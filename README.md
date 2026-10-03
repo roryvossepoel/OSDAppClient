@@ -8,20 +8,51 @@ It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a
 ## Architecture overview
 
 ```mermaid
-flowchart LR
-    A[Online OSD App Repository] --> B[Sync-OSDAppRepository]
-    B --> C[OSDCloud USB<br/>\OSDApps]
-    C --> D[Get-OSDApp]
-    D --> E[Add-OSDApp]
-    E --> F[Offline Windows volume<br/>C:\OSDApps]
-    F --> G[SetupComplete.cmd]
-    G --> H[OSD App Runner]
-    H --> I[Expand Package.zip]
-    I --> J[Run Install.ps1]
-    J --> K[OOBE / Autopilot]
+flowchart TB
+    subgraph CATALOG["1. Central catalog"]
+        A[Azure Blob Storage<br/>catalog.json]
+        B[Set-OSDAppCatalog]
+        C[Get-OSDAppCatalog]
+        A --> B
+        B --> C
+    end
 
-    L[x64 / arm64 / any] --> B
-    M[SHA-256 validation] --> B
+    subgraph CACHE["2. Local OSDCloud cache"]
+        D[Sync-OSDAppRepository]
+        E[OSDCloud volume<br/>\\OSDApps]
+        F[Get-OSDApp]
+        D --> E
+        E --> F
+    end
+
+    subgraph STAGE["3. Stage for installed Windows"]
+        G[Add-OSDApp]
+        H[Offline Windows<br/>C:\\OSDApps]
+        I[SetupComplete.cmd]
+        G --> H
+        H --> I
+    end
+
+    subgraph RUNTIME["4. SetupComplete runtime"]
+        J[OSD App Runner]
+        K{App source}
+        L[Repository app<br/>Expand Package.zip<br/>Run Install.ps1]
+        M[Built-in app<br/>Run vendor bootstrapper]
+        N[OOBE / Autopilot]
+
+        J --> K
+        K -->|Repository| L
+        K -->|BuiltIn| M
+        L --> N
+        M --> N
+    end
+
+    C --> D
+    F --> G
+    I --> J
+
+    O[Built-ins<br/>Microsoft365Apps<br/>Teams] --> F
+    P[x64 / arm64 / any<br/>SHA-256 validation] --> D
 ```
 
 Typical WinPE usage after OSDCloud v2 has finished applying Windows and drivers:
@@ -38,7 +69,7 @@ Get-OSDApp
 Get-OSDApp NotepadPlusPlus | Add-OSDApp
 ```
 
-OSDAppClient consumes only the prepared repository and local USB cache. It does not authenticate to Intune or any other upstream source during WinPE runtime.
+OSDAppClient uses a cloud-hosted catalog for repository discovery and a local cache on the volume labeled `OSDCloud`. Built-in apps such as Microsoft 365 Apps and Teams do not require a catalog or repository sync. The client does not authenticate to Intune or Microsoft Graph during WinPE runtime.
 
 ## Scope
 
@@ -76,7 +107,7 @@ Windows + drivers applied
         ↓
 OSDAppClient
         ↓
-Read repository manifest
+Read central catalog
         ↓
 Sync / validate Package.zip
         ↓
@@ -121,7 +152,7 @@ OSD App Client automatically finds the volume labeled `OSDCloud`, uses `\OSDApps
 
 ## Relationship with OSDAppRepo
 
-OSDAppRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the manifest. OSDAppClient only consumes the resulting repository contract.
+OSDAppRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the central `catalog.json`. OSDAppClient consumes that catalog and the resulting repository contract.
 
 
 ## Logging
