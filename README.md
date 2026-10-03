@@ -207,13 +207,19 @@ Microsoft 365 Apps can be staged without an OSD App repository:
 Add-OSDApp Microsoft365Apps
 ```
 
-OSDAppClient downloads the Office setup executable, uses the Office Deployment Tool to cache the Office payload under:
+OSDAppClient downloads only the Office Deployment Tool bootstrapper and prepares the Office configuration in WinPE. It then stages those files to the offline Windows installation.
+
+No Microsoft 365 Apps payload is downloaded in WinPE at this stage.
+
+During SetupComplete, the OSD App Runner starts:
 
 ```text
-<OSDCloud-volume>:\OSDApps\BuiltIn\Microsoft365Apps
+setup.exe /configure configuration.xml
 ```
 
-The cached content is copied to the offline Windows installation and installed by the OSD App Runner during SetupComplete. The generated configuration intentionally omits `SourcePath`, so the same configuration can be used while downloading into the USB cache and later while installing from the staged local folder.
+At that point the Office Deployment Tool acquires the required Microsoft 365 Apps content and installs it before OOBE / Autopilot continues. The generated configuration intentionally omits `SourcePath`, so ODT uses the normal Microsoft CDN during `/configure`.
+
+Future offline caching support can add a separate WinPE `/download` phase without changing the SetupComplete installation model.
 
 A common customized deployment:
 
@@ -285,4 +291,4 @@ Repository-based apps and Microsoft 365 Apps can also be staged in one call:
 Add-OSDApp NotepadPlusPlus,Microsoft365Apps
 ```
 
-Microsoft 365 Apps is the first built-in acquisition path. It is intentionally implemented separately from the repository package contract so large Office CDN content does not need to be wrapped in `Package.zip`.
+Microsoft 365 Apps is the first built-in installer path. It is intentionally implemented separately from the repository package contract. In the current implementation only the ODT bootstrapper and configuration are staged in WinPE; Office payload caching is reserved for a future enhancement.
