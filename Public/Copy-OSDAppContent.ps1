@@ -57,8 +57,8 @@ function Copy-OSDAppContent {
             Set-Content -LiteralPath (Join-Path $destinationRoot 'DeviceManifest.json') -Encoding UTF8
 
         $moduleRoot = Split-Path $PSScriptRoot -Parent
-        $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppsRunner.ps1'
-        Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppsRunner.ps1') -Force
+        $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
+        Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppRunner.ps1') -Force
         Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'Application staging completed.' -Data @{ Destination = $destinationRoot; PackageCount = @($packages).Count }
     }
 
