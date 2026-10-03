@@ -1,12 +1,12 @@
-# OSD Apps Client
+# OSD App Client
 
-OSD Apps Client is a PowerShell module for Windows PE, designed specifically to complement OSDCloud v2.
+OSD App Client is a PowerShell module for Windows PE, designed specifically to complement OSDCloud v2.
 
 It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a prepared OSD Apps repository, synchronizes and validates application packages, stages selected packages to the offline Windows volume, and appends a SetupComplete hook so the applications are installed before OOBE.
 
 ## Scope
 
-OSD Apps Client does not build application packages and does not authenticate to Intune or Microsoft Graph.
+OSD App Client does not build application packages and does not authenticate to Intune or Microsoft Graph.
 
 It consumes repositories that follow the OSD Apps repository contract.
 
@@ -41,7 +41,7 @@ OSDCloud v2 in WinPE
         ↓
 Windows + drivers applied
         ↓
-OSDAppsClient
+OSDAppClient
         ↓
 Read repository manifest
         ↓
@@ -53,7 +53,7 @@ Append SetupComplete.cmd
         ↓
 Reboot into installed Windows
         ↓
-OSD Apps Runner
+OSD App Runner
         ↓
 Expand Package.zip
         ↓
@@ -78,21 +78,21 @@ Add-OSDApp
 After OSDCloud v2 has finished applying Windows and drivers:
 
 ```powershell
-Import-Module OSDAppsClient
+Import-Module OSDAppClient
 
 Add-OSDApp NotepadPlusPlus
 ```
 
-OSD Apps Client automatically finds the volume labeled `OSDCloud`, uses `\OSDApps` on that volume as the cache, detects the offline Windows installation, stages the requested app, writes the device manifest, and appends the OSD Apps Runner to `SetupComplete.cmd`.
+OSD App Client automatically finds the volume labeled `OSDCloud`, uses `\OSDApps` on that volume as the cache, detects the offline Windows installation, stages the requested app, writes the device manifest, and appends the OSD App Runner to `SetupComplete.cmd`.
 
-## Relationship with OSDAppsRepo
+## Relationship with OSDAppRepo
 
-OSDAppsRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the manifest. OSDAppsClient only consumes the resulting repository contract.
+OSDAppRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the manifest. OSDAppClient only consumes the resulting repository contract.
 
 
 ## Logging
 
-OSD Apps Client writes structured JSON-lines logs designed for both human troubleshooting and machine analysis.
+OSD App Client writes structured JSON-lines logs designed for both human troubleshooting and machine analysis.
 
 ### WinPE / client log
 
@@ -125,7 +125,7 @@ Runtime logs use the same bounded JSON-lines format and automatic rotation.
 
 ## Architecture resolution
 
-OSD Apps Client understands the repository architectures:
+OSD App Client understands the repository architectures:
 
 ```text
 x64
@@ -146,4 +146,4 @@ For every requested application, package selection follows this order:
 2. `any` as an architecture-independent fallback.
 3. Fail clearly when no compatible package exists.
 
-OSD Apps Client does not silently select an x64 package on ARM64. Cross-architecture support must be represented explicitly by the repository package metadata.
+OSD App Client does not silently select an x64 package on ARM64. Cross-architecture support must be represented explicitly by the repository package metadata.
