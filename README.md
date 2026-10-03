@@ -197,3 +197,92 @@ Get-OSDApp NotepadPlusPlus | Add-OSDApp
 `Get-OSDApp` lists the applications that are actually available in the synchronized USB cache, including the version, resolved architecture, and cache validity.
 
 The returned objects can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
+
+
+## Built-in Microsoft 365 Apps support
+
+Microsoft 365 Apps can be staged without an OSD App repository:
+
+```powershell
+Add-OSDApp Microsoft365Apps
+```
+
+OSDAppClient downloads the Office setup executable, uses the Office Deployment Tool to cache the Office payload under:
+
+```text
+<OSDCloud-volume>:\OSDApps\BuiltIn\Microsoft365Apps
+```
+
+The cached content is copied to the offline Windows installation and installed by the OSD App Runner during SetupComplete. The generated configuration intentionally omits `SourcePath`, so the same configuration can be used while downloading into the USB cache and later while installing from the staged local folder.
+
+A common customized deployment:
+
+```powershell
+Add-OSDApp Microsoft365Apps `
+    -OfficeChannel MonthlyEnterprise `
+    -OfficeArchitecture 64 `
+    -OfficeProductId O365ProPlusRetail `
+    -OfficeLanguage nl-nl,en-us `
+    -OfficeExcludeApp Access,Publisher
+```
+
+Supported `-OfficeChannel` values follow the current Office Deployment Tool channel values:
+
+```text
+Current
+MonthlyEnterprise
+SemiAnnual
+CurrentPreview
+SemiAnnualPreview
+BetaChannel
+```
+
+`BetaChannel` is available in ODT but Microsoft classifies Beta Channel as unsupported for production use.
+
+Supported `-OfficeArchitecture` values are `64` and `32`. On Windows 11 Arm devices, Microsoft 365 Apps uses the 64-bit Office deployment and automatically installs Arm-optimized components.
+
+Built-in Microsoft 365 Apps currently supports these product IDs:
+
+```text
+O365ProPlusRetail
+O365BusinessRetail
+```
+
+Supported `-OfficeExcludeApp` values:
+
+```text
+Access
+Excel
+Groove
+Lync
+OneDrive
+OneNote
+Outlook
+OutlookForWindows
+PowerPoint
+Publisher
+Teams
+Word
+```
+
+Multiple languages can be supplied:
+
+```powershell
+Add-OSDApp Microsoft365Apps -OfficeLanguage nl-nl,en-us
+```
+
+For advanced Office Deployment Tool scenarios, a complete custom XML file can be supplied instead:
+
+```powershell
+Add-OSDApp Microsoft365Apps -ConfigurationXml .\configuration.xml
+```
+
+When a custom XML file is supplied, OSDAppClient copies it unchanged. For a fully offline SetupComplete installation, the custom configuration should either omit `SourcePath` or reference content that will still be available after the reboot.
+
+Repository-based apps and Microsoft 365 Apps can also be staged in one call:
+
+```powershell
+Add-OSDApp NotepadPlusPlus,Microsoft365Apps
+```
+
+Microsoft 365 Apps is the first built-in acquisition path. It is intentionally implemented separately from the repository package contract so large Office CDN content does not need to be wrapped in `Package.zip`.
