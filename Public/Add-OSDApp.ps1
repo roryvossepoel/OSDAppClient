@@ -16,6 +16,12 @@ function Add-OSDApp {
 
         [string[]]$OfficeLanguage = @('en-us'),
 
+        [bool]$OfficeAcceptEula = $true,
+
+        [bool]$OfficeSharedComputerLicensing = $false,
+
+        [bool]$OfficeDeviceBasedLicensing = $false,
+
         [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
         [string[]]$OfficeExcludeApp,
 
@@ -90,6 +96,9 @@ function Add-OSDApp {
                     Architecture            = $OfficeArchitecture
                     ProductId               = $OfficeProductId
                     Language                = $OfficeLanguage
+                    AcceptEula              = $OfficeAcceptEula
+                    SharedComputerLicensing = $OfficeSharedComputerLicensing
+                    DeviceBasedLicensing    = $OfficeDeviceBasedLicensing
                     OfficeDeploymentToolUri = $OfficeDeploymentToolUri
                     Confirm                 = $false
                 }
