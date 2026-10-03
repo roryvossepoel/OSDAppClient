@@ -86,6 +86,16 @@ try {
             throw "Package.zip not found for '$($package.Id)': $archivePath"
         }
 
+        if ($package.Archive -and $package.Archive.Sha256) {
+            $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
+            if ($actualHash -ne $package.Archive.Sha256) {
+                Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityFailed' -Level 'Error' -Message 'Staged package SHA-256 validation failed.' -Data @{ Id = $package.Id; ExpectedSha256 = $package.Archive.Sha256; ActualSha256 = $actualHash; Archive = $archivePath }
+                throw "SHA-256 validation failed for staged package '$($package.Id)'."
+            }
+
+            Write-RunnerLog -LogPath $logPath -Event 'PackageIntegrityValidated' -Message 'Staged package SHA-256 validation succeeded.' -Data @{ Id = $package.Id; Sha256 = $actualHash; Archive = $archivePath }
+        }
+
         $packageWork = Join-Path $workRoot $package.Id
         if (Test-Path -LiteralPath $packageWork) {
             Remove-Item -LiteralPath $packageWork -Recurse -Force
