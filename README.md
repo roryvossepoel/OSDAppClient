@@ -11,7 +11,7 @@ It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a
 flowchart LR
     A[Online OSD App Repository] --> B[Sync-OSDAppRepository]
     B --> C[OSDCloud USB<br/>\OSDApps]
-    C --> D[Get-OSDApp]
+    C --> D[Get-OSDAppCatalog]
     D --> E[Add-OSDApp]
     E --> F[Offline Windows volume<br/>C:\OSDApps]
     F --> G[SetupComplete.cmd]
@@ -29,9 +29,9 @@ Typical WinPE usage after OSDCloud v2 has finished applying Windows and drivers:
 ```powershell
 Sync-OSDAppRepository 'https://example.org/osdapps/manifest.json'
 
-Get-OSDApp
+Get-OSDAppCatalog
 
-Get-OSDApp NotepadPlusPlus | Add-OSDApp
+Get-OSDAppCatalog NotepadPlusPlus | Add-OSDApp
 ```
 
 OSDAppClient consumes only the prepared repository and local USB cache. It does not authenticate to Intune or any other upstream source during WinPE runtime.
@@ -98,7 +98,7 @@ OOBE / Autopilot
 
 ```powershell
 Sync-OSDAppRepository
-Get-OSDApp
+Get-OSDAppCatalog
 Add-OSDApp
 ```
 
@@ -187,14 +187,14 @@ After OSDCloud v2 has finished applying Windows and drivers:
 ```powershell
 Sync-OSDAppRepository 'https://example.org/osdapps/manifest.json'
 
-Get-OSDApp
+Get-OSDAppCatalog
 
-Get-OSDApp NotepadPlusPlus | Add-OSDApp
+Get-OSDAppCatalog NotepadPlusPlus | Add-OSDApp
 ```
 
 `Sync-OSDAppRepository` synchronizes the online repository to the `\OSDApps` cache on the USB volume labeled `OSDCloud`. The cache location is detected automatically.
 
-`Get-OSDApp` combines repository applications from the synchronized USB cache with the built-in applications provided by OSDAppClient. Repository entries include the version, resolved architecture, source, and cache validity. Built-in applications are returned even when no repository manifest is present. When no OSDCloud volume is present, `Get-OSDApp` returns only the built-in applications instead of failing.
+`Get-OSDAppCatalog` combines repository applications from the synchronized USB cache with the built-in applications provided by OSDAppClient. Repository entries include the version, resolved architecture, source, and cache validity. Built-in applications are returned even when no repository manifest is present. When no OSDCloud volume is present, `Get-OSDAppCatalog` returns only the built-in applications instead of failing.
 
 The returned objects can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
 
@@ -246,7 +246,7 @@ OSD App Runner
 install application before OOBE / Autopilot
 ```
 
-Repository-based applications remain available alongside built-ins and continue to use `Sync-OSDAppRepository`, `Get-OSDApp`, and the synchronized local cache.
+Repository-based applications remain available alongside built-ins and continue to use `Sync-OSDAppRepository`, `Get-OSDAppCatalog`, and the synchronized local cache.
 
 ## Built-in Microsoft 365 Apps support
 
@@ -374,3 +374,32 @@ teamsbootstrapper.exe -p --installTMA
 ```
 
 The built-in Teams flow currently uses the online bootstrapper only. Offline MSIX caching can be added later without changing the SetupComplete model.
+
+
+### Local and online catalog
+
+`Get-OSDAppCatalog` is the discovery command for OSD Apps.
+
+By default it shows what is locally available for deployment:
+
+```powershell
+Get-OSDAppCatalog
+```
+
+This is equivalent to:
+
+```powershell
+Get-OSDAppCatalog -Local
+```
+
+The local catalog combines built-in apps with repository packages already cached on the volume labeled `OSDCloud`.
+
+To inspect an online repository without downloading package content:
+
+```powershell
+Get-OSDAppCatalog -Online -ManifestUri 'https://example.org/osdapps/manifest.json'
+```
+
+Online repository entries are reported with `Availability = Online`. Local cached repository entries use `Availability = Cached`, while built-in apps use `Availability = Available`.
+
+`Get-OSDAppCatalog -Online` reads only the repository manifest. It does not synchronize package content. Use `Sync-OSDAppRepository` when the repository packages should be downloaded to the local OSD Apps cache.
