@@ -1,12 +1,12 @@
 @{
     RootModule        = 'OSDAppClient.psm1'
-    ModuleVersion     = '0.8.2'
+    ModuleVersion     = '0.9.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Description       = 'WinPE PowerShell module for consuming OSD Apps repositories after OSDCloud v2 and preparing pre-OOBE application installation.'
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
-        'Get-OSDApp',
+        'Get-OSDAppCatalog',
         'Sync-OSDAppRepository',
         'Test-OSDAppCache',
         'Copy-OSDAppContent',
