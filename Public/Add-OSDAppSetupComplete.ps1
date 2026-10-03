@@ -14,7 +14,7 @@ function Add-OSDAppSetupComplete {
 
     $begin = ':: OSDApps Begin'
     $end   = ':: OSDApps End'
-    $runnerPath = "%SystemDrive%\$StagedRelativePath\Invoke-OSDAppsRunner.ps1"
+    $runnerPath = "%SystemDrive%\$StagedRelativePath\Invoke-OSDAppRunner.ps1"
 
     $block = @(
         $begin
