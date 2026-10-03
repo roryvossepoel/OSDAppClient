@@ -55,7 +55,15 @@ Repository/
 └── Packages/
     └── <AppId>/
         └── <Version>/
-            └── Package.zip
+            └── <Architecture>/
+                └── Package.zip
 ```
 
 The package stays compressed in the repository, cache, and staging location. It is extracted only when the OSD Apps Runner installs the application under the installed Windows environment before OOBE.
+
+
+## Architecture contract
+
+Repository package entries are classified as `x64`, `arm64`, or `any`.
+
+OSDAppsClient detects the current WinPE architecture and resolves one package variant per application. An exact match is preferred; `any` is used only as a fallback. Incompatible packages are not staged automatically.
