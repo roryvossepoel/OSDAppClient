@@ -10,7 +10,9 @@ foreach ($folder in @('Private','Public')) {
 }
 
 Export-ModuleMember -Function @(
+    'Set-OSDAppCatalog',
     'Get-OSDAppCatalog',
+    'Get-OSDApp',
     'Sync-OSDAppRepository',
     'Test-OSDAppCache',
     'Copy-OSDAppContent',
