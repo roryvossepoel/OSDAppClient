@@ -3,7 +3,25 @@ function Add-OSDApp {
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
         [Alias('Id')]
-        [string[]]$Name
+        [string[]]$Name,
+
+        [ValidateSet('Current','MonthlyEnterprise','SemiAnnual','CurrentPreview','SemiAnnualPreview','BetaChannel')]
+        [string]$OfficeChannel = 'Current',
+
+        [ValidateSet('64','32')]
+        [string]$OfficeArchitecture = '64',
+
+        [ValidateSet('O365ProPlusRetail','O365BusinessRetail')]
+        [string]$OfficeProductId = 'O365ProPlusRetail',
+
+        [string[]]$OfficeLanguage = @('en-us'),
+
+        [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
+        [string[]]$OfficeExcludeApp,
+
+        [string]$ConfigurationXml,
+
+        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe'
     )
 
     begin {
@@ -24,11 +42,16 @@ function Add-OSDApp {
             throw 'No applications were supplied.'
         }
 
-        $cachePath = Get-OSDAppCachePath
-        $cacheManifestPath = Join-Path $cachePath 'CacheManifest.json'
+        $officeRequested = @($uniqueApps | Where-Object { $_ -ieq 'Microsoft365Apps' }).Count -gt 0
+        $repositoryApps = @($uniqueApps | Where-Object { $_ -ine 'Microsoft365Apps' })
 
-        if (-not (Test-Path -LiteralPath $cacheManifestPath -PathType Leaf)) {
-            throw "OSD App cache manifest not found: $cacheManifestPath. Run Sync-OSDAppRepository first."
+        $cachePath = Get-OSDAppCachePath
+
+        if ($repositoryApps.Count -gt 0) {
+            $cacheManifestPath = Join-Path $cachePath 'CacheManifest.json'
+            if (-not (Test-Path -LiteralPath $cacheManifestPath -PathType Leaf)) {
+                throw "OSD App cache manifest not found: $cacheManifestPath. Run Sync-OSDAppRepository first for repository-based applications."
+            }
         }
 
         $windowsCandidates = @(
@@ -55,7 +78,33 @@ function Add-OSDApp {
         $windowsPath = $windowsCandidates[0]
 
         if ($PSCmdlet.ShouldProcess(($uniqueApps -join ', '), "Stage applications for SetupComplete on $windowsPath")) {
-            Copy-OSDAppContent -Name $uniqueApps -CachePath $cachePath -WindowsPath $windowsPath
+            if ($repositoryApps.Count -gt 0) {
+                Copy-OSDAppContent -Name $repositoryApps -CachePath $cachePath -WindowsPath $windowsPath | Out-Null
+            }
+
+            if ($officeRequested) {
+                $officeParameters = @{
+                    CachePath               = $cachePath
+                    WindowsPath             = $windowsPath
+                    Channel                 = $OfficeChannel
+                    Architecture            = $OfficeArchitecture
+                    ProductId               = $OfficeProductId
+                    Language                = $OfficeLanguage
+                    OfficeDeploymentToolUri = $OfficeDeploymentToolUri
+                    Confirm                 = $false
+                }
+
+                if ($OfficeExcludeApp) {
+                    $officeParameters.ExcludeApp = $OfficeExcludeApp
+                }
+
+                if ($ConfigurationXml) {
+                    $officeParameters.ConfigurationXml = $ConfigurationXml
+                }
+
+                Add-OSDAppMicrosoft365Apps @officeParameters | Out-Null
+            }
+
             Add-OSDAppSetupComplete -WindowsPath $windowsPath | Out-Null
         }
 
@@ -66,6 +115,7 @@ function Add-OSDApp {
                 CachePath   = $cachePath
                 WindowsPath = $windowsPath
                 StagedPath  = Join-Path $windowsPath 'OSDApps'
+                Source      = if ($app -ieq 'Microsoft365Apps') { 'BuiltIn' } else { 'Repository' }
             }
         }
     }
