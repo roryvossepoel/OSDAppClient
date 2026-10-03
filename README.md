@@ -80,11 +80,11 @@ Import-Module OSDAppsClient
 
 Sync-OSDAppCache `
     -ManifestPath '\\server\OSDApps\manifest.json' `
-    -CachePath 'E:\OSDCloud\Apps'
+    -CachePath 'E:\OSDApps'
 
 Copy-OSDAppContent `
     -Name 'NotepadPlusPlus' `
-    -CachePath 'E:\OSDCloud\Apps' `
+    -CachePath 'E:\OSDApps' `
     -WindowsPath 'C:\'
 
 Add-OSDAppSetupComplete -WindowsPath 'C:\'
@@ -140,3 +140,29 @@ The selected runtime log location is stored in `DeviceManifest.json` and used by
 Using a location such as `%ProgramData%\OSDApps\Logs` is recommended when `C:\OSDApps` will be removed after deployment.
 
 Runtime logs use the same bounded JSON-lines format and automatic rotation.
+
+
+## Architecture resolution
+
+OSD Apps Client understands the repository architectures:
+
+```text
+x64
+arm64
+any
+```
+
+The client detects the WinPE host architecture automatically:
+
+```text
+AMD64 -> x64
+ARM64 -> arm64
+```
+
+For every requested application, package selection follows this order:
+
+1. Exact architecture match.
+2. `any` as an architecture-independent fallback.
+3. Fail clearly when no compatible package exists.
+
+OSD Apps Client does not silently select an x64 package on ARM64. Cross-architecture support must be represented explicitly by the repository package metadata.
