@@ -4,7 +4,7 @@ OSD Apps is split into two PowerShell modules with a shared repository contract.
 
 ```mermaid
 flowchart TD
-    A[Upstream content] --> B[OSDAppRepo]
+    A[Upstream content] --> B[OSDAppsRepo]
     A1[Manual packaging] --> A
     A2[Own PowerShell / CI-CD] --> A
     A3[Intune export tooling] --> A
@@ -27,13 +27,13 @@ flowchart TD
 
 ## Module boundary
 
-### OSDAppRepo
+### OSDAppsRepo
 
 Recommended authoring and repository-management layer.
 
 It creates and validates `Package.zip`, calculates hashes, publishes packages, and maintains `manifest.json`.
 
-Upstream integrations are not part of OSDAppRepo. Separate tooling may obtain content from Intune, vendor feeds, package feeds, GitHub Releases, or any other source and hand a source directory or compliant package to OSDAppRepo.
+Upstream integrations are not part of OSDAppsRepo. Separate tooling may obtain content from Intune, vendor feeds, package feeds, GitHub Releases, or any other source and hand a source directory or compliant package to OSDAppsRepo.
 
 ### OSDAppsClient
 
