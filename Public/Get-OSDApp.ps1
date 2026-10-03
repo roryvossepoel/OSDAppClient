@@ -7,17 +7,57 @@ function Get-OSDApp {
 
     $cachePath = Get-OSDAppCachePath
     $manifestPath = Join-Path $cachePath 'CacheManifest.json'
+    $apps = [System.Collections.Generic.List[object]]::new()
 
-    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        throw "OSD App cache manifest not found: $manifestPath. Run Sync-OSDAppRepository first."
+    if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+        $manifest = Get-OSDAppManifest -Path $manifestPath
+
+        foreach ($package in @($manifest.Packages)) {
+            $apps.Add([pscustomobject]@{
+                PSTypeName   = 'OSDAppClient.App'
+                Id           = $package.Id
+                Name         = $package.Id
+                DisplayName  = $package.DisplayName
+                Version      = $package.Version
+                Architecture = $package.Architecture
+                Source       = 'Repository'
+                Valid        = (Test-OSDAppFileHash -Path (Join-Path $cachePath (Join-Path 'Packages' (Join-Path $package.Id 'Package.zip'))) -ExpectedSha256 $package.Archive.Sha256)
+            })
+        }
     }
 
-    $manifest = Get-OSDAppManifest -Path $manifestPath
-    $packages = @($manifest.Packages)
+    $builtInApps = @(
+        [pscustomobject]@{
+            PSTypeName   = 'OSDAppClient.App'
+            Id           = 'Microsoft365Apps'
+            Name         = 'Microsoft365Apps'
+            DisplayName  = 'Microsoft 365 Apps'
+            Version      = 'Current'
+            Architecture = 'any'
+            Source       = 'BuiltIn'
+            Valid        = $true
+        },
+        [pscustomobject]@{
+            PSTypeName   = 'OSDAppClient.App'
+            Id           = 'Teams'
+            Name         = 'Teams'
+            DisplayName  = 'Microsoft Teams'
+            Version      = 'Current'
+            Architecture = 'any'
+            Source       = 'BuiltIn'
+            Valid        = $true
+        }
+    )
+
+    foreach ($builtInApp in $builtInApps) {
+        $apps.Add($builtInApp)
+    }
+
+    $result = @($apps)
 
     if ($Name) {
-        $packages = @(
-            $packages | Where-Object {
+        $result = @(
+            $result | Where-Object {
                 foreach ($pattern in $Name) {
                     if ($_.Id -like $pattern -or $_.DisplayName -like $pattern) {
                         return $true
@@ -28,15 +68,5 @@ function Get-OSDApp {
         )
     }
 
-    foreach ($package in $packages) {
-        [pscustomobject]@{
-            PSTypeName   = 'OSDAppClient.App'
-            Id           = $package.Id
-            Name         = $package.Id
-            DisplayName  = $package.DisplayName
-            Version      = $package.Version
-            Architecture = $package.Architecture
-            Valid        = (Test-OSDAppFileHash -Path (Join-Path $cachePath (Join-Path 'Packages' (Join-Path $package.Id 'Package.zip'))) -ExpectedSha256 $package.Archive.Sha256)
-        }
-    }
+    $result
 }
