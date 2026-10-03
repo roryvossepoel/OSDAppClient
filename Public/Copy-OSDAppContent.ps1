@@ -12,7 +12,7 @@ function Copy-OSDAppContent {
 
         [string]$DestinationRelativePath = 'OSDApps',
 
-        [string]$RuntimeLogPath = '%SystemDrive%\\OSDApps\\Logs'
+        [string]$RuntimeLogPath = '%SystemDrive%\OSDApps\Logs'
     )
 
     $cacheManifestPath = Join-Path $CachePath 'CacheManifest.json'
@@ -30,7 +30,7 @@ function Copy-OSDAppContent {
     }
 
     $clientLogPath = Join-Path $CachePath 'Logs\\Client.log'
-    Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageStart' -Message 'Starting application staging.' -Data @{ WindowsPath = $WindowsPath; DestinationRelativePath = $DestinationRelativePath; Packages = @($packages.Id); RuntimeLogPath = $RuntimeLogPath }
+    Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageStart' -Message 'Starting application staging.' -Data @{ WindowsPath = $WindowsPath; DestinationRelativePath = $DestinationRelativePath; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }); RuntimeLogPath = $RuntimeLogPath }
 
     $destinationRoot = Join-Path $WindowsPath $DestinationRelativePath
     $destinationPackages = Join-Path $destinationRoot 'Packages'
@@ -46,7 +46,7 @@ function Copy-OSDAppContent {
                 Remove-Item -LiteralPath $target -Recurse -Force
             }
             Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
-            Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Destination = $target }
+            Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Destination = $target }
         }
 
         $deviceManifest = [ordered]@{
