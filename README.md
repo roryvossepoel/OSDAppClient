@@ -100,6 +100,66 @@ A good `Install.ps1` should therefore:
 - write useful application-specific logs when troubleshooting value justifies it;
 - be safe to run during SetupComplete before OOBE.
 
+
+
+## First-phase runtime guarantees
+
+The first implementation intentionally favors predictable behavior over automatic recovery.
+
+### Installation order
+
+Repository applications are written to `DeviceManifest.json` in the same order in which they are supplied to `Add-OSDApp`. The OSD App Runner processes those repository packages sequentially in that order.
+
+Built-in applications are processed after repository packages.
+
+Example:
+
+```powershell
+Add-OSDApp VCPlusPlusRuntime,LineOfBusinessApp,Microsoft365Apps,Teams
+```
+
+The repository packages are processed first in the requested order, followed by the built-in applications.
+
+### Fail-fast behavior
+
+The runner stops on the first unrecoverable installation failure. It does not continue silently with the remaining applications.
+
+This is intentional for the pre-OOBE deployment phase: a failed prerequisite or incomplete baseline should be visible in the runner log instead of producing a partially configured device.
+
+### Package integrity
+
+Repository package SHA-256 is validated when content is synchronized and validated again from the staged Windows copy immediately before extraction and installation.
+
+A staged package with a hash mismatch is not executed.
+
+### Exit codes
+
+Repository packages use `0` and `3010` as success codes by default. A package can define its own `SuccessCodes` metadata when other vendor-specific success codes are required.
+
+### Cleanup
+
+OSDAppClient does not automatically remove `%SystemDrive%\OSDApps` after installation in the first phase. Keeping staged content and logs available makes troubleshooting much easier while the runtime model is being validated.
+
+Cleanup can be added later as an explicit, opt-in behavior.
+
+### Logging contract
+
+The runner uses structured JSON-lines logging. Important runtime events include:
+
+```text
+InstallStart
+PackageIntegrityValidated
+PackageIntegrityFailed
+PackageExtractStart
+PackageInstallStart
+PackageInstallComplete
+BuiltInInstallStart
+BuiltInInstallComplete
+InstallFailed
+InstallComplete
+```
+
+
 ## Package contract
 
 Every application is represented by a single archive named `Package.zip`.
@@ -118,6 +178,43 @@ Package.zip
 ```
 
 The ZIP remains compressed while it is stored, cached, and staged. It is extracted only at installation time.
+
+
+
+## Reference Install.ps1 pattern
+
+A repository package should keep vendor-specific installation behavior inside its own `Install.ps1`.
+
+A minimal reference pattern:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+
+$installer = Get-ChildItem -Path $PSScriptRoot -Filter '*.exe' -File |
+    Select-Object -First 1
+
+if (-not $installer) {
+    throw 'Installer not found.'
+}
+
+$process = Start-Process `
+    -FilePath $installer.FullName `
+    -ArgumentList '/S' `
+    -WorkingDirectory $PSScriptRoot `
+    -Wait `
+    -PassThru
+
+$successCodes = @(0,3010)
+
+if ($process.ExitCode -notin $successCodes) {
+    throw "Installer failed with exit code $($process.ExitCode)."
+}
+
+exit $process.ExitCode
+```
+
+This is only a pattern. The package author remains responsible for using the vendor-supported unattended switches, configuration, prerequisites, detection and error handling required by that application.
+
 
 ## Runtime flow
 
