@@ -65,13 +65,12 @@ OOBE / Autopilot
 ## Initial commands
 
 ```powershell
+Sync-OSDAppRepository
 Get-OSDApp
-Sync-OSDAppCache
-Test-OSDAppCache
-Copy-OSDAppContent
-Add-OSDAppSetupComplete
 Add-OSDApp
 ```
+
+The lower-level cache, staging, and SetupComplete commands remain implementation details of the client workflow.
 
 ## Example
 
@@ -147,3 +146,22 @@ For every requested application, package selection follows this order:
 3. Fail clearly when no compatible package exists.
 
 OSD App Client does not silently select an x64 package on ARM64. Cross-architecture support must be represented explicitly by the repository package metadata.
+
+
+## Typical WinPE workflow
+
+After OSDCloud v2 has finished applying Windows and drivers:
+
+```powershell
+Sync-OSDAppRepository 'https://example.org/osdapps/manifest.json'
+
+Get-OSDApp
+
+Get-OSDApp NotepadPlusPlus | Add-OSDApp
+```
+
+`Sync-OSDAppRepository` synchronizes the online repository to the `\OSDApps` cache on the USB volume labeled `OSDCloud`. The cache location is detected automatically.
+
+`Get-OSDApp` lists the applications that are actually available in the synchronized USB cache, including the version, resolved architecture, and cache validity.
+
+The returned objects can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
