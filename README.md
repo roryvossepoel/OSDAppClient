@@ -4,6 +4,38 @@ OSD App Client is a PowerShell module for Windows PE, designed specifically to c
 
 It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a prepared OSD Apps repository, synchronizes and validates application packages, stages selected packages to the offline Windows volume, and appends a SetupComplete hook so the applications are installed before OOBE.
 
+
+## Architecture overview
+
+```mermaid
+flowchart LR
+    A[Online OSD App Repository] --> B[Sync-OSDAppRepository]
+    B --> C[OSDCloud USB<br/>\OSDApps]
+    C --> D[Get-OSDApp]
+    D --> E[Add-OSDApp]
+    E --> F[Offline Windows volume<br/>C:\OSDApps]
+    F --> G[SetupComplete.cmd]
+    G --> H[OSD App Runner]
+    H --> I[Expand Package.zip]
+    I --> J[Run Install.ps1]
+    J --> K[OOBE / Autopilot]
+
+    L[x64 / arm64 / any] --> B
+    M[SHA-256 validation] --> B
+```
+
+Typical WinPE usage after OSDCloud v2 has finished applying Windows and drivers:
+
+```powershell
+Sync-OSDAppRepository 'https://example.org/osdapps/manifest.json'
+
+Get-OSDApp
+
+Get-OSDApp NotepadPlusPlus | Add-OSDApp
+```
+
+OSDAppClient consumes only the prepared repository and local USB cache. It does not authenticate to Intune or any other upstream source during WinPE runtime.
+
 ## Scope
 
 OSD App Client does not build application packages and does not authenticate to Intune or Microsoft Graph.
