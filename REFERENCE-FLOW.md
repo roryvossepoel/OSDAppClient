@@ -1,13 +1,13 @@
 # Reference Flow
 
-The first validated end-to-end OSD Apps Client flow uses Notepad++ 8.9.8.1.
+The first validated end-to-end OSD App Client flow uses Notepad++ 8.9.8.1.
 
 ## Proven runtime flow
 
 ```text
 OSD Apps repository
         ↓
-OSDAppsClient
+OSDAppClient
         ↓
 sync Package.zip to OSDCloud USB
         ↓
@@ -17,7 +17,7 @@ stage to offline Windows volume
         ↓
 DeviceManifest.json
         ↓
-OSD Apps Runner
+OSD App Runner
         ↓
 expand Package.zip
         ↓
