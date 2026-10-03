@@ -1,16 +1,21 @@
 function Sync-OSDAppRepository {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory, Position = 0)]
-        [uri]$ManifestUri,
+        [uri]$CatalogUri,
 
         [string[]]$Name
     )
 
+    $sourceUri = if ($CatalogUri) { $CatalogUri } else { $script:OSDAppCatalogUri }
+
+    if (-not $sourceUri) {
+        throw 'No OSD App Catalog is configured. Run Set-OSDAppCatalog -Uri <catalog.json URL> first, or specify -CatalogUri.'
+    }
+
     $cachePath = Get-OSDAppCachePath
 
     Sync-OSDAppCache `
-        -ManifestUri $ManifestUri `
+        -ManifestUri $sourceUri `
         -CachePath $cachePath `
         -Name $Name `
         -Confirm:$false
