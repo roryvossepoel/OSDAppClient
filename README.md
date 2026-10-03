@@ -70,25 +70,20 @@ Sync-OSDAppCache
 Test-OSDAppCache
 Copy-OSDAppContent
 Add-OSDAppSetupComplete
-Install-OSDApp
+Add-OSDApp
 ```
 
 ## Example
 
+After OSDCloud v2 has finished applying Windows and drivers:
+
 ```powershell
 Import-Module OSDAppsClient
 
-Sync-OSDAppCache `
-    -ManifestPath '\\server\OSDApps\manifest.json' `
-    -CachePath 'E:\OSDApps'
-
-Copy-OSDAppContent `
-    -Name 'NotepadPlusPlus' `
-    -CachePath 'E:\OSDApps' `
-    -WindowsPath 'C:\'
-
-Add-OSDAppSetupComplete -WindowsPath 'C:\'
+Add-OSDApp NotepadPlusPlus
 ```
+
+OSD Apps Client automatically finds the volume labeled `OSDCloud`, uses `\OSDApps` on that volume as the cache, detects the offline Windows installation, stages the requested app, writes the device manifest, and appends the OSD Apps Runner to `SetupComplete.cmd`.
 
 ## Relationship with OSDAppsRepo
 
@@ -119,25 +114,11 @@ Logs are bounded and rotated automatically. The default limit is 1 MB per file w
 
 ### Installed Windows / runtime log
 
-Application installation events default to:
+Application installation events are written to:
 
 ```text
 %SystemDrive%\OSDApps\Logs\Install.log
 ```
-
-A different persistent location can be selected while staging:
-
-```powershell
-Copy-OSDAppContent `
-    -Name 'NotepadPlusPlus' `
-    -CachePath 'E:\OSDApps' `
-    -WindowsPath 'C:\' `
-    -RuntimeLogPath '%ProgramData%\OSDApps\Logs'
-```
-
-The selected runtime log location is stored in `DeviceManifest.json` and used by the OSD Apps Runner after reboot.
-
-Using a location such as `%ProgramData%\OSDApps\Logs` is recommended when `C:\OSDApps` will be removed after deployment.
 
 Runtime logs use the same bounded JSON-lines format and automatic rotation.
 
