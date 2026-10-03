@@ -16,7 +16,14 @@ function Copy-OSDAppContent {
     $cacheManifestPath = Join-Path $CachePath 'CacheManifest.json'
     $manifest = Get-OSDAppManifest -Path $cacheManifestPath
 
-    $packages = @($manifest.Packages | Where-Object { $_.Id -in $Name })
+    $packages = @(
+        foreach ($requestedName in $Name) {
+            $match = @($manifest.Packages | Where-Object { $_.Id -eq $requestedName })
+            if ($match.Count -gt 0) {
+                $match[0]
+            }
+        }
+    )
     $missing = @($Name | Where-Object { $_ -notin @($packages.Id) })
     if ($missing.Count -gt 0) {
         throw "Requested package(s) not found in cache manifest: $($missing -join ', ')"
