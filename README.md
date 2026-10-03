@@ -79,6 +79,27 @@ It consumes repositories that follow the OSD Apps repository contract.
 
 The OSD App Catalog is cloud-native and referenced by an HTTP/HTTPS URL. Azure Blob Storage is the primary design target for hosting `catalog.json` and package content.
 
+## Package author responsibility
+
+Repository packages are executed during SetupComplete, before the interactive OOBE / Autopilot experience is available.
+
+The package author is responsible for making sure the root-level `Install.ps1` performs a fully unattended installation. The script must not depend on interactive prompts, visible installer windows, user input, or UI-driven configuration.
+
+Because this runs in a non-interactive deployment phase, `Install.ps1` should be designed to be stable and fault-tolerant. It should handle expected installer exit codes, validate prerequisites where appropriate, fail clearly on unrecoverable errors, and avoid leaving the device in an indeterminate state.
+
+OSDAppClient provides the staging and execution framework, but it does not make a vendor installer unattended automatically. Packaging logic, silent switches, configuration files, prerequisite handling, and application-specific error handling remain the responsibility of the package author.
+
+A good `Install.ps1` should therefore:
+
+- use silent or unattended vendor-supported installation switches;
+- avoid any dependency on visible UI;
+- wait for installation processes to finish before exiting;
+- return meaningful exit codes;
+- handle common success codes such as reboot-required outcomes where applicable;
+- validate required files and prerequisites before starting;
+- write useful application-specific logs when troubleshooting value justifies it;
+- be safe to run during SetupComplete before OOBE.
+
 ## Package contract
 
 Every application is represented by a single archive named `Package.zip`.
