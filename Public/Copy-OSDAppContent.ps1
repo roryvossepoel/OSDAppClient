@@ -10,7 +10,9 @@ function Copy-OSDAppContent {
         [Parameter(Mandatory)]
         [string]$WindowsPath,
 
-        [string]$DestinationRelativePath = 'OSDApps'
+        [string]$DestinationRelativePath = 'OSDApps',
+
+        [string]$RuntimeLogPath = '%SystemDrive%\\OSDApps\\Logs'
     )
 
     $cacheManifestPath = Join-Path $CachePath 'CacheManifest.json'
@@ -27,6 +29,9 @@ function Copy-OSDAppContent {
         throw "Cache validation failed for: $((@($invalid.Id | Select-Object -Unique)) -join ', ')"
     }
 
+    $clientLogPath = Join-Path $CachePath 'Logs\\Client.log'
+    Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageStart' -Message 'Starting application staging.' -Data @{ WindowsPath = $WindowsPath; DestinationRelativePath = $DestinationRelativePath; Packages = @($packages.Id); RuntimeLogPath = $RuntimeLogPath }
+
     $destinationRoot = Join-Path $WindowsPath $DestinationRelativePath
     $destinationPackages = Join-Path $destinationRoot 'Packages'
 
@@ -41,12 +46,16 @@ function Copy-OSDAppContent {
                 Remove-Item -LiteralPath $target -Recurse -Force
             }
             Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
+            Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Destination = $target }
         }
 
         $deviceManifest = [ordered]@{
             SchemaVersion = $manifest.SchemaVersion
             StagedAt      = (Get-Date).ToUniversalTime().ToString('o')
             Packages      = @($packages)
+            Runtime       = [ordered]@{
+                LogPath = $RuntimeLogPath
+            }
         }
 
         $deviceManifest | ConvertTo-Json -Depth 20 |
@@ -55,6 +64,7 @@ function Copy-OSDAppContent {
         $moduleRoot = Split-Path $PSScriptRoot -Parent
         $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppInstall.ps1'
         Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppInstall.ps1') -Force
+        Write-OSDAppsClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'Application staging completed.' -Data @{ Destination = $destinationRoot; PackageCount = @($packages).Count }
     }
 
     Get-Item -LiteralPath $destinationRoot
