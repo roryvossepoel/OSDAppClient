@@ -20,6 +20,7 @@ function Test-OSDAppCache {
         [pscustomobject]@{
             Id      = $package.Id
             Version = $package.Version
+            Architecture = $package.Architecture
             Path    = $archivePath
             Valid   = $valid
         }
