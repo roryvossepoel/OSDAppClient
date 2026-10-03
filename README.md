@@ -93,3 +93,50 @@ Add-OSDAppSetupComplete -WindowsPath 'C:\'
 ## Relationship with OSDAppsRepo
 
 OSDAppsRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the manifest. OSDAppsClient only consumes the resulting repository contract.
+
+
+## Logging
+
+OSD Apps Client writes structured JSON-lines logs designed for both human troubleshooting and machine analysis.
+
+### WinPE / client log
+
+Repository synchronization and staging events are written to:
+
+```text
+<CachePath>\Logs\Client.log
+```
+
+For the standard OSDCloud USB layout this is typically:
+
+```text
+E:\OSDApps\Logs\Client.log
+```
+
+The log includes events such as synchronization start/completion, packages already current, package acquisition, SHA-256 validation, and staging.
+
+Logs are bounded and rotated automatically. The default limit is 1 MB per file with three retained rotated files.
+
+### Installed Windows / runtime log
+
+Application installation events default to:
+
+```text
+%SystemDrive%\OSDApps\Logs\Install.log
+```
+
+A different persistent location can be selected while staging:
+
+```powershell
+Copy-OSDAppContent `
+    -Name 'NotepadPlusPlus' `
+    -CachePath 'E:\OSDApps' `
+    -WindowsPath 'C:\' `
+    -RuntimeLogPath '%ProgramData%\OSDApps\Logs'
+```
+
+The selected runtime log location is stored in `DeviceManifest.json` and used by the OSD Apps Runner after reboot.
+
+Using a location such as `%ProgramData%\OSDApps\Logs` is recommended when `C:\OSDApps` will be removed after deployment.
+
+Runtime logs use the same bounded JSON-lines format and automatic rotation.
