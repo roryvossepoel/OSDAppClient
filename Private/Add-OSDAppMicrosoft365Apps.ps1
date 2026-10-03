@@ -61,7 +61,6 @@ function Add-OSDAppMicrosoft365Apps {
             $writer.WriteStartElement('Configuration')
 
             $writer.WriteStartElement('Add')
-            $writer.WriteAttributeString('SourcePath', $builtInRoot)
             $writer.WriteAttributeString('OfficeClientEdition', $Architecture)
             $writer.WriteAttributeString('Channel', $Channel)
 
