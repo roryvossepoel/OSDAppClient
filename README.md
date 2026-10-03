@@ -292,3 +292,36 @@ Add-OSDApp NotepadPlusPlus,Microsoft365Apps
 ```
 
 Microsoft 365 Apps is the first built-in installer path. It is intentionally implemented separately from the repository package contract. In the current implementation only the ODT bootstrapper and configuration are staged in WinPE; Office payload caching is reserved for a future enhancement.
+
+
+## Built-in Microsoft Teams support
+
+Microsoft Teams can also be staged without an OSD App repository:
+
+```powershell
+Add-OSDApp Teams
+```
+
+In WinPE, OSDAppClient downloads only the latest Microsoft `teamsbootstrapper.exe` and stages it to the offline Windows installation. Teams itself is not installed in WinPE.
+
+During SetupComplete, the OSD App Runner executes:
+
+```text
+teamsbootstrapper.exe -p
+```
+
+The Teams bootstrapper then downloads and provisions the latest Teams MSIX for all users on the device.
+
+The optional Teams Meeting Add-in can be installed machine-wide with:
+
+```powershell
+Add-OSDApp Teams -TeamsInstallMeetingAddin $true
+```
+
+This causes SetupComplete to run:
+
+```text
+teamsbootstrapper.exe -p --installTMA
+```
+
+The built-in Teams flow currently uses the online bootstrapper only. Offline MSIX caching can be added later without changing the SetupComplete model.
