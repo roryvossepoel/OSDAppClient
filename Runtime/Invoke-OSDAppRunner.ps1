@@ -145,6 +145,28 @@ try {
 
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Microsoft 365 Apps installation completed.' -Data @{ Id = $app.Id; ExitCode = $process.ExitCode }
             }
+            'TeamsBootstrapper' {
+                $setupPath = Join-Path $StagedPath $app.Setup
+                $workingDirectory = Split-Path $setupPath -Parent
+
+                if (-not (Test-Path -LiteralPath $setupPath -PathType Leaf)) {
+                    throw "Teams bootstrapper not found: $setupPath"
+                }
+
+                $arguments = @('-p')
+                if ($app.InstallMeetingAddin -eq $true) {
+                    $arguments += '--installTMA'
+                }
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Microsoft Teams provisioning.' -Data @{ Id = $app.Id; Setup = $setupPath; Arguments = ($arguments -join ' ') }
+
+                $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -WorkingDirectory $workingDirectory -Wait -PassThru
+                if ($process.ExitCode -ne 0) {
+                    throw "Installation of '$($app.Id)' failed with exit code $($process.ExitCode)."
+                }
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Microsoft Teams provisioning completed.' -Data @{ Id = $app.Id; ExitCode = $process.ExitCode }
+            }
             default {
                 throw "Unsupported built-in application type '$($app.Type)' for '$($app.Id)'."
             }
