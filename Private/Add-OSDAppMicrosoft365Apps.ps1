@@ -18,6 +18,12 @@ function Add-OSDAppMicrosoft365Apps {
 
         [string[]]$Language = @('en-us'),
 
+        [bool]$AcceptEula = $true,
+
+        [bool]$SharedComputerLicensing = $false,
+
+        [bool]$DeviceBasedLicensing = $false,
+
         [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
         [string[]]$ExcludeApp,
 
@@ -85,8 +91,22 @@ function Add-OSDAppMicrosoft365Apps {
 
             $writer.WriteStartElement('Display')
             $writer.WriteAttributeString('Level', 'None')
-            $writer.WriteAttributeString('AcceptEULA', 'TRUE')
+            $writer.WriteAttributeString('AcceptEULA', $(if ($AcceptEula) { 'TRUE' } else { 'FALSE' }))
             $writer.WriteEndElement()
+
+            if ($SharedComputerLicensing) {
+                $writer.WriteStartElement('Property')
+                $writer.WriteAttributeString('Name', 'SharedComputerLicensing')
+                $writer.WriteAttributeString('Value', '1')
+                $writer.WriteEndElement()
+            }
+
+            if ($DeviceBasedLicensing) {
+                $writer.WriteStartElement('Property')
+                $writer.WriteAttributeString('Name', 'DeviceBasedLicensing')
+                $writer.WriteAttributeString('Value', '1')
+                $writer.WriteEndElement()
+            }
 
             $writer.WriteStartElement('Updates')
             $writer.WriteAttributeString('Enabled', 'TRUE')
