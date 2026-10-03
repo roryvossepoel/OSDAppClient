@@ -10,23 +10,9 @@ $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $workRoot = Join-Path $StagedPath 'Work'
 
 function Initialize-RunnerLog {
-    param(
-        [string]$RequestedPath,
-        [string]$FallbackRoot
-    )
-
-    if ([string]::IsNullOrWhiteSpace($RequestedPath)) {
-        $RequestedPath = '%SystemDrive%\OSDApps\Logs'
-    }
-
-    $expanded = [Environment]::ExpandEnvironmentVariables($RequestedPath)
-
-    if (-not [System.IO.Path]::IsPathRooted($expanded)) {
-        $expanded = Join-Path $FallbackRoot $expanded
-    }
-
-    New-Item -ItemType Directory -Path $expanded -Force | Out-Null
-    Join-Path $expanded 'Install.log'
+    $logDirectory = Join-Path $env:SystemDrive 'OSDApps\Logs'
+    New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+    Join-Path $logDirectory 'Install.log'
 }
 
 function Write-RunnerLog {
@@ -83,12 +69,8 @@ try {
     }
 
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $requestedLogPath = $null
-    if ($manifest.Runtime -and $manifest.Runtime.LogPath) {
-        $requestedLogPath = [string]$manifest.Runtime.LogPath
-    }
 
-    $logPath = Initialize-RunnerLog -RequestedPath $requestedLogPath -FallbackRoot $StagedPath
+    $logPath = Initialize-RunnerLog
     Write-RunnerLog -LogPath $logPath -Event 'InstallStart' -Message 'OSD Apps Runner started.' -Data @{ StagedPath = $StagedPath }
 
     $packages = @($manifest.Packages)
