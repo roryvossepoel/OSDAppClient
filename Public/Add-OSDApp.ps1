@@ -27,7 +27,11 @@ function Add-OSDApp {
 
         [string]$ConfigurationXml,
 
-        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe'
+        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe',
+
+        [bool]$TeamsInstallMeetingAddin = $false,
+
+        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
 
     begin {
@@ -49,7 +53,8 @@ function Add-OSDApp {
         }
 
         $officeRequested = @($uniqueApps | Where-Object { $_ -ieq 'Microsoft365Apps' }).Count -gt 0
-        $repositoryApps = @($uniqueApps | Where-Object { $_ -ine 'Microsoft365Apps' })
+        $teamsRequested = @($uniqueApps | Where-Object { $_ -ieq 'Teams' }).Count -gt 0
+        $repositoryApps = @($uniqueApps | Where-Object { $_ -ine 'Microsoft365Apps' -and $_ -ine 'Teams' })
 
         $cachePath = Get-OSDAppCachePath
 
@@ -114,6 +119,10 @@ function Add-OSDApp {
                 Add-OSDAppMicrosoft365Apps @officeParameters | Out-Null
             }
 
+            if ($teamsRequested) {
+                Add-OSDAppTeams -CachePath $cachePath -WindowsPath $windowsPath -InstallMeetingAddin $TeamsInstallMeetingAddin -TeamsBootstrapperUri $TeamsBootstrapperUri -Confirm:$false | Out-Null
+            }
+
             Add-OSDAppSetupComplete -WindowsPath $windowsPath | Out-Null
         }
 
@@ -124,7 +133,7 @@ function Add-OSDApp {
                 CachePath   = $cachePath
                 WindowsPath = $windowsPath
                 StagedPath  = Join-Path $windowsPath 'OSDApps'
-                Source      = if ($app -ieq 'Microsoft365Apps') { 'BuiltIn' } else { 'Repository' }
+                Source      = if ($app -ieq 'Microsoft365Apps' -or $app -ieq 'Teams') { 'BuiltIn' } else { 'Repository' }
             }
         }
     }
