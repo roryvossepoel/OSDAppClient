@@ -11,7 +11,7 @@ foreach ($folder in @('Private','Public')) {
 
 Export-ModuleMember -Function @(
     'Get-OSDApp',
-    'Sync-OSDAppCache',
+    'Sync-OSDAppRepository',
     'Test-OSDAppCache',
     'Copy-OSDAppContent',
     'Add-OSDAppSetupComplete',
