@@ -194,7 +194,7 @@ Get-OSDApp NotepadPlusPlus | Add-OSDApp
 
 `Sync-OSDAppRepository` synchronizes the online repository to the `\OSDApps` cache on the USB volume labeled `OSDCloud`. The cache location is detected automatically.
 
-`Get-OSDApp` lists the applications that are actually available in the synchronized USB cache, including the version, resolved architecture, and cache validity.
+`Get-OSDApp` combines repository applications from the synchronized USB cache with the built-in applications provided by OSDAppClient. Repository entries include the version, resolved architecture, source, and cache validity. Built-in applications are returned even when no repository manifest is present.
 
 The returned objects can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
 
