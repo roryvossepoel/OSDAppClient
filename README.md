@@ -11,7 +11,7 @@ It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a
 flowchart LR
     A[Online OSD App Repository] --> B[Sync-OSDAppRepository]
     B --> C[OSDCloud USB<br/>\OSDApps]
-    C --> D[Get-OSDAppCatalog]
+    C --> D[Get-OSDApp]
     D --> E[Add-OSDApp]
     E --> F[Offline Windows volume<br/>C:\OSDApps]
     F --> G[SetupComplete.cmd]
@@ -27,11 +27,15 @@ flowchart LR
 Typical WinPE usage after OSDCloud v2 has finished applying Windows and drivers:
 
 ```powershell
-Sync-OSDAppRepository 'https://example.org/osdapps/manifest.json'
+Set-OSDAppCatalog 'https://example.org/osdapps/catalog.json'
 
 Get-OSDAppCatalog
 
-Get-OSDAppCatalog NotepadPlusPlus | Add-OSDApp
+Sync-OSDAppRepository
+
+Get-OSDApp
+
+Get-OSDApp NotepadPlusPlus | Add-OSDApp
 ```
 
 OSDAppClient consumes only the prepared repository and local USB cache. It does not authenticate to Intune or any other upstream source during WinPE runtime.
@@ -42,10 +46,7 @@ OSD App Client does not build application packages and does not authenticate to 
 
 It consumes repositories that follow the OSD Apps repository contract.
 
-Supported repository locations:
-- Local path
-- UNC path
-- HTTP/HTTPS
+The OSD App Catalog is cloud-native and referenced by an HTTP/HTTPS URL. Azure Blob Storage is the primary design target for hosting `catalog.json` and package content.
 
 ## Package contract
 
@@ -97,8 +98,10 @@ OOBE / Autopilot
 ## Initial commands
 
 ```powershell
-Sync-OSDAppRepository
+Set-OSDAppCatalog
 Get-OSDAppCatalog
+Sync-OSDAppRepository
+Get-OSDApp
 Add-OSDApp
 ```
 
@@ -185,18 +188,24 @@ OSD App Client does not silently select an x64 package on ARM64. Cross-architect
 After OSDCloud v2 has finished applying Windows and drivers:
 
 ```powershell
-Sync-OSDAppRepository 'https://example.org/osdapps/manifest.json'
+Set-OSDAppCatalog 'https://example.org/osdapps/catalog.json'
 
 Get-OSDAppCatalog
 
-Get-OSDAppCatalog NotepadPlusPlus | Add-OSDApp
+Sync-OSDAppRepository
+
+Get-OSDApp
+
+Get-OSDApp NotepadPlusPlus | Add-OSDApp
 ```
 
-`Sync-OSDAppRepository` synchronizes the online repository to the `\OSDApps` cache on the USB volume labeled `OSDCloud`. The cache location is detected automatically.
+`Set-OSDAppCatalog` configures the central cloud catalog for the current PowerShell session. `Get-OSDAppCatalog` reads that online catalog only; it does not download package content.
 
-`Get-OSDAppCatalog` combines repository applications from the synchronized USB cache with the built-in applications provided by OSDAppClient. Repository entries include the version, resolved architecture, source, and cache validity. Built-in applications are returned even when no repository manifest is present. When no OSDCloud volume is present, `Get-OSDAppCatalog` returns only the built-in applications instead of failing.
+`Sync-OSDAppRepository` synchronizes repository content from the configured catalog to the `\OSDApps` cache on the USB volume labeled `OSDCloud`. The cache location is detected automatically.
 
-The returned objects can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
+`Get-OSDApp` shows what is locally available for deployment: cached repository apps plus built-in apps such as Microsoft 365 Apps and Teams. Repository entries report `Availability = Cached`; built-ins report `Availability = Available`.
+
+Objects returned by `Get-OSDApp` can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
 
 
 
@@ -246,7 +255,7 @@ OSD App Runner
 install application before OOBE / Autopilot
 ```
 
-Repository-based applications remain available alongside built-ins and continue to use `Sync-OSDAppRepository`, `Get-OSDAppCatalog`, and the synchronized local cache.
+Repository-based applications remain available alongside built-ins and use `Get-OSDAppCatalog` to inspect the central catalog, `Sync-OSDAppRepository` to populate the local cache, and `Get-OSDApp` to discover what is locally deployment-ready.
 
 ## Built-in Microsoft 365 Apps support
 
@@ -376,30 +385,65 @@ teamsbootstrapper.exe -p --installTMA
 The built-in Teams flow currently uses the online bootstrapper only. Offline MSIX caching can be added later without changing the SetupComplete model.
 
 
-### Local and online catalog
 
-`Get-OSDAppCatalog` is the discovery command for OSD Apps.
 
-By default it shows what is locally available for deployment:
+## Catalog configuration and discovery
+
+The central OSD App Catalog is configured once per PowerShell session:
+
+```powershell
+Set-OSDAppCatalog -Uri 'https://example.blob.core.windows.net/osdapps/catalog.json'
+```
+
+The configuration is session-scoped. Nothing has to exist on the deployment USB before the module is loaded.
+
+Use `Get-OSDAppCatalog` to inspect what the central catalog currently offers:
 
 ```powershell
 Get-OSDAppCatalog
 ```
 
-This is equivalent to:
+This command reads the online catalog only. It does not synchronize or download package content.
+
+An explicit catalog URL can also be supplied for one-off inspection:
 
 ```powershell
-Get-OSDAppCatalog -Local
+Get-OSDAppCatalog -Uri 'https://example.blob.core.windows.net/osdapps/catalog.json'
 ```
 
-The local catalog combines built-in apps with repository packages already cached on the volume labeled `OSDCloud`.
-
-To inspect an online repository without downloading package content:
+Synchronize repository packages to the local OSDCloud media with:
 
 ```powershell
-Get-OSDAppCatalog -Online -ManifestUri 'https://example.org/osdapps/manifest.json'
+Sync-OSDAppRepository
 ```
 
-Online repository entries are reported with `Availability = Online`. Local cached repository entries use `Availability = Cached`, while built-in apps use `Availability = Available`.
+After synchronization, use `Get-OSDApp` to see what is locally deployment-ready:
 
-`Get-OSDAppCatalog -Online` reads only the repository manifest. It does not synchronize package content. Use `Sync-OSDAppRepository` when the repository packages should be downloaded to the local OSD Apps cache.
+```powershell
+Get-OSDApp
+```
+
+Typical output conceptually distinguishes the source and availability:
+
+```text
+Id                  Source       Availability
+--                  ------       ------------
+NotepadPlusPlus     Repository   Cached
+Microsoft365Apps    BuiltIn      Available
+Teams               BuiltIn      Available
+```
+
+Built-in applications are part of OSDAppClient and therefore do not appear in the online catalog. They are returned by `Get-OSDApp` even when no repository has been synchronized.
+
+The intended cloud-native layout is:
+
+```text
+Azure Blob Storage
+└── osdapps/
+    ├── catalog.json
+    └── Packages/
+        └── <AppId>/
+            └── <Version>/
+                └── <Architecture>/
+                    └── Package.zip
+```
