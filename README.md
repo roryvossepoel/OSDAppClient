@@ -199,9 +199,58 @@ Get-OSDApp NotepadPlusPlus | Add-OSDApp
 The returned objects can be piped directly to `Add-OSDApp`. Multiple apps are collected and staged together so the device manifest contains the complete requested application set.
 
 
+
+
+## Built-in applications without a repository
+
+OSDAppClient also supports a small set of built-in application flows that do **not** require an OSD App repository, `manifest.json`, or `Sync-OSDAppRepository`.
+
+Currently supported:
+
+```text
+Microsoft365Apps
+Teams
+```
+
+These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete.
+
+Examples:
+
+```powershell
+Add-OSDApp Microsoft365Apps
+```
+
+```powershell
+Add-OSDApp Teams
+```
+
+They can also be staged together:
+
+```powershell
+Add-OSDApp Microsoft365Apps,Teams
+```
+
+For built-in applications, OSDAppClient still uses the same runtime model:
+
+```text
+WinPE
+  ↓
+Add-OSDApp
+  ↓
+stage installer/bootstrapper and metadata
+  ↓
+SetupComplete
+  ↓
+OSD App Runner
+  ↓
+install application before OOBE / Autopilot
+```
+
+Repository-based applications remain available alongside built-ins and continue to use `Sync-OSDAppRepository`, `Get-OSDApp`, and the synchronized local cache.
+
 ## Built-in Microsoft 365 Apps support
 
-Microsoft 365 Apps can be staged without an OSD App repository:
+Microsoft 365 Apps can be staged without an OSD App repository, repository manifest, or prior repository synchronization:
 
 ```powershell
 Add-OSDApp Microsoft365Apps
@@ -296,7 +345,7 @@ Microsoft 365 Apps is the first built-in installer path. It is intentionally imp
 
 ## Built-in Microsoft Teams support
 
-Microsoft Teams can also be staged without an OSD App repository:
+Microsoft Teams can also be staged without an OSD App repository, repository manifest, or prior repository synchronization:
 
 ```powershell
 Add-OSDApp Teams
