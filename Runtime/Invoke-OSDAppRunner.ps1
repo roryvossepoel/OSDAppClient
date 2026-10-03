@@ -74,7 +74,7 @@ try {
     Write-RunnerLog -LogPath $logPath -Event 'InstallStart' -Message 'OSD App Runner started.' -Data @{ StagedPath = $StagedPath }
 
     $packages = @($manifest.Packages)
-    if ($Name) { $packages = $packages | Where-Object { $_.Id -in $Name } }
+    if ($Name) { $packages = @($packages | Where-Object { $_.Id -in $Name }) }
 
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 
@@ -116,7 +116,42 @@ try {
         Write-RunnerLog -LogPath $logPath -Event 'PackageInstallComplete' -Message 'Package installation completed.' -Data @{ Id = $package.Id; Version = $package.Version; ExitCode = $process.ExitCode }
     }
 
-    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ PackageCount = @($packages).Count }
+    $builtInApps = @()
+    if ($manifest.PSObject.Properties.Name -contains 'BuiltInApps') {
+        $builtInApps = @($manifest.BuiltInApps)
+    }
+    if ($Name) { $builtInApps = @($builtInApps | Where-Object { $_.Id -in $Name }) }
+
+    foreach ($app in $builtInApps) {
+        switch ($app.Type) {
+            'OfficeDeploymentTool' {
+                $setupPath = Join-Path $StagedPath $app.Setup
+                $configurationPath = Join-Path $StagedPath $app.Configuration
+                $workingDirectory = Split-Path $setupPath -Parent
+
+                if (-not (Test-Path -LiteralPath $setupPath -PathType Leaf)) {
+                    throw "Office setup executable not found: $setupPath"
+                }
+                if (-not (Test-Path -LiteralPath $configurationPath -PathType Leaf)) {
+                    throw "Office configuration XML not found: $configurationPath"
+                }
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Microsoft 365 Apps installation.' -Data @{ Id = $app.Id; Setup = $setupPath; Configuration = $configurationPath }
+
+                $process = Start-Process -FilePath $setupPath -ArgumentList @('/configure', $configurationPath) -WorkingDirectory $workingDirectory -Wait -PassThru
+                if ($process.ExitCode -notin @(0,3010)) {
+                    throw "Installation of '$($app.Id)' failed with exit code $($process.ExitCode)."
+                }
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Microsoft 365 Apps installation completed.' -Data @{ Id = $app.Id; ExitCode = $process.ExitCode }
+            }
+            default {
+                throw "Unsupported built-in application type '$($app.Type)' for '$($app.Id)'."
+            }
+        }
+    }
+
+    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ PackageCount = @($packages).Count; BuiltInAppCount = @($builtInApps).Count }
     exit 0
 }
 catch {
