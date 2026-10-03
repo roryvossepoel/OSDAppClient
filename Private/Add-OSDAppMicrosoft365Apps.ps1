@@ -81,6 +81,7 @@ function Add-OSDAppMicrosoft365Apps {
             }
 
             foreach ($app in @($ExcludeApp)) {
+                if ([string]::IsNullOrWhiteSpace($app)) { continue }
                 $writer.WriteStartElement('ExcludeApp')
                 $writer.WriteAttributeString('ID', $app)
                 $writer.WriteEndElement()
