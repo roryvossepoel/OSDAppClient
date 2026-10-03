@@ -90,6 +90,6 @@ Copy-OSDAppContent `
 Add-OSDAppSetupComplete -WindowsPath 'C:\'
 ```
 
-## Relationship with OSDAppRepo
+## Relationship with OSDAppsRepo
 
-OSDAppRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the manifest. OSDAppsClient only consumes the resulting repository contract.
+OSDAppsRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the manifest. OSDAppsClient only consumes the resulting repository contract.
