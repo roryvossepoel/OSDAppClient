@@ -40,9 +40,9 @@ function Add-OSDAppMicrosoft365Apps {
     New-Item -ItemType Directory -Path $builtInRoot -Force | Out-Null
 
     if (-not (Test-Path -LiteralPath $setupPath -PathType Leaf)) {
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'ODTDownloadStart' -Message 'Downloading Office setup executable.' -Data @{ Uri = $OfficeDeploymentToolUri }
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'ODTAcquireStart' -Message 'Downloading Office Deployment Tool bootstrapper for SetupComplete.' -Data @{ Uri = $OfficeDeploymentToolUri }
         Invoke-WebRequest -Uri $OfficeDeploymentToolUri -OutFile $setupPath -UseBasicParsing -ErrorAction Stop
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'ODTDownloadComplete' -Message 'Office setup executable downloaded.' -Data @{ Path = $setupPath }
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'ODTAcquireComplete' -Message 'Office Deployment Tool bootstrapper acquired.' -Data @{ Path = $setupPath }
     }
 
     if ($ConfigurationXml) {
@@ -120,20 +120,6 @@ function Add-OSDAppMicrosoft365Apps {
         }
     }
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeDownloadStart' -Message 'Starting Microsoft 365 Apps content download.' -Data @{ CachePath = $builtInRoot; Configuration = $configPath }
-
-    $download = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $builtInRoot -Wait -PassThru
-    if ($download.ExitCode -ne 0) {
-        throw "Office Deployment Tool download failed with exit code $($download.ExitCode)."
-    }
-
-    $officeData = Join-Path $builtInRoot 'Office\Data'
-    if (-not (Test-Path -LiteralPath $officeData -PathType Container)) {
-        throw "Microsoft 365 Apps download completed but Office\Data was not found in the cache: $builtInRoot"
-    }
-
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeDownloadComplete' -Message 'Microsoft 365 Apps content is available in the USB cache.' -Data @{ CachePath = $builtInRoot }
-
     $destinationRoot = Join-Path $WindowsPath 'OSDApps'
     $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\Microsoft365Apps'
 
@@ -184,7 +170,7 @@ function Add-OSDAppMicrosoft365Apps {
         $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
         Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppRunner.ps1') -Force
 
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeStageComplete' -Message 'Microsoft 365 Apps staged to the offline Windows volume.' -Data @{ Destination = $destinationBuiltIn }
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeStageComplete' -Message 'Microsoft 365 Apps installer and configuration staged for SetupComplete. Office content will be acquired during /configure.' -Data @{ Destination = $destinationBuiltIn }
     }
 
     [pscustomobject]@{
