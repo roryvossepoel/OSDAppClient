@@ -15,5 +15,5 @@ Export-ModuleMember -Function @(
     'Test-OSDAppCache',
     'Copy-OSDAppContent',
     'Add-OSDAppSetupComplete',
-    'Install-OSDApp'
+    'Add-OSDApp'
 )
