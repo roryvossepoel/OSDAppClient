@@ -5,11 +5,21 @@ function Get-OSDApp {
         [string[]]$Name
     )
 
-    $cachePath = Get-OSDAppCachePath
-    $manifestPath = Join-Path $cachePath 'CacheManifest.json'
     $apps = [System.Collections.Generic.List[object]]::new()
 
-    if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+    $cachePath = $null
+    try {
+        $cachePath = Get-OSDAppCachePath
+    }
+    catch {
+        Write-Verbose 'No OSDCloud volume was found. Returning built-in applications only.'
+    }
+
+    if ($cachePath) {
+        $manifestPath = Join-Path $cachePath 'CacheManifest.json'
+    }
+
+    if ($cachePath -and (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
         $manifest = Get-OSDAppManifest -Path $manifestPath
 
         foreach ($package in @($manifest.Packages)) {
