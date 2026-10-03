@@ -15,7 +15,7 @@ function Sync-OSDAppCache {
 
     $logPath = Join-Path $CachePath 'Logs\\Client.log'
 
-    Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncStart' -Message 'Starting repository synchronization.' -Data @{ CachePath = $CachePath; ParameterSet = $PSCmdlet.ParameterSetName }
+    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncStart' -Message 'Starting repository synchronization.' -Data @{ CachePath = $CachePath; ParameterSet = $PSCmdlet.ParameterSetName }
 
     if ($PSCmdlet.ParameterSetName -eq 'Uri') {
         $sourceManifest = Get-OSDAppManifest -Uri $ManifestUri
@@ -66,7 +66,7 @@ function Sync-OSDAppCache {
         }
     )
 
-    Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'ArchitectureResolved' -Message 'Resolved package variants for host architecture.' -Data @{ HostArchitecture = $hostArchitecture; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
+    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'ArchitectureResolved' -Message 'Resolved package variants for host architecture.' -Data @{ HostArchitecture = $hostArchitecture; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
 
     $packagesRoot = Join-Path $CachePath 'Packages'
     $stagingRoot  = Join-Path $CachePath '.staging'
@@ -87,7 +87,7 @@ function Sync-OSDAppCache {
 
         if (Test-OSDAppFileHash -Path $targetArchive -ExpectedSha256 $package.Archive.Sha256) {
             Write-Verbose "$($package.Id) is current."
-            Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'PackageCurrent' -Message 'Cached package is current.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture }
+            Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'PackageCurrent' -Message 'Cached package is current.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture }
             continue
         }
 
@@ -100,7 +100,7 @@ function Sync-OSDAppCache {
 
         if ($package.Archive.Uri) {
             Write-Verbose "Downloading $($package.Archive.Uri)"
-            Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Downloading package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $package.Archive.Uri }
+            Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Downloading package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $package.Archive.Uri }
             Invoke-WebRequest -Uri $package.Archive.Uri -OutFile $tempArchive -UseBasicParsing
         }
         elseif ($package.Archive.SourcePath) {
@@ -108,7 +108,7 @@ function Sync-OSDAppCache {
             $sourceArchive = Join-Path $repositoryRoot ($package.Archive.SourcePath -replace '/', [IO.Path]::DirectorySeparatorChar)
             if (-not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) { throw "Source archive not found: $sourceArchive" }
             Write-Verbose "Copying $sourceArchive"
-            Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Copying package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $sourceArchive }
+            Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Copying package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $sourceArchive }
             Copy-Item -LiteralPath $sourceArchive -Destination $tempArchive -Force
         }
         else {
@@ -116,11 +116,11 @@ function Sync-OSDAppCache {
         }
 
         if (-not (Test-OSDAppFileHash -Path $tempArchive -ExpectedSha256 $package.Archive.Sha256)) {
-            Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'HashValidationFailed' -Level 'Error' -Message 'SHA-256 validation failed.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture }
+            Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'HashValidationFailed' -Level 'Error' -Message 'SHA-256 validation failed.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture }
             throw "SHA-256 validation failed for '$($package.Id)/Package.zip'."
         }
 
-        Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'PackageUpdated' -Message 'Package synchronized and validated.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Sha256 = $package.Archive.Sha256 }
+        Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'PackageUpdated' -Message 'Package synchronized and validated.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Sha256 = $package.Archive.Sha256 }
 
         if (Test-Path -LiteralPath $targetRoot) {
             $backupRoot = "$targetRoot.previous"
@@ -148,7 +148,7 @@ function Sync-OSDAppCache {
 
     $cacheManifestPath = Join-Path $CachePath 'CacheManifest.json'
     $selectedManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $cacheManifestPath -Encoding UTF8
-    Write-OSDAppsClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{ Manifest = $cacheManifestPath; PackageCount = @($packages).Count }
+    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{ Manifest = $cacheManifestPath; PackageCount = @($packages).Count }
 
     Get-Item -LiteralPath $cacheManifestPath
 }
