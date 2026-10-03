@@ -4,22 +4,22 @@ OSD Apps is split into two PowerShell modules with a shared repository contract.
 
 ```mermaid
 flowchart TD
-    A[Upstream content] --> B[OSDAppsRepo]
+    A[Upstream content] --> B[OSDAppRepo]
     A1[Manual packaging] --> A
     A2[Own PowerShell / CI-CD] --> A
     A3[Intune export tooling] --> A
     A4[Vendor automation] --> A
 
-    B --> C[OSD Apps Repository]
+    B --> C[OSD App Repository]
     C --> C1[manifest.json]
     C --> C2[Package.zip]
 
-    C --> D[OSDAppsClient in WinPE]
+    C --> D[OSDAppClient in WinPE]
     D --> E[Cache and SHA-256 validation]
     E --> F[Stage selected packages to offline Windows]
     F --> G[Append SetupComplete.cmd]
     G --> H[Reboot into installed Windows]
-    H --> I[OSD Apps Runner]
+    H --> I[OSD App Runner]
     I --> J[Expand Package.zip]
     J --> K[Run Install.ps1]
     K --> L[OOBE / Autopilot]
@@ -27,15 +27,15 @@ flowchart TD
 
 ## Module boundary
 
-### OSDAppsRepo
+### OSDAppRepo
 
 Recommended authoring and repository-management layer.
 
 It creates and validates `Package.zip`, calculates hashes, publishes packages, and maintains `manifest.json`.
 
-Upstream integrations are not part of OSDAppsRepo. Separate tooling may obtain content from Intune, vendor feeds, package feeds, GitHub Releases, or any other source and hand a source directory or compliant package to OSDAppsRepo.
+Upstream integrations are not part of OSDAppRepo. Separate tooling may obtain content from Intune, vendor feeds, package feeds, GitHub Releases, or any other source and hand a source directory or compliant package to OSDAppRepo.
 
-### OSDAppsClient
+### OSDAppClient
 
 WinPE consumer/runtime module designed specifically to complement OSDCloud v2.
 
@@ -59,11 +59,11 @@ Repository/
                 └── Package.zip
 ```
 
-The package stays compressed in the repository, cache, and staging location. It is extracted only when the OSD Apps Runner installs the application under the installed Windows environment before OOBE.
+The package stays compressed in the repository, cache, and staging location. It is extracted only when the OSD App Runner installs the application under the installed Windows environment before OOBE.
 
 
 ## Architecture contract
 
 Repository package entries are classified as `x64`, `arm64`, or `any`.
 
-OSDAppsClient detects the current WinPE architecture and resolves one package variant per application. An exact match is preferred; `any` is used only as a fallback. Incompatible packages are not staged automatically.
+OSDAppClient detects the current WinPE architecture and resolves one package variant per application. An exact match is preferred; `any` is used only as a fallback. Incompatible packages are not staged automatically.
