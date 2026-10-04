@@ -9,6 +9,8 @@ function Add-OSDAppTeams {
 
         [bool]$InstallMeetingAddin = $false,
 
+        [bool]$UseCachedPayload = $true,
+
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
 
@@ -34,7 +36,13 @@ function Add-OSDAppTeams {
             Remove-Item -LiteralPath $destinationBuiltIn -Recurse -Force
         }
 
-        Copy-Item -LiteralPath $builtInRoot -Destination $destinationBuiltIn -Recurse -Force
+        if ($UseCachedPayload) {
+            Copy-Item -LiteralPath $builtInRoot -Destination $destinationBuiltIn -Recurse -Force
+        }
+        else {
+            New-Item -ItemType Directory -Path $destinationBuiltIn -Force | Out-Null
+            Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $destinationBuiltIn 'teamsbootstrapper.exe') -Force
+        }
 
         $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
         if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {
@@ -56,7 +64,7 @@ function Add-OSDAppTeams {
 
         $offlinePackage = $null
         $cachedMsixPath = Join-Path $builtInRoot 'teams.msix'
-        if (Test-Path -LiteralPath $cachedMsixPath -PathType Leaf) {
+        if ($UseCachedPayload -and (Test-Path -LiteralPath $cachedMsixPath -PathType Leaf)) {
             $offlinePackage = 'BuiltIn\Teams\teams.msix'
         }
 
