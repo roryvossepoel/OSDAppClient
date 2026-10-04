@@ -11,7 +11,7 @@
         'Get-OSDApp',
         'Sync-OSDAppRepository',
         'Sync-OSDAppMicrosoft365Apps',
-    'Sync-OSDAppTeams',
+        'Sync-OSDAppTeams',
         'Clear-OSDAppCache',
         'Test-OSDAppCache',
         'Copy-OSDAppContent',
