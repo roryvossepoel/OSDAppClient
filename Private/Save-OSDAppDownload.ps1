@@ -8,7 +8,11 @@ function Save-OSDAppDownload {
         [string]$DestinationPath,
 
         [Parameter(Mandatory)]
-        [string]$Activity
+        [string]$Activity,
+
+        [int]$ProgressId = 20,
+
+        [int]$ParentProgressId = -1
     )
 
     Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
@@ -51,19 +55,19 @@ function Save-OSDAppDownload {
                     $percent = [math]::Min(100, [int](($downloaded / $totalBytes) * 100))
                     if ($percent -ne $lastPercent) {
                         $totalMB = [math]::Round($totalBytes / 1MB, 1)
-                        Write-Progress -Activity $Activity -Status "$downloadedMB MB / $totalMB MB" -PercentComplete $percent
+                        Write-Progress -Id $ProgressId -ParentId $ParentProgressId -Activity $Activity -Status "$downloadedMB MB / $totalMB MB" -PercentComplete $percent
                         $lastPercent = $percent
                     }
                 }
                 else {
-                    Write-Progress -Activity $Activity -Status "$downloadedMB MB downloaded" -PercentComplete -1
+                    Write-Progress -Id $ProgressId -ParentId $ParentProgressId -Activity $Activity -Status "$downloadedMB MB downloaded" -PercentComplete -1
                 }
             }
         }
         finally {
             $target.Dispose()
             $source.Dispose()
-            Write-Progress -Activity $Activity -Completed
+            Write-Progress -Id $ProgressId -Activity $Activity -Completed
         }
     }
     finally {
