@@ -15,6 +15,7 @@ Export-ModuleMember -Function @(
     'Get-OSDApp',
     'Sync-OSDAppRepository',
     'Sync-OSDAppBuiltIn',
+    'Clear-OSDAppCache',
     'Test-OSDAppCache',
     'Copy-OSDAppContent',
     'Add-OSDAppSetupComplete',
