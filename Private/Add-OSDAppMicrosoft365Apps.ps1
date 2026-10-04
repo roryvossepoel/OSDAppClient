@@ -33,7 +33,9 @@ function Add-OSDAppMicrosoft365Apps {
 
         [bool]$UseCachedPayload = $true,
 
-        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe'
+        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe',
+
+        [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
 
     $builtInRoot = Join-Path $CachePath 'BuiltIn\Microsoft365Apps'
@@ -130,7 +132,7 @@ function Add-OSDAppMicrosoft365Apps {
         }
     }
 
-    $destinationRoot = Join-Path $WindowsPath 'OSDApps'
+    $destinationRoot = Join-Path $WindowsPath $StagedRelativePath
     $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\Microsoft365Apps'
 
     if ($PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Microsoft 365 Apps for SetupComplete')) {
