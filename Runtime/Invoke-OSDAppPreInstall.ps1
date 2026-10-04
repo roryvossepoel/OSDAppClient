@@ -228,6 +228,11 @@ try {
     foreach ($app in $builtInApps) {
         switch ($app.Id) {
             'Microsoft365Apps' {
+                if ($app.Offline -ne $true) {
+                    Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Message 'Microsoft 365 Apps is staged in online mode. USB cache refresh is not required.' -Data @{ Id = 'Microsoft365Apps'; Reason = 'OnlineMode' }
+                    continue
+                }
+
                 $usbOfficeRoot = Join-Path $usbRoot 'BuiltIn\Microsoft365Apps'
                 $localOfficeRoot = Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
                 $setupPath = Join-Path $usbOfficeRoot 'setup.exe'
@@ -300,6 +305,11 @@ try {
             }
 
             'Teams' {
+                if (-not $app.OfflinePackage) {
+                    Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Message 'Microsoft Teams is staged in online mode. USB cache refresh is not required.' -Data @{ Id = 'Teams'; Reason = 'OnlineMode' }
+                    continue
+                }
+
                 $usbTeamsRoot = Join-Path $usbRoot 'BuiltIn\Teams'
                 $localTeamsRoot = Join-Path $StagedPath 'BuiltIn\Teams'
                 $usbMsixPath = Join-Path $usbTeamsRoot 'teams.msix'
