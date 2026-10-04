@@ -29,6 +29,8 @@ function Add-OSDAppMicrosoft365Apps {
 
         [string]$ConfigurationXml,
 
+        [bool]$UseCachedConfiguration = $false,
+
         [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe'
     )
 
@@ -45,7 +47,12 @@ function Add-OSDAppMicrosoft365Apps {
         Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'ODTAcquireComplete' -Message 'Office Deployment Tool bootstrapper acquired.' -Data @{ Path = $setupPath }
     }
 
-    if ($ConfigurationXml) {
+    $officeDataCached = Test-Path -LiteralPath (Join-Path $builtInRoot 'Office\Data') -PathType Container
+
+    if ($UseCachedConfiguration -and $officeDataCached -and (Test-Path -LiteralPath $configPath -PathType Leaf)) {
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'CachedConfigurationSelected' -Message 'Using the Office configuration stored with the built-in cache.'
+    }
+    elseif ($ConfigurationXml) {
         if (-not (Test-Path -LiteralPath $ConfigurationXml -PathType Leaf)) {
             throw "Office configuration XML not found: $ConfigurationXml"
         }
