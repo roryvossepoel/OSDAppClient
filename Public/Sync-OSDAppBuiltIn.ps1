@@ -1,0 +1,280 @@
+function Sync-OSDAppBuiltIn {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory, Position = 0)]
+        [ValidateSet('Microsoft365Apps','Teams')]
+        [string[]]$Name,
+
+        [ValidateSet('Current','MonthlyEnterprise','SemiAnnual','CurrentPreview','SemiAnnualPreview','BetaChannel')]
+        [string]$OfficeChannel = 'Current',
+
+        [ValidateSet('64','32')]
+        [string]$OfficeArchitecture = '64',
+
+        [ValidateSet('O365ProPlusRetail','O365BusinessRetail')]
+        [string]$OfficeProductId = 'O365ProPlusRetail',
+
+        [string[]]$OfficeLanguage = @('en-us'),
+
+        [bool]$OfficeAcceptEula = $true,
+
+        [bool]$OfficeSharedComputerLicensing = $false,
+
+        [bool]$OfficeDeviceBasedLicensing = $false,
+
+        [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
+        [string[]]$OfficeExcludeApp,
+
+        [string]$ConfigurationXml,
+
+        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe',
+
+        [ValidateSet('Auto','x86','x64','arm64')]
+        [string]$TeamsArchitecture = 'Auto',
+
+        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
+    )
+
+    $cachePath = Get-OSDAppCachePath
+    $clientLogPath = Join-Path $cachePath 'Logs\Client.log'
+
+    foreach ($appName in @($Name | Select-Object -Unique)) {
+        switch ($appName) {
+            'Microsoft365Apps' {
+                $root = Join-Path $cachePath 'BuiltIn\Microsoft365Apps'
+                $setupPath = Join-Path $root 'setup.exe'
+                $configPath = Join-Path $root 'configuration.xml'
+                $cacheInfoPath = Join-Path $root 'CacheInfo.json'
+
+                New-Item -ItemType Directory -Path $root -Force | Out-Null
+
+                if ($OfficeSharedComputerLicensing -and $OfficeDeviceBasedLicensing) {
+                    throw 'OfficeSharedComputerLicensing and OfficeDeviceBasedLicensing cannot both be enabled.'
+                }
+
+                if ($PSCmdlet.ShouldProcess($root, 'Synchronize Microsoft 365 Apps built-in cache')) {
+                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
+
+                    Invoke-WebRequest -Uri $OfficeDeploymentToolUri -OutFile $setupPath -UseBasicParsing -ErrorAction Stop
+
+                    if ($ConfigurationXml) {
+                        if (-not (Test-Path -LiteralPath $ConfigurationXml -PathType Leaf)) {
+                            throw "Office configuration XML not found: $ConfigurationXml"
+                        }
+                        Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
+                    }
+                    else {
+                        if (-not $OfficeLanguage -or @($OfficeLanguage).Count -eq 0) {
+                            throw 'At least one Office language must be specified.'
+                        }
+
+                        $settings = New-Object System.Xml.XmlWriterSettings
+                        $settings.Indent = $true
+                        $settings.Encoding = New-Object System.Text.UTF8Encoding($false)
+
+                        $writer = [System.Xml.XmlWriter]::Create($configPath, $settings)
+                        try {
+                            $writer.WriteStartDocument()
+                            $writer.WriteStartElement('Configuration')
+
+                            $writer.WriteStartElement('Add')
+                            $writer.WriteAttributeString('OfficeClientEdition', $OfficeArchitecture)
+                            $writer.WriteAttributeString('Channel', $OfficeChannel)
+
+                            $writer.WriteStartElement('Product')
+                            $writer.WriteAttributeString('ID', $OfficeProductId)
+
+                            foreach ($culture in $OfficeLanguage) {
+                                if ([string]::IsNullOrWhiteSpace($culture)) { continue }
+                                $writer.WriteStartElement('Language')
+                                $writer.WriteAttributeString('ID', $culture)
+                                $writer.WriteEndElement()
+                            }
+
+                            foreach ($excluded in @($OfficeExcludeApp)) {
+                                if ([string]::IsNullOrWhiteSpace($excluded)) { continue }
+                                $writer.WriteStartElement('ExcludeApp')
+                                $writer.WriteAttributeString('ID', $excluded)
+                                $writer.WriteEndElement()
+                            }
+
+                            $writer.WriteEndElement()
+                            $writer.WriteEndElement()
+
+                            $writer.WriteStartElement('Display')
+                            $writer.WriteAttributeString('Level', 'None')
+                            $writer.WriteAttributeString('AcceptEULA', $(if ($OfficeAcceptEula) { 'TRUE' } else { 'FALSE' }))
+                            $writer.WriteEndElement()
+
+                            if ($OfficeSharedComputerLicensing) {
+                                $writer.WriteStartElement('Property')
+                                $writer.WriteAttributeString('Name', 'SharedComputerLicensing')
+                                $writer.WriteAttributeString('Value', '1')
+                                $writer.WriteEndElement()
+                            }
+
+                            if ($OfficeDeviceBasedLicensing) {
+                                $writer.WriteStartElement('Property')
+                                $writer.WriteAttributeString('Name', 'DeviceBasedLicensing')
+                                $writer.WriteAttributeString('Value', '1')
+                                $writer.WriteEndElement()
+                            }
+
+                            $writer.WriteStartElement('Updates')
+                            $writer.WriteAttributeString('Enabled', 'TRUE')
+                            $writer.WriteEndElement()
+
+                            $writer.WriteEndElement()
+                            $writer.WriteEndDocument()
+                        }
+                        finally {
+                            $writer.Dispose()
+                        }
+                    }
+
+                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
+
+                    $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -Wait -PassThru
+                    if ($process.ExitCode -ne 0) {
+                        throw "Office Deployment Tool download failed with exit code $($process.ExitCode)."
+                    }
+
+                    $officeData = Join-Path $root 'Office\Data'
+                    if (-not (Test-Path -LiteralPath $officeData -PathType Container)) {
+                        throw "Office Deployment Tool completed but Office\Data was not found: $officeData"
+                    }
+
+                    $versionFolders = @(
+                        Get-ChildItem -LiteralPath $officeData -Directory -ErrorAction SilentlyContinue |
+                            Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+                            ForEach-Object {
+                                try {
+                                    [pscustomobject]@{ Name = $_.Name; Version = [version]$_.Name }
+                                }
+                                catch { }
+                            } |
+                            Sort-Object Version -Descending
+                    )
+
+                    $resolvedVersion = if ($versionFolders.Count -gt 0) { $versionFolders[0].Name } else { 'Unknown' }
+
+                    [ordered]@{
+                        Id           = 'Microsoft365Apps'
+                        Cached       = $true
+                        Version      = $resolvedVersion
+                        Architecture = $OfficeArchitecture
+                        Channel      = $OfficeChannel
+                        SyncedAt     = (Get-Date).ToUniversalTime().ToString('o')
+                    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+
+                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root }
+
+                    [pscustomobject]@{
+                        PSTypeName   = 'OSDAppClient.BuiltInCache'
+                        Id           = 'Microsoft365Apps'
+                        Version      = $resolvedVersion
+                        Architecture = $OfficeArchitecture
+                        CachePath    = $root
+                        Cached       = $true
+                    }
+                }
+            }
+
+            'Teams' {
+                $root = Join-Path $cachePath 'BuiltIn\Teams'
+                $bootstrapperPath = Join-Path $root 'teamsbootstrapper.exe'
+                $msixPath = Join-Path $root 'teams.msix'
+                $cacheInfoPath = Join-Path $root 'CacheInfo.json'
+                $tempMsix = Join-Path $root 'teams.download.msix'
+
+                New-Item -ItemType Directory -Path $root -Force | Out-Null
+
+                $resolvedArchitecture = $TeamsArchitecture
+                if ($resolvedArchitecture -eq 'Auto') {
+                    $processorArchitecture = $env:PROCESSOR_ARCHITECTURE
+                    if ($processorArchitecture -eq 'ARM64') {
+                        $resolvedArchitecture = 'arm64'
+                    }
+                    elseif ($processorArchitecture -eq 'x86') {
+                        $resolvedArchitecture = 'x86'
+                    }
+                    else {
+                        $resolvedArchitecture = 'x64'
+                    }
+                }
+
+                $teamsMsixUri = switch ($resolvedArchitecture) {
+                    'x86'   { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060' }
+                    'x64'   { 'https://go.microsoft.com/fwlink/?linkid=2196106' }
+                    'arm64' { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207' }
+                }
+
+                if ($PSCmdlet.ShouldProcess($root, "Synchronize Microsoft Teams built-in cache ($resolvedArchitecture)")) {
+                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
+
+                    Invoke-WebRequest -Uri $TeamsBootstrapperUri -OutFile $bootstrapperPath -UseBasicParsing -ErrorAction Stop
+                    Invoke-WebRequest -Uri $teamsMsixUri -OutFile $tempMsix -UseBasicParsing -ErrorAction Stop
+
+                    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+                    $archive = [System.IO.Compression.ZipFile]::OpenRead($tempMsix)
+                    try {
+                        $manifestEntry = $archive.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' } | Select-Object -First 1
+                        if (-not $manifestEntry) {
+                            throw 'AppxManifest.xml was not found in the downloaded Teams MSIX.'
+                        }
+
+                        $reader = New-Object System.IO.StreamReader($manifestEntry.Open())
+                        try {
+                            [xml]$appxManifest = $reader.ReadToEnd()
+                        }
+                        finally {
+                            $reader.Dispose()
+                        }
+
+                        $resolvedVersion = [string]$appxManifest.Package.Identity.Version
+                    }
+                    finally {
+                        $archive.Dispose()
+                    }
+
+                    $previousVersion = $null
+                    if (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf) {
+                        try {
+                            $previousVersion = (Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json).Version
+                        }
+                        catch { }
+                    }
+
+                    if ((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $previousVersion -eq $resolvedVersion) {
+                        Remove-Item -LiteralPath $tempMsix -Force
+                        $updated = $false
+                    }
+                    else {
+                        Move-Item -LiteralPath $tempMsix -Destination $msixPath -Force
+                        $updated = $true
+                    }
+
+                    [ordered]@{
+                        Id           = 'Teams'
+                        Cached       = $true
+                        Version      = $resolvedVersion
+                        Architecture = $resolvedArchitecture
+                        SyncedAt     = (Get-Date).ToUniversalTime().ToString('o')
+                    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+
+                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Architecture = $resolvedArchitecture; Updated = $updated; Path = $root }
+
+                    [pscustomobject]@{
+                        PSTypeName   = 'OSDAppClient.BuiltInCache'
+                        Id           = 'Teams'
+                        Version      = $resolvedVersion
+                        Architecture = $resolvedArchitecture
+                        CachePath    = $root
+                        Cached       = $true
+                        Updated      = $updated
+                    }
+                }
+            }
+        }
+    }
+}
