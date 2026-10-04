@@ -146,7 +146,10 @@ try {
                     throw "Office configuration XML not found: $configurationPath"
                 }
 
-                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Microsoft 365 Apps installation.' -Data @{ Id = $app.Id; Setup = $setupPath; Configuration = $configurationPath }
+                $officeDataPath = Join-Path $workingDirectory 'Office\Data'
+                $offlineOffice = Test-Path -LiteralPath $officeDataPath -PathType Container
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Microsoft 365 Apps installation.' -Data @{ Id = $app.Id; Setup = $setupPath; Configuration = $configurationPath; Offline = $offlineOffice }
 
                 $process = Start-Process -FilePath $setupPath -ArgumentList @('/configure', $configurationPath) -WorkingDirectory $workingDirectory -Wait -PassThru
                 if ($process.ExitCode -notin @(0,3010)) {
