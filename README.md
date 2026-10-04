@@ -413,6 +413,10 @@ For every requested application, package selection follows this order:
 OSD App Client does not silently select an x64 package on ARM64. Cross-architecture support must be represented explicitly by the repository package metadata.
 
 
+
+> **Keep the OSDCloud USB connected until OOBE is displayed.**  
+> Repository packages are synchronized while still in WinPE, immediately after OSDCloud has finished applying Windows. Built-in applications such as Microsoft 365 Apps and Teams follow a different lifecycle: their cached payloads are staged in WinPE, but the cache refresh/update step runs later in full Windows during the pre-install phase before the runner installs them. Removing the USB too early prevents that refresh from using and updating the shared OSD Apps cache. For a safe deployment flow, leave the USB attached until Windows reaches OOBE.
+
 ## Typical WinPE workflow
 
 After OSDCloud v2 has finished applying Windows and drivers:
@@ -471,6 +475,8 @@ Sync-OSDAppTeams -Architecture x64
 ```
 
 Built-in cache synchronization is intended for full Windows. During WinPE, cached built-in payloads are staged as-is and refreshed later by the standalone pre-install phase in full Windows. Repository synchronization remains available in WinPE.
+
+Because the built-in refresh happens after the first boot into full Windows, the OSDCloud USB must remain connected through SetupComplete. The safest operational rule is to keep the USB attached until OOBE is visible. Repository packages do not depend on this later phase for cache synchronization: they are synchronized in WinPE immediately after OSDCloud completes.
 
 
 OSDAppClient also supports a small set of built-in application flows that do **not** require an OSD App repository, `manifest.json`, or `Sync-OSDAppRepository`.
@@ -531,6 +537,7 @@ Default / Cached
 → Office and Teams caches are refreshed when possible
 → current payload is restaged locally
 → the runner installs from local staged content
+→ keep the OSDCloud USB connected until OOBE is displayed
 ```
 
 For environments where bandwidth is plentiful and pre-caching is not desirable, use online mode:
