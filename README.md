@@ -370,7 +370,7 @@ Microsoft365Apps
 Teams
 ```
 
-These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete.
+These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. In the current implementation they are intended for online installation during SetupComplete: OSDAppClient does not cache the full Microsoft 365 Apps or Teams installation payload in WinPE.
 
 Examples:
 
@@ -416,7 +416,7 @@ Add-OSDApp Microsoft365Apps
 
 OSDAppClient downloads only the Office Deployment Tool bootstrapper and prepares the Office configuration in WinPE. It then stages those files to the offline Windows installation.
 
-No Microsoft 365 Apps payload is downloaded in WinPE at this stage.
+No Microsoft 365 Apps payload is downloaded or cached in WinPE at this stage. During SetupComplete, the Office Deployment Tool downloads the required installation content from the Microsoft CDN and installs it. An active internet connection is therefore required during the Microsoft 365 Apps installation.
 
 During SetupComplete, the OSD App Runner starts:
 
@@ -531,7 +531,7 @@ This causes SetupComplete to run:
 teamsbootstrapper.exe -p --installTMA
 ```
 
-The built-in Teams flow currently uses the online bootstrapper only. Offline MSIX caching can be added later without changing the SetupComplete model.
+The built-in Teams flow currently stages only `teamsbootstrapper.exe`. The Teams MSIX payload is not cached in WinPE. During SetupComplete, the bootstrapper downloads the required Teams installation content from Microsoft and provisions it. An active internet connection is therefore required during the Teams installation. Offline MSIX caching can be added later without changing the SetupComplete model.
 
 
 
