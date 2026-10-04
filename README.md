@@ -406,6 +406,93 @@ install application before OOBE / Autopilot
 
 Repository-based applications remain available alongside built-ins and use `Get-OSDAppCatalog` to inspect the central catalog, `Sync-OSDAppRepository` to populate the local cache, and `Get-OSDApp` to discover what is locally deployment-ready.
 
+## Optional built-in caching
+
+Microsoft 365 Apps and Teams can be used in two modes:
+
+```text
+Default
+→ stage only the vendor bootstrapper/configuration
+→ download application payload during SetupComplete
+
+Cached
+→ Sync-OSDAppBuiltIn downloads the vendor payload to the OSDCloud media first
+→ Add-OSDApp stages that cached payload to offline Windows
+→ SetupComplete installs from the staged local content
+```
+
+Caching is optional and does not use the OSD App repository or central `catalog.json`.
+
+Synchronize one or both built-ins:
+
+```powershell
+Sync-OSDAppBuiltIn Microsoft365Apps
+Sync-OSDAppBuiltIn Teams
+Sync-OSDAppBuiltIn Microsoft365Apps,Teams
+```
+
+The cache is stored below:
+
+```text
+<OSDCloud volume>:\OSDApps\BuiltIn
+```
+
+After synchronization, `Get-OSDApp` reports the built-in as `Availability = Cached` and shows the detected cached version.
+
+### Microsoft 365 Apps cache behavior
+
+For Microsoft 365 Apps, OSDAppClient runs the Office Deployment Tool in `/download` mode using the selected Office configuration. ODT maintains the `Office\Data` content under the built-in cache.
+
+Running `Sync-OSDAppBuiltIn Microsoft365Apps` again asks ODT to synchronize the same cache. ODT downloads required or missing content and the module records the newest detected Office data version in `CacheInfo.json`.
+
+The same Office configuration options used by `Add-OSDApp Microsoft365Apps` are available on `Sync-OSDAppBuiltIn`.
+
+Example:
+
+```powershell
+Sync-OSDAppBuiltIn Microsoft365Apps `
+    -OfficeChannel Current `
+    -OfficeArchitecture 64 `
+    -OfficeProductId O365ProPlusRetail `
+    -OfficeLanguage nl-nl,en-us `
+    -OfficeSharedComputerLicensing $true
+```
+
+When cached Office content is staged, SetupComplete still runs:
+
+```text
+setup.exe /configure configuration.xml
+```
+
+Because the `Office\Data` payload is present beside the Office Deployment Tool, ODT can install from the local staged content.
+
+### Microsoft Teams cache behavior
+
+For Teams, OSDAppClient downloads the latest Microsoft Teams bootstrapper and the official Teams MSIX for the selected architecture.
+
+```powershell
+Sync-OSDAppBuiltIn Teams
+```
+
+Architecture defaults to the current host architecture and can be overridden:
+
+```powershell
+Sync-OSDAppBuiltIn Teams -TeamsArchitecture x64
+Sync-OSDAppBuiltIn Teams -TeamsArchitecture arm64
+```
+
+The module reads the version from the downloaded MSIX and stores it in `CacheInfo.json`. When the downloaded version matches the already cached version, the existing cached MSIX is retained.
+
+When a Teams MSIX is cached, `Add-OSDApp Teams` records the offline package in `DeviceManifest.json`. During SetupComplete the runner uses the Microsoft-supported offline provisioning form:
+
+```text
+teamsbootstrapper.exe -p -o <local teams.msix>
+```
+
+Without a cached MSIX, the existing online `teamsbootstrapper.exe -p` behavior remains unchanged.
+
+> The current Teams version check requires downloading the current Microsoft MSIX before its embedded package version can be compared with the local cache. This can be optimized later if Microsoft exposes suitable lightweight version metadata.
+
 ## Built-in Microsoft 365 Apps support
 
 Microsoft 365 Apps can be staged without an OSD App repository, repository manifest, or prior repository synchronization:
@@ -426,7 +513,7 @@ setup.exe /configure configuration.xml
 
 At that point the Office Deployment Tool acquires the required Microsoft 365 Apps content and installs it before OOBE / Autopilot continues. The generated configuration intentionally omits `SourcePath`, so ODT uses the normal Microsoft CDN during `/configure`.
 
-Future offline caching support can add a separate WinPE `/download` phase without changing the SetupComplete installation model.
+Optional offline caching is available through `Sync-OSDAppBuiltIn Microsoft365Apps`. Without that prior sync, the existing online SetupComplete behavior remains unchanged.
 
 A common customized deployment:
 
@@ -531,7 +618,7 @@ This causes SetupComplete to run:
 teamsbootstrapper.exe -p --installTMA
 ```
 
-The built-in Teams flow currently stages only `teamsbootstrapper.exe`. The Teams MSIX payload is not cached in WinPE. During SetupComplete, the bootstrapper downloads the required Teams installation content from Microsoft and provisions it. An active internet connection is therefore required during the Teams installation. Offline MSIX caching can be added later without changing the SetupComplete model.
+By default, the built-in Teams flow stages only `teamsbootstrapper.exe`, so SetupComplete downloads the Teams payload from Microsoft and requires internet access. When `Sync-OSDAppBuiltIn Teams` has populated the local built-in cache first, `Add-OSDApp Teams` stages the cached MSIX and SetupComplete provisions Teams from that local package instead.
 
 
 
