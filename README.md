@@ -1,6 +1,6 @@
 # OSD App Client
 
-OSD App Client is a PowerShell module for Windows PE, designed specifically to complement OSDCloud v2.
+OSD App Client is a PowerShell module and standalone runtime for OSDCloud v2 application caching, staging, refresh, and pre-OOBE installation.
 
 It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a prepared OSD Apps repository, synchronizes and validates application packages, stages selected packages to the offline Windows volume, and appends a SetupComplete hook so the applications are installed before OOBE.
 
@@ -32,7 +32,7 @@ flowchart TB
 
     subgraph BUILTINS["3. Built-in acquisition"]
         I{BuiltInInstallMode}
-        J[Cached - default<br/>the dedicated built-in sync cmdlets]
+        J[Cached - default<br/>Sync-OSDAppMicrosoft365Apps / Sync-OSDAppTeams]
         K[Online<br/>No payload cache]
         L[Microsoft 365 Apps<br/>ODT download]
         M[Microsoft Teams<br/>Bootstrapper + MSIX]
@@ -430,7 +430,7 @@ Microsoft365Apps
 Teams
 ```
 
-These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. By default, `Add-OSDApp` refreshes and uses the local built-in cache so SetupComplete installs from staged local content. `-BuiltInInstallMode Online` disables payload caching and stages only the vendor bootstrapper/configuration so the application content is downloaded during SetupComplete.
+These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. In cached mode, WinPE stages the existing built-in cache without refreshing it. During SetupComplete in full Windows, the standalone pre-install phase refreshes the configured Office and Teams caches when possible, restages current content, and then starts the installer. `-BuiltInInstallMode Online` skips the cached payload model and stages only the vendor bootstrapper/configuration.
 
 Examples:
 
@@ -470,14 +470,15 @@ Repository-based applications remain available alongside built-ins and use `Get-
 
 Microsoft 365 Apps and Teams can be used in two modes.
 
-By default, `Add-OSDApp` uses `BuiltInInstallMode = Cached`. The command first synchronizes the built-in cache, downloading only required or changed vendor content, then stages the local payload to the offline Windows installation.
+By default, `Add-OSDApp` uses `BuiltInInstallMode = Cached`. In WinPE, the command stages the existing built-in cache to the offline Windows installation. The standalone pre-install phase in full Windows refreshes the built-in caches immediately before installation.
 
 ```text
 Default / Cached
-→ Add-OSDApp refreshes the built-in cache
-→ only required or changed content is downloaded
-→ cached payload is staged to offline Windows
-→ SetupComplete installs from local staged content
+→ WinPE stages the existing built-in cache
+→ SetupComplete starts the standalone pre-install refresh in full Windows
+→ Office and Teams caches are refreshed when possible
+→ current payload is restaged locally
+→ the runner installs from local staged content
 ```
 
 For environments where bandwidth is plentiful and pre-caching is not desirable, use online mode:
@@ -495,7 +496,7 @@ Online
 
 The mode applies only to built-in applications. Repository packages continue to use the normal repository cache.
 
-`Sync-OSDAppMicrosoft365Apps` and `Sync-OSDAppTeams` are the explicit built-in cache configuration/synchronization commands. Each built-in has its own parameter set.
+`Sync-OSDAppMicrosoft365Apps` and `Sync-OSDAppTeams` are the explicit built-in cache configuration/synchronization commands. Each built-in has its own parameter set, and each sync invocation defines the desired configuration for that cache.
 
 Synchronize the built-ins independently:
 
@@ -576,9 +577,7 @@ Microsoft 365 Apps can be staged without an OSD App repository, repository manif
 Add-OSDApp Microsoft365Apps
 ```
 
-OSDAppClient downloads only the Office Deployment Tool bootstrapper and prepares the Office configuration in WinPE. It then stages those files to the offline Windows installation.
-
-No Microsoft 365 Apps payload is downloaded or cached in WinPE at this stage. During SetupComplete, the Office Deployment Tool downloads the required installation content from the Microsoft CDN and installs it. An active internet connection is therefore required during the Microsoft 365 Apps installation.
+In cached mode, WinPE does not run the Office Deployment Tool. It stages the existing Microsoft 365 Apps cache to the offline Windows installation. During SetupComplete in full Windows, the standalone pre-install phase runs ODT `/download` against the USB cache, refreshes the staged Office payload, and then the runner installs Office locally. If refresh is unavailable, the previously staged payload remains the fallback.
 
 During SetupComplete, the OSD App Runner starts:
 
@@ -671,7 +670,7 @@ Microsoft Teams can also be staged without an OSD App repository, repository man
 Add-OSDApp Teams
 ```
 
-In WinPE, OSDAppClient downloads only the latest Microsoft `teamsbootstrapper.exe` and stages it to the offline Windows installation. Teams itself is not installed in WinPE.
+In cached mode, WinPE stages the existing Teams bootstrapper and MSIX without refreshing the built-in cache. During SetupComplete in full Windows, the standalone pre-install phase checks Teams freshness, refreshes the USB cache when needed, restages the current payload, and then the runner provisions Teams.
 
 During SetupComplete, the OSD App Runner executes:
 
