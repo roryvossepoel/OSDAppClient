@@ -10,7 +10,7 @@ $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $workRoot = Join-Path $StagedPath 'Work'
 
 function Initialize-RunnerLog {
-    $logDirectory = Join-Path $env:SystemDrive 'OSDApps\Logs'
+    $logDirectory = Join-Path $env:ProgramData 'OSDApps\Logs'
     New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
     Join-Path $logDirectory 'Install.log'
 }
@@ -75,6 +75,30 @@ function Write-RunnerLog {
 
     $line = '<![LOG[{0}]LOG]!><time="{1}" date="{2}" component="Install" context="" type="{3}" thread="{4}" file="">' -f $logMessage, $time, $date, $type, $thread
     Add-Content -LiteralPath $LogPath -Value $line -Encoding UTF8
+}
+
+function Start-RunnerCleanup {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [string]$LogPath
+    )
+
+    $cleanupScript = Join-Path $env:TEMP ("OSDApps-Cleanup-{0}.cmd" -f ([guid]::NewGuid().ToString('N')))
+    $cleanupContent = @(
+        '@echo off'
+        'timeout /t 2 /nobreak >nul'
+        ('rd /s /q "{0}"' -f $Path)
+        'del /f /q "%~f0"'
+    )
+
+    Set-Content -LiteralPath $cleanupScript -Value $cleanupContent -Encoding ASCII
+
+    Write-RunnerLog -LogPath $LogPath -Event 'CleanupScheduled' -Message 'Runtime source cleanup was scheduled.' -Data @{ Path = $Path; CleanupScript = $cleanupScript }
+
+    Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/c',('"{0}"' -f $cleanupScript)) -WindowStyle Hidden | Out-Null
 }
 
 $logPath = $null
@@ -213,13 +237,30 @@ try {
         }
     }
 
-    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ PackageCount = @($packages).Count; BuiltInAppCount = @($builtInApps).Count }
+    $keepSource = $false
+    if (
+        $manifest.PSObject.Properties.Name -contains 'Runtime' -and
+        $manifest.Runtime -and
+        $manifest.Runtime.PSObject.Properties.Name -contains 'KeepSource'
+    ) {
+        $keepSource = [bool]$manifest.Runtime.KeepSource
+    }
+
+    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ PackageCount = @($packages).Count; BuiltInAppCount = @($builtInApps).Count; KeepSource = $keepSource }
+
+    if ($keepSource) {
+        Write-RunnerLog -LogPath $logPath -Event 'CleanupSkipped' -Message 'Runtime source cleanup was skipped because KeepSource is enabled.' -Data @{ Path = $StagedPath }
+    }
+    else {
+        Start-RunnerCleanup -Path $StagedPath -LogPath $logPath
+    }
+
     exit 0
 }
 catch {
     if (-not $logPath) {
         try {
-            $fallbackDir = Join-Path $StagedPath 'Logs'
+            $fallbackDir = Join-Path $env:ProgramData 'OSDApps\Logs'
             New-Item -ItemType Directory -Path $fallbackDir -Force | Out-Null
             $logPath = Join-Path $fallbackDir 'Install.log'
         }
