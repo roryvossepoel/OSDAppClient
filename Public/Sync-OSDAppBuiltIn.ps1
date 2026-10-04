@@ -211,7 +211,6 @@ function Sync-OSDAppBuiltIn {
                 $bootstrapperPath = Join-Path $root 'teamsbootstrapper.exe'
                 $msixPath = Join-Path $root 'teams.msix'
                 $cacheInfoPath = Join-Path $root 'CacheInfo.json'
-                $tempMsix = Join-Path $root 'teams.download.msix'
 
                 New-Item -ItemType Directory -Path $root -Force | Out-Null
 
@@ -275,13 +274,13 @@ function Sync-OSDAppBuiltIn {
                     }
                     else {
                         Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading Teams MSIX...' -PercentComplete 15
-                        Save-OSDAppDownload -Uri $teamsMsixUri -DestinationPath $tempMsix -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" -ProgressId 12 -ParentProgressId 10 | Out-Null
+                        Save-OSDAppDownload -Uri $teamsMsixUri -DestinationPath $msixPath -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" -ProgressId 12 -ParentProgressId 10 | Out-Null
 
                         Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Reading MSIX package metadata...' -PercentComplete 85
                         $metadataStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-                        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadStart' -Message 'Reading Teams MSIX package metadata.' -Data @{ Path = $tempMsix }
+                        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadStart' -Message 'Reading Teams MSIX package metadata.' -Data @{ Path = $msixPath }
                         Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
-                        $archive = [System.IO.Compression.ZipFile]::OpenRead($tempMsix)
+                        $archive = [System.IO.Compression.ZipFile]::OpenRead($msixPath)
                         try {
                             $manifestEntry = $archive.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' } | Select-Object -First 1
                             if (-not $manifestEntry) {
@@ -305,11 +304,6 @@ function Sync-OSDAppBuiltIn {
                         $metadataStopwatch.Stop()
                         Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadComplete' -Message 'Teams MSIX package metadata read completed.' -Data @{ Version = $resolvedVersion; DurationMs = $metadataStopwatch.ElapsedMilliseconds }
 
-                        Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Finalizing Teams cache on OSDCloud media...' -PercentComplete 92
-                        $finalizeStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-                        Move-Item -LiteralPath $tempMsix -Destination $msixPath -Force
-                        $finalizeStopwatch.Stop()
-                        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'CacheFinalizeComplete' -Message 'Teams MSIX cache finalization completed.' -Data @{ DurationMs = $finalizeStopwatch.ElapsedMilliseconds; Path = $msixPath }
                         $updated = $true
                     }
 
