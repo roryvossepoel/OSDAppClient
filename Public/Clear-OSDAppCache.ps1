@@ -109,13 +109,22 @@ function Clear-OSDAppCache {
 
                     # Teams cache has a flat, known layout. Avoid recursive delete
                     # completely: direct DEL of files, then RD of the empty folder.
-                    & cmd.exe /d /c ('if exist "{0}\NUL" (del /f /q "{0}\*" >nul 2>&1 & rd /q "{0}")' -f $builtInAppPath)
-                    $exitCode = $LASTEXITCODE
+                    & cmd.exe /d /c ('del /f /q "{0}\*" >nul 2>&1' -f $builtInAppPath)
+                    $deleteExitCode = $LASTEXITCODE
+
+                    & cmd.exe /d /c ('rd /q "{0}" >nul 2>&1' -f $builtInAppPath)
+                    $directoryExitCode = $LASTEXITCODE
+
+                    # Verify existence through cmd.exe as well. Do not use Test-Path
+                    # here because the PowerShell/.NET filesystem provider has shown
+                    # pathological latency on freshly downloaded Teams MSIX files.
+                    & cmd.exe /d /c ('if exist "{0}\." (exit /b 1) else (exit /b 0)' -f $builtInAppPath)
+                    $stillExists = $LASTEXITCODE -ne 0
 
                     $stopwatch.Stop()
 
-                    if ($exitCode -ne 0) {
-                        throw "Failed to remove Teams cache using native Windows delete. Exit code: $exitCode"
+                    if ($stillExists) {
+                        throw "Failed to remove Teams cache. Native delete exit code: $deleteExitCode; directory exit code: $directoryExitCode"
                     }
 
                     Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Teams cache removed using non-recursive native Windows delete.' -Data @{
