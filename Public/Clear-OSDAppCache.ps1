@@ -117,23 +117,27 @@ function Clear-OSDAppCache {
 
                     foreach ($knownFile in $knownFiles) {
                         $knownPath = Join-Path $builtInAppPath $knownFile
-                        & cmd.exe /d /c ('if exist "{0}" del /f /q "{0}" >nul 2>&1' -f $knownPath)
+                        $deleteProcess = Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList @(
+                            '/d',
+                            '/c',
+                            ('del /f /q "{0}" >nul 2>&1' -f $knownPath)
+                        ) -Wait -PassThru -WindowStyle Hidden
 
-                        if ($LASTEXITCODE -ne 0) {
-                            throw "Failed to remove Teams cache file '$knownPath'. Exit code: $LASTEXITCODE"
+                        if ($deleteProcess.ExitCode -ne 0) {
+                            Write-Verbose "Native delete returned exit code $($deleteProcess.ExitCode) for '$knownPath'. The file may already be absent."
                         }
                     }
 
-                    & cmd.exe /d /c ('rd /q "{0}" >nul 2>&1' -f $builtInAppPath)
-                    $directoryExitCode = $LASTEXITCODE
-
-                    & cmd.exe /d /c ('if exist "{0}\." (exit /b 1) else (exit /b 0)' -f $builtInAppPath)
-                    $stillExists = $LASTEXITCODE -ne 0
+                    $directoryProcess = Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList @(
+                        '/d',
+                        '/c',
+                        ('rd /q "{0}" >nul 2>&1' -f $builtInAppPath)
+                    ) -Wait -PassThru -WindowStyle Hidden
 
                     $stopwatch.Stop()
 
-                    if ($stillExists) {
-                        throw "Failed to remove Teams cache directory. Directory exit code: $directoryExitCode"
+                    if ($directoryProcess.ExitCode -ne 0) {
+                        throw "Failed to remove Teams cache directory. Exit code: $($directoryProcess.ExitCode)"
                     }
 
                     Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Teams cache removed using non-recursive native Windows delete.' -Data @{
