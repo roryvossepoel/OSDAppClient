@@ -24,11 +24,13 @@ function Clear-OSDAppCache {
         $All = $true
     }
 
-    Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearStart' -Message 'Starting OSD App cache clear operation.' -Data @{
-        Scope       = $scope
-        Names       = @($Name)
-        IncludeLogs = [bool]$IncludeLogs
-        CachePath   = $cachePath
+    if (-not $WhatIfPreference) {
+        Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearStart' -Message 'Starting OSD App cache clear operation.' -Data @{
+            Scope       = $scope
+            Names       = @($Name)
+            IncludeLogs = [bool]$IncludeLogs
+            CachePath   = $cachePath
+        }
     }
 
     $removed = [System.Collections.Generic.List[string]]::new()
@@ -42,37 +44,25 @@ function Clear-OSDAppCache {
             [string]$Label
         )
 
-        if (-not $PSCmdlet.ShouldProcess($Path, "Remove $Label")) {
+        if (-not (Test-Path -LiteralPath $Path)) {
             return
         }
 
-        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        if ($PSCmdlet.ShouldProcess($Path, "Remove $Label")) {
+            $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+            Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+            $stopwatch.Stop()
 
-        # Important: keep cache deletion fully on the native Windows path.
-        # Do not use Test-Path, Get-Item or Get-ChildItem here. On freshly
-        # downloaded MSIX content those PowerShell/.NET provider calls can
-        # block for several minutes even though cmd.exe can remove the same
-        # file immediately.
-        $escapedPath = $Path.Replace('"', '""')
+            if (-not $WhatIfPreference) {
+                Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Cache item removed.' -Data @{
+                    Label      = $Label
+                    Path       = $Path
+                    DurationMs = $stopwatch.ElapsedMilliseconds
+                }
+            }
 
-        # First try treating the target as a directory. Delete all files
-        # recursively using native DEL, then remove the now-empty tree.
-        & cmd.exe /d /c ('if exist "{0}\NUL" (del /f /q /s "{0}\*" >nul 2>&1 & rmdir /s /q "{0}") else if exist "{0}" (del /f /q "{0}")' -f $escapedPath)
-
-        $exitCode = $LASTEXITCODE
-        $stopwatch.Stop()
-
-        if ($exitCode -ne 0) {
-            throw "Failed to remove cache item '$Path' using native Windows delete. Exit code: $exitCode"
+            $removed.Add($Label)
         }
-
-        Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Cache item removed using native Windows delete.' -Data @{
-            Label      = $Label
-            Path       = $Path
-            DurationMs = $stopwatch.ElapsedMilliseconds
-        }
-
-        $removed.Add($Label)
     }
 
     $manifestPath = Join-Path $cachePath 'CacheManifest.json'
@@ -101,65 +91,12 @@ function Clear-OSDAppCache {
         }
 
         foreach ($appName in @($Name | Select-Object -Unique)) {
-            if ($appName -ieq 'Teams') {
-                $builtInAppPath = Join-Path $builtInPath 'Teams'
-
-                if ($PSCmdlet.ShouldProcess($builtInAppPath, "Remove built-in app 'Teams'")) {
-                    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-
-                    # Teams cache has a flat, known layout. Avoid recursive delete
-                    # completely: direct DEL of files, then RD of the empty folder.
-                    $knownFiles = @(
-                        'teams.msix',
-                        'teamsbootstrapper.exe',
-                        'CacheInfo.json'
-                    )
-
-                    foreach ($knownFile in $knownFiles) {
-                        $knownPath = Join-Path $builtInAppPath $knownFile
-                        $deleteProcess = Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList @(
-                            '/d',
-                            '/c',
-                            ('del /f /q "{0}" >nul 2>&1' -f $knownPath)
-                        ) -Wait -PassThru -WindowStyle Hidden
-
-                        if ($deleteProcess.ExitCode -ne 0) {
-                            Write-Verbose "Native delete returned exit code $($deleteProcess.ExitCode) for '$knownPath'. The file may already be absent."
-                        }
-                    }
-
-                    $directoryProcess = Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList @(
-                        '/d',
-                        '/c',
-                        ('rd /q "{0}" >nul 2>&1' -f $builtInAppPath)
-                    ) -Wait -PassThru -WindowStyle Hidden
-
-                    $stopwatch.Stop()
-
-                    if ($directoryProcess.ExitCode -ne 0) {
-                        throw "Failed to remove Teams cache directory. Exit code: $($directoryProcess.ExitCode)"
-                    }
-
-                    Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Teams cache removed using non-recursive native Windows delete.' -Data @{
-                        Label      = "Built-in app 'Teams'"
-                        Path       = $builtInAppPath
-                        DurationMs = $stopwatch.ElapsedMilliseconds
-                    }
-
-                    $removed.Add("Built-in app 'Teams'")
-                }
-
+            if ($appName -ieq 'Microsoft365Apps' -or $appName -ieq 'Teams') {
+                Remove-CacheItem -Path (Join-Path $builtInPath $appName) -Label "Built-in app '$appName'"
                 continue
             }
 
-            if ($appName -ieq 'Microsoft365Apps') {
-                $builtInAppPath = Join-Path $builtInPath $appName
-                Remove-CacheItem -Path $builtInAppPath -Label "Built-in app '$appName'"
-                continue
-            }
-
-            $repositoryAppPath = Join-Path $packagesPath $appName
-            Remove-CacheItem -Path $repositoryAppPath -Label "Repository app '$appName'"
+            Remove-CacheItem -Path (Join-Path $packagesPath $appName) -Label "Repository app '$appName'"
 
             if ($manifest -and $manifest.PSObject.Properties.Name -contains 'Packages') {
                 $remainingPackages = @($manifest.Packages | Where-Object { $_.Id -ne $appName })
@@ -182,13 +119,10 @@ function Clear-OSDAppCache {
 
         if ($PSCmdlet.ShouldProcess($logsPath, 'Clear OSD App client logs')) {
             if (Test-Path -LiteralPath $logsPath) {
-                & cmd.exe /d /c ('del /f /q "{0}\*"' -f $logsPath)
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Failed to clear OSD App client logs using native Windows delete. Exit code: $LASTEXITCODE"
-                }
+                Get-ChildItem -LiteralPath $logsPath -File -ErrorAction SilentlyContinue |
+                    Remove-Item -Force -ErrorAction Stop
             }
 
-            # Recreate Client.log after clearing so the cache-clear action itself remains auditable.
             Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheLogsCleared' -Message 'OSD App client logs were cleared by request.' -Data @{
                 Scope     = $scope
                 Names     = @($Name)
@@ -197,12 +131,14 @@ function Clear-OSDAppCache {
         }
     }
 
-    Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearComplete' -Message 'OSD App cache clear operation completed.' -Data @{
-        Scope       = $scope
-        Names       = @($Name)
-        IncludeLogs = [bool]$IncludeLogs
-        Removed     = @($removed)
-        CachePath   = $cachePath
+    if (-not $WhatIfPreference) {
+        Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearComplete' -Message 'OSD App cache clear operation completed.' -Data @{
+            Scope       = $scope
+            Names       = @($Name)
+            IncludeLogs = [bool]$IncludeLogs
+            Removed     = @($removed)
+            CachePath   = $cachePath
+        }
     }
 
     [pscustomobject]@{
