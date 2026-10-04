@@ -164,7 +164,7 @@ function Add-OSDApp {
                         }
 
                         if ($OfficeExcludeApp) {
-                            $officeSyncParameters.OfficeExcludeApp = $OfficeExcludeApp
+                            $officeSyncParameters.ExcludeApp = $OfficeExcludeApp
                         }
 
                         if ($ConfigurationXml) {
@@ -172,7 +172,7 @@ function Add-OSDApp {
                         }
 
                         try {
-                            Sync-OSDAppBuiltIn @officeSyncParameters | Out-Null
+                            Sync-OSDAppMicrosoft365Apps @officeSyncParameters | Out-Null
                         }
                         catch {
                             Write-Warning "Microsoft 365 Apps cache refresh failed. Existing cached payload will be used when available. $($_.Exception.Message)"
@@ -181,14 +181,13 @@ function Add-OSDApp {
 
                     if ($teamsRequested) {
                         $teamsSyncParameters = @{
-                            Name                     = 'Teams'
-                            TeamsBootstrapperUri     = $TeamsBootstrapperUri
-                            TeamsMinimumFreeSpaceGB  = $TeamsMinimumFreeSpaceGB
-                            Confirm                  = $false
+                            BootstrapperUri    = $TeamsBootstrapperUri
+                            MinimumFreeSpaceGB = $TeamsMinimumFreeSpaceGB
+                            Confirm            = $false
                         }
 
                         try {
-                            Sync-OSDAppBuiltIn @teamsSyncParameters | Out-Null
+                            Sync-OSDAppTeams @teamsSyncParameters | Out-Null
                         }
                         catch {
                             Write-Warning "Microsoft Teams cache refresh failed. Existing cached payload will be used when available. $($_.Exception.Message)"
