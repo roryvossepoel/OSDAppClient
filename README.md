@@ -32,7 +32,7 @@ flowchart TB
 
     subgraph BUILTINS["3. Built-in acquisition"]
         I{BuiltInInstallMode}
-        J[Cached - default<br/>Sync-OSDAppBuiltIn]
+        J[Cached - default<br/>the dedicated built-in sync cmdlets]
         K[Online<br/>No payload cache]
         L[Microsoft 365 Apps<br/>ODT download]
         M[Microsoft Teams<br/>Bootstrapper + MSIX]
@@ -390,6 +390,37 @@ Objects returned by `Get-OSDApp` can be piped directly to `Add-OSDApp`. Multiple
 
 ## Built-in applications without a repository
 
+### Dedicated built-in sync cmdlets
+
+Each built-in application has its own synchronization command and parameter set:
+
+```powershell
+Sync-OSDAppMicrosoft365Apps
+Sync-OSDAppTeams
+```
+
+These commands are both configuration and synchronization commands. Supplying different parameters changes the desired cache configuration and then refreshes the cache.
+
+Example Microsoft 365 Apps configuration change:
+
+```powershell
+Sync-OSDAppMicrosoft365Apps `
+    -Channel MonthlyEnterprise `
+    -Architecture 64 `
+    -ProductId O365ProPlusRetail `
+    -Language nl-nl,en-us `
+    -SharedComputerLicensing $true
+```
+
+Example Teams configuration:
+
+```powershell
+Sync-OSDAppTeams -Architecture x64
+```
+
+Built-in cache synchronization is intended for full Windows. During WinPE, cached built-in payloads are staged as-is and refreshed later by the standalone pre-install phase in full Windows. Repository synchronization remains available in WinPE.
+
+
 OSDAppClient also supports a small set of built-in application flows that do **not** require an OSD App repository, `manifest.json`, or `Sync-OSDAppRepository`.
 
 Currently supported:
@@ -464,14 +495,13 @@ Online
 
 The mode applies only to built-in applications. Repository packages continue to use the normal repository cache.
 
-`Sync-OSDAppBuiltIn` remains available as an explicit pre-cache command, but it is not required for the normal cached `Add-OSDApp` flow.
+`Sync-OSDAppMicrosoft365Apps` and `Sync-OSDAppTeams` are the explicit built-in cache configuration/synchronization commands. Each built-in has its own parameter set.
 
-Synchronize one or both built-ins:
+Synchronize the built-ins independently:
 
 ```powershell
-Sync-OSDAppBuiltIn Microsoft365Apps
-Sync-OSDAppBuiltIn Teams
-Sync-OSDAppBuiltIn Microsoft365Apps,Teams
+Sync-OSDAppMicrosoft365Apps
+Sync-OSDAppTeams
 ```
 
 The cache is stored below:
@@ -486,16 +516,16 @@ When a Microsoft 365 Apps cache already exists, a plain `Add-OSDApp Microsoft365
 
 ### Microsoft 365 Apps cache behavior
 
-For Microsoft 365 Apps, OSDAppClient runs the Office Deployment Tool in `/download` mode using the selected Office configuration. ODT maintains the `Office\Data` content under the built-in cache.
+For Microsoft 365 Apps, `Sync-OSDAppMicrosoft365Apps` defines the desired Office configuration and then runs the Office Deployment Tool in `/download` mode. ODT maintains the `Office\Data` content under the built-in cache.
 
-Running `Sync-OSDAppBuiltIn Microsoft365Apps` again asks ODT to synchronize the same cache. ODT downloads required or missing content and the module records the newest detected Office data version in `CacheInfo.json`.
+Running `Sync-OSDAppMicrosoft365Apps` again can also change the desired Office settings. The cmdlet rewrites the generated `configuration.xml`, synchronizes the cache with ODT, and records the resulting configuration and detected Office version in `CacheInfo.json`.
 
-The same Office configuration options used by `Add-OSDApp Microsoft365Apps` are available on `Sync-OSDAppBuiltIn`.
+The same Office configuration options used by `Add-OSDApp Microsoft365Apps` are available on `the dedicated built-in sync cmdlets`.
 
 Example:
 
 ```powershell
-Sync-OSDAppBuiltIn Microsoft365Apps `
+Sync-OSDAppMicrosoft365Apps `
     -OfficeChannel Current `
     -OfficeArchitecture 64 `
     -OfficeProductId O365ProPlusRetail `
@@ -516,14 +546,14 @@ Because the `Office\Data` payload is present beside the Office Deployment Tool, 
 For Teams, OSDAppClient downloads the latest Microsoft Teams bootstrapper and the official Teams MSIX for the selected architecture.
 
 ```powershell
-Sync-OSDAppBuiltIn Teams
+Sync-OSDAppTeams
 ```
 
 Architecture defaults to the current host architecture and can be overridden:
 
 ```powershell
-Sync-OSDAppBuiltIn Teams -TeamsArchitecture x64
-Sync-OSDAppBuiltIn Teams -TeamsArchitecture arm64
+Sync-OSDAppTeams -TeamsArchitecture x64
+Sync-OSDAppTeams -TeamsArchitecture arm64
 ```
 
 The module reads the version from the downloaded MSIX and stores it in `CacheInfo.json`. When the downloaded version matches the already cached version, the existing cached MSIX is retained.
@@ -762,7 +792,7 @@ Add-OSDApp Microsoft365Apps,Teams `
 or when explicitly pre-caching:
 
 ```powershell
-Sync-OSDAppBuiltIn Microsoft365Apps `
+Sync-OSDAppMicrosoft365Apps `
     -OfficeMinimumFreeSpaceGB 6
 ```
 
