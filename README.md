@@ -476,7 +476,45 @@ Sync-OSDAppTeams -Architecture x64
 
 Built-in cache synchronization is intended for full Windows. During WinPE, cached built-in payloads are staged as-is and refreshed later by the standalone pre-install phase in full Windows. Repository synchronization remains available in WinPE.
 
+### Why built-in synchronization runs in full Windows
+
+Microsoft 365 Apps and Teams deliberately share one built-in lifecycle.
+
+The Office Deployment Tool cannot run in the x64 WinPE environment used during OSD Apps testing because the current ODT bootstrapper requires x86 Windows runtime / side-by-side components that are not available there. This was validated during WinPE testing with the Windows side-by-side loader.
+
+Microsoft Teams synchronization can technically run in WinPE, but OSD Apps intentionally performs the Teams refresh in the same full-Windows pre-install phase. Keeping all built-ins on one lifecycle makes acquisition, update, fallback, logging, and troubleshooting consistent.
+
+Repository applications are different. Their content is downloaded, hash-validated, and cached directly by OSDAppClient and does not depend on a vendor installer. Repository synchronization therefore remains a WinPE operation immediately after OSDCloud completes.
+
+The resulting design is:
+
+```text
+Repository apps
+→ synchronize and validate in WinPE
+→ stage to Windows Temp
+→ install during SetupComplete
+
+Built-in apps
+→ stage existing cache in WinPE
+→ refresh/update in full Windows PreInstall
+→ restage current payload
+→ install during SetupComplete
+```
+
+If Microsoft 365 Apps or Teams must be acquired and managed entirely from WinPE, package them as normal repository applications instead of using the built-in flow.
+
 Because the built-in refresh happens after the first boot into full Windows, the OSDCloud USB must remain connected through SetupComplete. The safest operational rule is to keep the USB attached until OOBE is visible. Repository packages do not depend on this later phase for cache synchronization: they are synchronized in WinPE immediately after OSDCloud completes.
+
+### Built-in refresh fallback and timeout
+
+Built-in refresh is an optimization, not a deployment dependency. The payload staged during WinPE is always the fallback.
+
+- If the OSDCloud USB is no longer available, PreInstall logs the condition and continues with the staged payload.
+- If no active network is detected, refresh is skipped and installation continues from the staged payload.
+- If an individual Office or Teams refresh fails, the failure is logged as a warning and installation continues.
+- The Office Deployment Tool refresh is bounded to 20 minutes by default so SetupComplete cannot wait indefinitely on ODT. A timeout stops the refresh attempt and falls back to the staged Office payload.
+- Runtime source is removed only after the complete runner finishes successfully. Failed installations keep the source for troubleshooting.
+- Persistent logs remain under `%ProgramData%\OSDApps\Logs` regardless of source cleanup.
 
 
 OSDAppClient also supports a small set of built-in application flows that do **not** require an OSD App repository, `manifest.json`, or `Sync-OSDAppRepository`.
