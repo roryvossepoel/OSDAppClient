@@ -38,7 +38,9 @@ function Add-OSDApp {
 
         [double]$TeamsMinimumFreeSpaceGB = 2,
 
-        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
+        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
+
+        [string]$WindowsPath
     )
 
     begin {
@@ -86,28 +88,37 @@ function Add-OSDApp {
             }
         }
 
-        $windowsCandidates = @(
-            Get-Volume -ErrorAction SilentlyContinue |
-                Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'X' } |
-                ForEach-Object {
-                    $root = "$($_.DriveLetter):\"
-                    $systemHive = Join-Path $root 'Windows\System32\Config\SYSTEM'
+        if ($PSBoundParameters.ContainsKey('WindowsPath')) {
+            $windowsPath = [System.IO.Path]::GetFullPath($WindowsPath)
 
-                    if (Test-Path -LiteralPath $systemHive -PathType Leaf) {
-                        $root
+            if (-not (Test-Path -LiteralPath $windowsPath -PathType Container)) {
+                throw "WindowsPath does not exist or is not a directory: $windowsPath"
+            }
+        }
+        else {
+            $windowsCandidates = @(
+                Get-Volume -ErrorAction SilentlyContinue |
+                    Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'X' } |
+                    ForEach-Object {
+                        $root = "$($_.DriveLetter):\"
+                        $systemHive = Join-Path $root 'Windows\System32\Config\SYSTEM'
+
+                        if (Test-Path -LiteralPath $systemHive -PathType Leaf) {
+                            $root
+                        }
                     }
-                }
-        )
+            )
 
-        if ($windowsCandidates.Count -eq 0) {
-            throw 'No offline Windows installation was found.'
+            if ($windowsCandidates.Count -eq 0) {
+                throw 'No offline Windows installation was found.'
+            }
+
+            if ($windowsCandidates.Count -gt 1) {
+                throw "Multiple Windows installations were found: $($windowsCandidates -join ', ')."
+            }
+
+            $windowsPath = $windowsCandidates[0]
         }
-
-        if ($windowsCandidates.Count -gt 1) {
-            throw "Multiple Windows installations were found: $($windowsCandidates -join ', ')."
-        }
-
-        $windowsPath = $windowsCandidates[0]
 
         if ($PSCmdlet.ShouldProcess(($uniqueApps -join ', '), "Stage applications for SetupComplete on $windowsPath")) {
             if ($repositoryApps.Count -gt 0) {
