@@ -60,7 +60,7 @@ function Sync-OSDAppBuiltIn {
                     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $OfficeMinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
 
-                    Invoke-WebRequest -Uri $OfficeDeploymentToolUri -OutFile $setupPath -UseBasicParsing -ErrorAction Stop
+                    Save-OSDAppDownload -Uri $OfficeDeploymentToolUri -DestinationPath $setupPath -Activity 'Downloading Office Deployment Tool' | Out-Null
 
                     if ($ConfigurationXml) {
                         if (-not (Test-Path -LiteralPath $ConfigurationXml -PathType Leaf)) {
@@ -139,7 +139,28 @@ function Sync-OSDAppBuiltIn {
 
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
 
-                    $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -Wait -PassThru
+                    $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -PassThru
+                    try {
+                        while (-not $process.HasExited) {
+                            $downloadedBytes = 0L
+                            $officeRoot = Join-Path $root 'Office'
+                            if (Test-Path -LiteralPath $officeRoot -PathType Container) {
+                                $downloadedBytes = (
+                                    Get-ChildItem -LiteralPath $officeRoot -File -Recurse -ErrorAction SilentlyContinue |
+                                        Measure-Object -Property Length -Sum
+                                ).Sum
+                            }
+
+                            $downloadedGB = [math]::Round(([double]$downloadedBytes / 1GB), 2)
+                            Write-Progress -Activity 'Downloading Microsoft 365 Apps content' -Status "$downloadedGB GB cached" -PercentComplete -1
+                            Start-Sleep -Seconds 2
+                            $process.Refresh()
+                        }
+                    }
+                    finally {
+                        Write-Progress -Activity 'Downloading Microsoft 365 Apps content' -Completed
+                    }
+
                     if ($process.ExitCode -ne 0) {
                         throw "Office Deployment Tool download failed with exit code $($process.ExitCode)."
                     }
@@ -218,8 +239,8 @@ function Sync-OSDAppBuiltIn {
                     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $TeamsMinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $clientLogPath | Out-Null
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
 
-                    Invoke-WebRequest -Uri $TeamsBootstrapperUri -OutFile $bootstrapperPath -UseBasicParsing -ErrorAction Stop
-                    Invoke-WebRequest -Uri $teamsMsixUri -OutFile $tempMsix -UseBasicParsing -ErrorAction Stop
+                    Save-OSDAppDownload -Uri $TeamsBootstrapperUri -DestinationPath $bootstrapperPath -Activity 'Downloading Microsoft Teams bootstrapper' | Out-Null
+                    Save-OSDAppDownload -Uri $teamsMsixUri -DestinationPath $tempMsix -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" | Out-Null
 
                     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
                     $archive = [System.IO.Compression.ZipFile]::OpenRead($tempMsix)
