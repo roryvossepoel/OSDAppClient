@@ -63,7 +63,7 @@ function Clear-OSDAppCache {
 
             foreach ($file in $files) {
                 & cmd.exe /d /c ('del /f /q "{0}"' -f $file.FullName)
-                if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $file.FullName)) {
+                if ($LASTEXITCODE -ne 0) {
                     throw "Failed to remove cache file '$($file.FullName)' using native Windows delete. Exit code: $LASTEXITCODE"
                 }
             }
@@ -75,7 +75,7 @@ function Clear-OSDAppCache {
 
             foreach ($directory in $directories) {
                 & cmd.exe /d /c ('rmdir /q "{0}"' -f $directory.FullName)
-                if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $directory.FullName)) {
+                if ($LASTEXITCODE -ne 0) {
                     throw "Failed to remove cache directory '$($directory.FullName)' using native Windows delete. Exit code: $LASTEXITCODE"
                 }
             }
@@ -90,7 +90,11 @@ function Clear-OSDAppCache {
 
         $stopwatch.Stop()
 
-        if ($exitCode -ne 0 -or (Test-Path -LiteralPath $Path)) {
+        # Do not verify native deletes with Test-Path here. On some freshly
+        # downloaded MSIX files the PowerShell/.NET FileSystem provider can
+        # block for several minutes even after cmd.exe has already deleted
+        # the file successfully. Trust the native process exit code instead.
+        if ($exitCode -ne 0) {
             throw "Failed to remove cache item '$Path' using native Windows delete. Exit code: $exitCode"
         }
 
