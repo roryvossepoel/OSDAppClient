@@ -54,13 +54,40 @@ function Clear-OSDAppCache {
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
         if ($item.PSIsContainer) {
-            & cmd.exe /d /c ('rmdir /s /q "{0}"' -f $item.FullName)
+            # Avoid rmdir /s here. In testing, recursive directory deletion can take
+            # several minutes on freshly downloaded MSIX content even though a
+            # direct native file delete completes immediately.
+            $files = @(
+                Get-ChildItem -LiteralPath $item.FullName -File -Recurse -Force -ErrorAction Stop
+            )
+
+            foreach ($file in $files) {
+                & cmd.exe /d /c ('del /f /q "{0}"' -f $file.FullName)
+                if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $file.FullName)) {
+                    throw "Failed to remove cache file '$($file.FullName)' using native Windows delete. Exit code: $LASTEXITCODE"
+                }
+            }
+
+            $directories = @(
+                Get-ChildItem -LiteralPath $item.FullName -Directory -Recurse -Force -ErrorAction Stop |
+                    Sort-Object { $_.FullName.Length } -Descending
+            )
+
+            foreach ($directory in $directories) {
+                & cmd.exe /d /c ('rmdir /q "{0}"' -f $directory.FullName)
+                if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $directory.FullName)) {
+                    throw "Failed to remove cache directory '$($directory.FullName)' using native Windows delete. Exit code: $LASTEXITCODE"
+                }
+            }
+
+            & cmd.exe /d /c ('rmdir /q "{0}"' -f $item.FullName)
+            $exitCode = $LASTEXITCODE
         }
         else {
             & cmd.exe /d /c ('del /f /q "{0}"' -f $item.FullName)
+            $exitCode = $LASTEXITCODE
         }
 
-        $exitCode = $LASTEXITCODE
         $stopwatch.Stop()
 
         if ($exitCode -ne 0 -or (Test-Path -LiteralPath $Path)) {
