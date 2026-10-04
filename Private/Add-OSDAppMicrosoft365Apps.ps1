@@ -149,12 +149,15 @@ function Add-OSDAppMicrosoft365Apps {
             $builtInApps = @($deviceManifest.BuiltInApps | Where-Object { $_.Id -ne 'Microsoft365Apps' })
         }
 
+        $officePayloadCached = Test-Path -LiteralPath (Join-Path $builtInRoot 'Office\Data') -PathType Container
+
         $builtInApps += [pscustomobject]@{
             Id            = 'Microsoft365Apps'
             DisplayName   = 'Microsoft 365 Apps'
             Type          = 'OfficeDeploymentTool'
             Configuration = 'BuiltIn\Microsoft365Apps\configuration.xml'
             Setup         = 'BuiltIn\Microsoft365Apps\setup.exe'
+            Offline       = $officePayloadCached
         }
 
         if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') {
@@ -171,7 +174,7 @@ function Add-OSDAppMicrosoft365Apps {
         $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
         Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppRunner.ps1') -Force
 
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeStageComplete' -Message 'Microsoft 365 Apps installer and configuration staged for SetupComplete. Office content will be acquired during /configure.' -Data @{ Destination = $destinationBuiltIn }
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeStageComplete' -Message 'Microsoft 365 Apps staged for SetupComplete.' -Data @{ Destination = $destinationBuiltIn; Offline = $officePayloadCached }
     }
 
     [pscustomobject]@{
