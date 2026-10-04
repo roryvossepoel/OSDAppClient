@@ -728,6 +728,14 @@ Azure Blob Storage
 ```
 
 
+### Download progress
+
+Built-in cache synchronization shows interactive PowerShell progress.
+
+For Microsoft Teams, OSDAppClient uses the HTTP content length when available and shows transferred megabytes and a percentage while downloading the bootstrapper and MSIX.
+
+For Microsoft 365 Apps, the Office Deployment Tool controls the payload download internally and does not expose a reliable total byte count. OSDAppClient therefore shows live cached size growth in GB while `setup.exe /download` is running rather than a misleading percentage.
+
 ### Cache free-space guard
 
 Before synchronizing built-in payloads, OSDAppClient checks the remaining free space on the volume labeled `OSDCloud`.
