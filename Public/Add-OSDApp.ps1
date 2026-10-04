@@ -150,17 +150,16 @@ function Add-OSDApp {
                 else {
                     if ($officeRequested) {
                         $officeSyncParameters = @{
-                            Name                            = 'Microsoft365Apps'
-                            OfficeChannel                   = $OfficeChannel
-                            OfficeArchitecture              = $OfficeArchitecture
-                            OfficeProductId                 = $OfficeProductId
-                            OfficeLanguage                  = $OfficeLanguage
-                            OfficeAcceptEula                = $OfficeAcceptEula
-                            OfficeSharedComputerLicensing   = $OfficeSharedComputerLicensing
-                            OfficeDeviceBasedLicensing      = $OfficeDeviceBasedLicensing
-                            OfficeDeploymentToolUri         = $OfficeDeploymentToolUri
-                            OfficeMinimumFreeSpaceGB        = $OfficeMinimumFreeSpaceGB
-                            Confirm                         = $false
+                            Channel                   = $OfficeChannel
+                            Architecture              = $OfficeArchitecture
+                            ProductId                 = $OfficeProductId
+                            Language                  = $OfficeLanguage
+                            AcceptEula                = $OfficeAcceptEula
+                            SharedComputerLicensing   = $OfficeSharedComputerLicensing
+                            DeviceBasedLicensing      = $OfficeDeviceBasedLicensing
+                            OfficeDeploymentToolUri   = $OfficeDeploymentToolUri
+                            MinimumFreeSpaceGB        = $OfficeMinimumFreeSpaceGB
+                            Confirm                   = $false
                         }
 
                         if ($OfficeExcludeApp) {
@@ -219,7 +218,7 @@ function Add-OSDApp {
                 }
 
                 if ($missingBuiltInCache.Count -gt 0) {
-                    throw "Required built-in cache is not available for: $($missingBuiltInCache -join ', '). Run Sync-OSDAppBuiltIn on a supported online Windows environment, or use -BuiltInInstallMode Online."
+                    throw "Required built-in cache is not available for: $($missingBuiltInCache -join ', '). Run Sync-OSDAppMicrosoft365Apps and/or Sync-OSDAppTeams on full Windows, or use -BuiltInInstallMode Online."
                 }
             }
 
