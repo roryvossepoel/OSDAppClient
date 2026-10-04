@@ -11,7 +11,9 @@ function Add-OSDAppTeams {
 
         [bool]$UseCachedPayload = $true,
 
-        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
+        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
+
+        [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
 
     $builtInRoot = Join-Path $CachePath 'BuiltIn\Teams'
@@ -26,7 +28,7 @@ function Add-OSDAppTeams {
         Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BootstrapperAcquireComplete' -Message 'Microsoft Teams bootstrapper acquired.' -Data @{ Path = $bootstrapperPath }
     }
 
-    $destinationRoot = Join-Path $WindowsPath 'OSDApps'
+    $destinationRoot = Join-Path $WindowsPath $StagedRelativePath
     $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\Teams'
 
     if ($PSCmdlet.ShouldProcess($destinationBuiltIn, 'Stage Microsoft Teams for SetupComplete')) {
