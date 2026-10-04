@@ -40,6 +40,8 @@ function Add-OSDApp {
 
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
 
+        [switch]$SkipCacheRefresh,
+
         [string]$WindowsPath
     )
 
@@ -132,43 +134,72 @@ function Add-OSDApp {
                 if ($officeRequested) { $builtInNames += 'Microsoft365Apps' }
                 if ($teamsRequested) { $builtInNames += 'Teams' }
 
-                $syncParameters = @{
-                    Name                     = $builtInNames
-                    OfficeChannel            = $OfficeChannel
-                    OfficeArchitecture       = $OfficeArchitecture
-                    OfficeProductId          = $OfficeProductId
-                    OfficeLanguage           = $OfficeLanguage
-                    OfficeAcceptEula         = $OfficeAcceptEula
-                    OfficeSharedComputerLicensing = $OfficeSharedComputerLicensing
-                    OfficeDeviceBasedLicensing    = $OfficeDeviceBasedLicensing
-                    OfficeDeploymentToolUri  = $OfficeDeploymentToolUri
-                    TeamsBootstrapperUri     = $TeamsBootstrapperUri
-                    OfficeMinimumFreeSpaceGB = $OfficeMinimumFreeSpaceGB
-                    TeamsMinimumFreeSpaceGB  = $TeamsMinimumFreeSpaceGB
-                    Confirm                  = $false
-                }
+                $networkAvailable = [System.Net.NetworkInformation.NetworkInterface]::GetIsNetworkAvailable()
 
-                if ($OfficeExcludeApp) {
-                    $syncParameters.OfficeExcludeApp = $OfficeExcludeApp
+                if ($SkipCacheRefresh) {
+                    Write-OSDAppClientLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component 'Stage' -Event 'BuiltInCacheRefreshSkipped' -Message 'Built-in cache refresh was skipped by request.' -Data @{ Names = $builtInNames; Reason = 'SkipCacheRefresh' }
                 }
-
-                if ($ConfigurationXml) {
-                    $syncParameters.ConfigurationXml = $ConfigurationXml
+                elseif (-not $networkAvailable) {
+                    Write-OSDAppClientLog -LogPath (Join-Path $cachePath 'Logs\Client.log') -Component 'Stage' -Event 'BuiltInCacheRefreshSkipped' -Message 'No active network connection was detected. Existing built-in cache will be used without an online refresh attempt.' -Data @{ Names = $builtInNames; Reason = 'Offline' }
                 }
-
-                try {
-                    Sync-OSDAppBuiltIn @syncParameters | Out-Null
-                }
-                catch {
-                    $officeCacheAvailable = (-not $officeRequested) -or (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\Microsoft365Apps\Office\Data') -PathType Container)
-                    $teamsCacheAvailable = (-not $teamsRequested) -or (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\Teams\teams.msix') -PathType Leaf)
-
-                    if ($officeCacheAvailable -and $teamsCacheAvailable) {
-                        Write-Warning "Built-in cache refresh failed. Existing cached payload will be used. $($_.Exception.Message)"
+                else {
+                    $syncParameters = @{
+                        Name                          = $builtInNames
+                        OfficeChannel                 = $OfficeChannel
+                        OfficeArchitecture            = $OfficeArchitecture
+                        OfficeProductId               = $OfficeProductId
+                        OfficeLanguage                = $OfficeLanguage
+                        OfficeAcceptEula              = $OfficeAcceptEula
+                        OfficeSharedComputerLicensing = $OfficeSharedComputerLicensing
+                        OfficeDeviceBasedLicensing    = $OfficeDeviceBasedLicensing
+                        OfficeDeploymentToolUri       = $OfficeDeploymentToolUri
+                        TeamsBootstrapperUri          = $TeamsBootstrapperUri
+                        OfficeMinimumFreeSpaceGB      = $OfficeMinimumFreeSpaceGB
+                        TeamsMinimumFreeSpaceGB       = $TeamsMinimumFreeSpaceGB
+                        Confirm                       = $false
                     }
-                    else {
-                        throw
+
+                    if ($OfficeExcludeApp) {
+                        $syncParameters.OfficeExcludeApp = $OfficeExcludeApp
                     }
+
+                    if ($ConfigurationXml) {
+                        $syncParameters.ConfigurationXml = $ConfigurationXml
+                    }
+
+                    try {
+                        Sync-OSDAppBuiltIn @syncParameters | Out-Null
+                    }
+                    catch {
+                        Write-Warning "Built-in cache refresh failed. Existing cached payload will be used when available. $($_.Exception.Message)"
+                    }
+                }
+
+                $missingBuiltInCache = [System.Collections.Generic.List[string]]::new()
+
+                if ($officeRequested) {
+                    $officeCacheRoot = Join-Path $cachePath 'BuiltIn\Microsoft365Apps'
+                    if (
+                        -not (Test-Path -LiteralPath (Join-Path $officeCacheRoot 'Office\Data') -PathType Container) -or
+                        -not (Test-Path -LiteralPath (Join-Path $officeCacheRoot 'setup.exe') -PathType Leaf) -or
+                        -not (Test-Path -LiteralPath (Join-Path $officeCacheRoot 'configuration.xml') -PathType Leaf)
+                    ) {
+                        $missingBuiltInCache.Add('Microsoft365Apps')
+                    }
+                }
+
+                if ($teamsRequested) {
+                    $teamsCacheRoot = Join-Path $cachePath 'BuiltIn\Teams'
+                    if (
+                        -not (Test-Path -LiteralPath (Join-Path $teamsCacheRoot 'teams.msix') -PathType Leaf) -or
+                        -not (Test-Path -LiteralPath (Join-Path $teamsCacheRoot 'teamsbootstrapper.exe') -PathType Leaf)
+                    ) {
+                        $missingBuiltInCache.Add('Teams')
+                    }
+                }
+
+                if ($missingBuiltInCache.Count -gt 0) {
+                    throw "Required built-in cache is not available for: $($missingBuiltInCache -join ', '). Run Sync-OSDAppBuiltIn while online, or use -BuiltInInstallMode Online."
                 }
             }
 
