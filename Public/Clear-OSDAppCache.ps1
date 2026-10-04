@@ -101,7 +101,36 @@ function Clear-OSDAppCache {
         }
 
         foreach ($appName in @($Name | Select-Object -Unique)) {
-            if ($appName -ieq 'Microsoft365Apps' -or $appName -ieq 'Teams') {
+            if ($appName -ieq 'Teams') {
+                $builtInAppPath = Join-Path $builtInPath 'Teams'
+
+                if ($PSCmdlet.ShouldProcess($builtInAppPath, "Remove built-in app 'Teams'")) {
+                    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+                    # Teams cache has a flat, known layout. Avoid recursive delete
+                    # completely: direct DEL of files, then RD of the empty folder.
+                    & cmd.exe /d /c ('if exist "{0}\NUL" (del /f /q "{0}\*" >nul 2>&1 & rd /q "{0}")' -f $builtInAppPath)
+                    $exitCode = $LASTEXITCODE
+
+                    $stopwatch.Stop()
+
+                    if ($exitCode -ne 0) {
+                        throw "Failed to remove Teams cache using native Windows delete. Exit code: $exitCode"
+                    }
+
+                    Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Teams cache removed using non-recursive native Windows delete.' -Data @{
+                        Label      = "Built-in app 'Teams'"
+                        Path       = $builtInAppPath
+                        DurationMs = $stopwatch.ElapsedMilliseconds
+                    }
+
+                    $removed.Add("Built-in app 'Teams'")
+                }
+
+                continue
+            }
+
+            if ($appName -ieq 'Microsoft365Apps') {
                 $builtInAppPath = Join-Path $builtInPath $appName
                 Remove-CacheItem -Path $builtInAppPath -Label "Built-in app '$appName'"
                 continue
