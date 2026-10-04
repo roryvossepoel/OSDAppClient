@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $logDirectory = Join-Path $StagedPath 'Logs'
 $logPath = Join-Path $logDirectory 'Install.log'
@@ -135,13 +136,13 @@ function Get-RemoteMetadata {
         [int]$TimeoutSec = 15
     )
 
-    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler = [System.Net.Http.HttpClientHandler]::new()
     $handler.AllowAutoRedirect = $true
-    $client = New-Object System.Net.Http.HttpClient($handler)
+    $client = [System.Net.Http.HttpClient]::new($handler)
     $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSec)
 
     try {
-        $request = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Head, $Uri)
+        $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Head, $Uri)
         $response = $client.SendAsync($request).GetAwaiter().GetResult()
 
         try {
