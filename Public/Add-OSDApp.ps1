@@ -53,6 +53,20 @@ function Add-OSDApp {
         }
 
         $officeRequested = @($uniqueApps | Where-Object { $_ -ieq 'Microsoft365Apps' }).Count -gt 0
+
+        $officeOverrideNames = @(
+            'OfficeChannel',
+            'OfficeArchitecture',
+            'OfficeProductId',
+            'OfficeLanguage',
+            'OfficeAcceptEula',
+            'OfficeSharedComputerLicensing',
+            'OfficeDeviceBasedLicensing',
+            'OfficeExcludeApp',
+            'ConfigurationXml'
+        )
+        $officeConfigurationOverridden = @($officeOverrideNames | Where-Object { $PSBoundParameters.ContainsKey($_) }).Count -gt 0
+
         $teamsRequested = @($uniqueApps | Where-Object { $_ -ieq 'Teams' }).Count -gt 0
         $repositoryApps = @($uniqueApps | Where-Object { $_ -ine 'Microsoft365Apps' -and $_ -ine 'Teams' })
 
@@ -104,6 +118,7 @@ function Add-OSDApp {
                     AcceptEula              = $OfficeAcceptEula
                     SharedComputerLicensing = $OfficeSharedComputerLicensing
                     DeviceBasedLicensing    = $OfficeDeviceBasedLicensing
+                    UseCachedConfiguration   = (-not $officeConfigurationOverridden)
                     OfficeDeploymentToolUri = $OfficeDeploymentToolUri
                     Confirm                 = $false
                 }
