@@ -4,7 +4,7 @@ function Add-OSDAppSetupComplete {
         [Parameter(Mandatory)]
         [string]$WindowsPath,
 
-        [string]$StagedRelativePath = 'OSDApps'
+        [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
 
     $scriptsPath = Join-Path $WindowsPath 'Windows\Setup\Scripts'
