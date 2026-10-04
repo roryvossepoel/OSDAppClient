@@ -370,7 +370,7 @@ Microsoft365Apps
 Teams
 ```
 
-These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. By default, only the vendor bootstrapper and configuration are staged and the application payload is downloaded during SetupComplete. Optional local caching is available through `Sync-OSDAppBuiltIn` for deployments that should install Microsoft 365 Apps or Teams from staged local content.
+These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. By default, `Add-OSDApp` refreshes and uses the local built-in cache so SetupComplete installs from staged local content. `-BuiltInInstallMode Online` disables payload caching and stages only the vendor bootstrapper/configuration so the application content is downloaded during SetupComplete.
 
 Examples:
 
@@ -408,20 +408,34 @@ Repository-based applications remain available alongside built-ins and use `Get-
 
 ## Optional built-in caching
 
-Microsoft 365 Apps and Teams can be used in two modes:
+Microsoft 365 Apps and Teams can be used in two modes.
+
+By default, `Add-OSDApp` uses `BuiltInInstallMode = Cached`. The command first synchronizes the built-in cache, downloading only required or changed vendor content, then stages the local payload to the offline Windows installation.
 
 ```text
-Default
-→ stage only the vendor bootstrapper/configuration
-→ download application payload during SetupComplete
-
-Cached
-→ Sync-OSDAppBuiltIn downloads the vendor payload to the OSDCloud media first
-→ Add-OSDApp stages that cached payload to offline Windows
-→ SetupComplete installs from the staged local content
+Default / Cached
+→ Add-OSDApp refreshes the built-in cache
+→ only required or changed content is downloaded
+→ cached payload is staged to offline Windows
+→ SetupComplete installs from local staged content
 ```
 
-Caching is optional and does not use the OSD App repository or central `catalog.json`.
+For environments where bandwidth is plentiful and pre-caching is not desirable, use online mode:
+
+```powershell
+Add-OSDApp Microsoft365Apps,Teams -BuiltInInstallMode Online
+```
+
+```text
+Online
+→ no built-in payload synchronization
+→ only bootstrapper/configuration is staged
+→ SetupComplete downloads the application payload from Microsoft
+```
+
+The mode applies only to built-in applications. Repository packages continue to use the normal repository cache.
+
+`Sync-OSDAppBuiltIn` remains available as an explicit pre-cache command, but it is not required for the normal cached `Add-OSDApp` flow.
 
 Synchronize one or both built-ins:
 
@@ -515,7 +529,7 @@ setup.exe /configure configuration.xml
 
 At that point the Office Deployment Tool acquires the required Microsoft 365 Apps content and installs it before OOBE / Autopilot continues. The generated configuration intentionally omits `SourcePath`, so ODT uses the normal Microsoft CDN during `/configure`.
 
-Optional offline caching is available through `Sync-OSDAppBuiltIn Microsoft365Apps`. Without that prior sync, the existing online SetupComplete behavior remains unchanged.
+Cached mode is the default for `Add-OSDApp Microsoft365Apps`. Use `-BuiltInInstallMode Online` when Office content should instead be downloaded during SetupComplete.
 
 A common customized deployment:
 
@@ -620,7 +634,7 @@ This causes SetupComplete to run:
 teamsbootstrapper.exe -p --installTMA
 ```
 
-By default, the built-in Teams flow stages only `teamsbootstrapper.exe`, so SetupComplete downloads the Teams payload from Microsoft and requires internet access. When `Sync-OSDAppBuiltIn Teams` has populated the local built-in cache first, `Add-OSDApp Teams` stages the cached MSIX and SetupComplete provisions Teams from that local package instead.
+Cached mode is the default for `Add-OSDApp Teams`: the built-in cache is refreshed first, the Teams MSIX is staged, and SetupComplete provisions Teams from the local package. Use `-BuiltInInstallMode Online` to skip MSIX caching and let `teamsbootstrapper.exe -p` download Teams during SetupComplete.
 
 
 
