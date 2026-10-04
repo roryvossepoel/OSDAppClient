@@ -239,9 +239,13 @@ function Sync-OSDAppBuiltIn {
                     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $TeamsMinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $clientLogPath | Out-Null
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
 
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading bootstrapper...' -PercentComplete 5
                     Save-OSDAppDownload -Uri $TeamsBootstrapperUri -DestinationPath $bootstrapperPath -Activity 'Downloading Microsoft Teams bootstrapper' | Out-Null
+
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading Teams MSIX...' -PercentComplete 10
                     Save-OSDAppDownload -Uri $teamsMsixUri -DestinationPath $tempMsix -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" | Out-Null
 
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Reading MSIX package metadata...' -PercentComplete 85
                     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
                     $archive = [System.IO.Compression.ZipFile]::OpenRead($tempMsix)
                     try {
@@ -264,6 +268,8 @@ function Sync-OSDAppBuiltIn {
                         $archive.Dispose()
                     }
 
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status "Detected Teams version $resolvedVersion. Comparing with local cache..." -PercentComplete 90
+
                     $previousVersion = $null
                     if (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf) {
                         try {
@@ -281,6 +287,8 @@ function Sync-OSDAppBuiltIn {
                         $updated = $true
                     }
 
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Updating cache metadata...' -PercentComplete 95
+
                     [ordered]@{
                         Id           = 'Teams'
                         Cached       = $true
@@ -290,6 +298,10 @@ function Sync-OSDAppBuiltIn {
                     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Architecture = $resolvedArchitecture; Updated = $updated; Path = $root }
+
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Completed.' -PercentComplete 100
+                    Start-Sleep -Milliseconds 350
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Completed
 
                     [pscustomobject]@{
                         PSTypeName   = 'OSDAppClient.BuiltInCache'
