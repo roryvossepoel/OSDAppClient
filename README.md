@@ -47,7 +47,7 @@ flowchart TB
 
     subgraph STAGE["4. Stage to offline Windows"]
         N[Add-OSDApp]
-        O[Offline Windows<br/>C:\\OSDApps]
+        O[Offline Windows runtime<br/>C:\\Windows\\Temp\\OSDApps]
         P[DeviceManifest.json]
         Q[SetupComplete.cmd]
 
@@ -163,11 +163,33 @@ A staged package with a hash mismatch is not executed.
 
 Repository packages use `0` and `3010` as success codes by default. A package can define its own `SuccessCodes` metadata when other vendor-specific success codes are required.
 
-### Cleanup
+### Runtime storage and cleanup
 
-OSDAppClient does not automatically remove `%SystemDrive%\OSDApps` after installation in the first phase. Keeping staged content and logs available makes troubleshooting much easier while the runtime model is being validated.
+Staged application source and runtime files are temporary by default and are written to:
 
-Cleanup can be added later as an explicit, opt-in behavior.
+```text
+%SystemRoot%\Temp\OSDApps
+```
+
+This directory contains the device manifest, standalone pre-install and runner scripts, repository packages, built-in payloads, and temporary working files.
+
+After a **successful** runner execution, OSD Apps schedules removal of the complete runtime directory. Cleanup happens after the runner process exits so the runner can safely remove its own source directory as well. Failed installations retain the runtime source automatically for troubleshooting.
+
+Use `-KeepSource` with `Add-OSDApp` when the staged source should remain after a successful installation:
+
+```powershell
+Add-OSDApp Microsoft365Apps,Teams -KeepSource
+```
+
+`KeepSource` is recorded in `DeviceManifest.json` and is consumed by the standalone runner. Because the source remains under Windows Temp, Windows may still remove it later as part of normal temporary-file maintenance.
+
+Logs are never part of source cleanup. Persistent runtime logs are written to:
+
+```text
+%ProgramData%\OSDApps\Logs\Install.log
+```
+
+This keeps troubleshooting data available without leaving several gigabytes of installers on the system drive.
 
 ### Logging contract
 
@@ -256,7 +278,7 @@ Read central catalog
         ↓
 Sync / validate Package.zip
         ↓
-Stage selected packages to offline Windows
+Stage selected packages to %SystemRoot%\Temp\OSDApps
         ↓
 Append SetupComplete.cmd
         ↓
@@ -293,12 +315,40 @@ Import-Module OSDAppClient
 Add-OSDApp NotepadPlusPlus
 ```
 
-OSD App Client automatically finds the volume labeled `OSDCloud`, uses `\OSDApps` on that volume as the cache, detects the offline Windows installation, stages the requested app, writes the device manifest, and appends the OSD App Runner to `SetupComplete.cmd`.
+OSD App Client automatically finds the volume labeled `OSDCloud`, uses `\OSDApps` on that volume as the cache, detects the offline Windows installation, stages the requested app under `Windows\Temp\OSDApps`, writes the device manifest, stages the standalone pre-install/runner scripts, and appends the OSD Apps runtime to `SetupComplete.cmd`.
 
 ## Relationship with OSDAppRepo
 
 OSDAppRepo is the recommended authoring and repository-management module. It builds and validates packages and maintains the central `catalog.json`. OSDAppClient consumes that catalog and the resulting repository contract.
 
+
+## Runtime directory policy
+
+OSD Apps deliberately separates temporary deployment source from persistent troubleshooting data.
+
+Default locations:
+
+```text
+Runtime/source : %SystemRoot%\Temp\OSDApps
+Logs           : %ProgramData%\OSDApps\Logs
+```
+
+The temporary runtime directory can contain:
+
+```text
+DeviceManifest.json
+Invoke-OSDAppPreInstall.ps1
+Invoke-OSDAppRunner.ps1
+Packages\
+BuiltIn\
+Work\
+```
+
+The standalone pre-install script refreshes built-in content in full Windows and the runner installs the requested applications. After a successful run, the runner launches a short-lived cleanup helper and exits. The helper then removes the entire runtime/source directory and removes itself.
+
+Default behavior therefore leaves no OSD Apps source directory behind after a successful deployment. Use `Add-OSDApp ... -KeepSource` to retain the temporary runtime source for troubleshooting. Runtime source is always retained automatically when installation fails.
+
+Persistent logs are not removed by runtime cleanup.
 
 ## Logging
 
@@ -329,7 +379,7 @@ Logs are bounded and rotated automatically. The default limit is 1 MB per file w
 Application installation events are written to:
 
 ```text
-%SystemDrive%\OSDApps\Logs\Install.log
+%ProgramData%\OSDApps\Logs\Install.log
 ```
 
 Runtime logs use the same CMTrace-compatible format and automatic rotation: the active `Install.log` plus up to three rotated files.
@@ -455,7 +505,7 @@ WinPE
   ↓
 Add-OSDApp
   ↓
-stage installer/bootstrapper and metadata
+stage payload and runtime under Windows\Temp\OSDApps
   ↓
 SetupComplete
   ↓
