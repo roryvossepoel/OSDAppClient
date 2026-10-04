@@ -10,7 +10,7 @@ function Copy-OSDAppContent {
         [Parameter(Mandatory)]
         [string]$WindowsPath,
 
-        [string]$DestinationRelativePath = 'OSDApps'
+        [string]$DestinationRelativePath = 'Windows\Temp\OSDApps'
     )
 
     $cacheManifestPath = Join-Path $CachePath 'CacheManifest.json'
