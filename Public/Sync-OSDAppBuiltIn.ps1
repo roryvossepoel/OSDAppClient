@@ -42,6 +42,10 @@ function Sync-OSDAppBuiltIn {
     $cachePath = Get-OSDAppCachePath
     $clientLogPath = Join-Path $cachePath 'Logs\Client.log'
 
+    if (Test-OSDAppWinPE) {
+        throw 'Sync-OSDAppBuiltIn is intended for full Windows. Built-in cache refresh is deferred until the pre-install phase. Use repository packages for WinPE-managed application acquisition.'
+    }
+
     foreach ($appName in @($Name | Select-Object -Unique)) {
         switch ($appName) {
             'Microsoft365Apps' {
@@ -52,41 +56,6 @@ function Sync-OSDAppBuiltIn {
 
                 New-Item -ItemType Directory -Path $root -Force | Out-Null
 
-                if (Test-OSDAppWinPE) {
-                    $officeDataPath = Join-Path $root 'Office\Data'
-                    $cacheAvailable = (
-                        (Test-Path -LiteralPath $officeDataPath -PathType Container) -and
-                        (Test-Path -LiteralPath $setupPath -PathType Leaf) -and
-                        (Test-Path -LiteralPath $configPath -PathType Leaf)
-                    )
-
-                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncSkipped' -Message 'Microsoft 365 Apps cache synchronization is skipped in WinPE.' -Data @{ Reason = 'WinPE'; CacheAvailable = $cacheAvailable }
-
-                    if (-not $cacheAvailable) {
-                        throw 'Microsoft 365 Apps cache is not available in WinPE. Pre-cache Microsoft365Apps from full Windows before deployment.'
-                    }
-
-                    $cacheInfo = $null
-                    if (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf) {
-                        try {
-                            $cacheInfo = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json
-                        }
-                        catch { }
-                    }
-
-                    [pscustomobject]@{
-                        PSTypeName     = 'OSDAppClient.BuiltInCache'
-                        Id             = 'Microsoft365Apps'
-                        Version        = if ($cacheInfo -and $cacheInfo.Version) { [string]$cacheInfo.Version } else { 'Unknown' }
-                        Architecture   = if ($cacheInfo -and $cacheInfo.Architecture) { [string]$cacheInfo.Architecture } else { $OfficeArchitecture }
-                        CachePath      = $root
-                        Cached         = $true
-                        Updated        = $false
-                        RefreshSkipped = $true
-                    }
-
-                    continue
-                }
 
                 if ($OfficeSharedComputerLicensing -and $OfficeDeviceBasedLicensing) {
                     throw 'OfficeSharedComputerLicensing and OfficeDeviceBasedLicensing cannot both be enabled.'
