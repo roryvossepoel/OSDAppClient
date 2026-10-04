@@ -239,50 +239,67 @@ function Sync-OSDAppBuiltIn {
                     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $TeamsMinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $clientLogPath | Out-Null
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
 
-                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading bootstrapper...' -PercentComplete 5
-                    Save-OSDAppDownload -Uri $TeamsBootstrapperUri -DestinationPath $bootstrapperPath -Activity 'Downloading Microsoft Teams bootstrapper' | Out-Null
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Checking current Microsoft package metadata...' -PercentComplete 5
 
-                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading Teams MSIX...' -PercentComplete 10
-                    Save-OSDAppDownload -Uri $teamsMsixUri -DestinationPath $tempMsix -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" | Out-Null
+                    $remoteMetadata = Get-OSDAppRemoteFileMetadata -Uri $teamsMsixUri
 
-                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Reading MSIX package metadata...' -PercentComplete 85
-                    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
-                    $archive = [System.IO.Compression.ZipFile]::OpenRead($tempMsix)
-                    try {
-                        $manifestEntry = $archive.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' } | Select-Object -First 1
-                        if (-not $manifestEntry) {
-                            throw 'AppxManifest.xml was not found in the downloaded Teams MSIX.'
-                        }
-
-                        $reader = New-Object System.IO.StreamReader($manifestEntry.Open())
-                        try {
-                            [xml]$appxManifest = $reader.ReadToEnd()
-                        }
-                        finally {
-                            $reader.Dispose()
-                        }
-
-                        $resolvedVersion = [string]$appxManifest.Package.Identity.Version
-                    }
-                    finally {
-                        $archive.Dispose()
-                    }
-
-                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status "Detected Teams version $resolvedVersion. Comparing with local cache..." -PercentComplete 90
-
-                    $previousVersion = $null
+                    $previousCacheInfo = $null
                     if (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf) {
                         try {
-                            $previousVersion = (Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json).Version
+                            $previousCacheInfo = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json
                         }
                         catch { }
                     }
 
-                    if ((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $previousVersion -eq $resolvedVersion) {
-                        Remove-Item -LiteralPath $tempMsix -Force
+                    $metadataMatches = $false
+                    if ((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $previousCacheInfo) {
+                        if ($remoteMetadata.ETag -and $previousCacheInfo.RemoteETag) {
+                            $metadataMatches = $remoteMetadata.ETag -eq $previousCacheInfo.RemoteETag
+                        }
+                        elseif ($remoteMetadata.LastModified -and $previousCacheInfo.RemoteLastModified -and
+                                $remoteMetadata.ContentLength -and $previousCacheInfo.RemoteContentLength) {
+                            $metadataMatches = (
+                                $remoteMetadata.LastModified -eq $previousCacheInfo.RemoteLastModified -and
+                                [int64]$remoteMetadata.ContentLength -eq [int64]$previousCacheInfo.RemoteContentLength
+                            )
+                        }
+                    }
+
+                    Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading bootstrapper...' -PercentComplete 10
+                    Save-OSDAppDownload -Uri $TeamsBootstrapperUri -DestinationPath $bootstrapperPath -Activity 'Downloading Microsoft Teams bootstrapper' | Out-Null
+
+                    if ($metadataMatches) {
+                        $resolvedVersion = [string]$previousCacheInfo.Version
                         $updated = $false
+                        Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status "Cached Teams $resolvedVersion is current. No MSIX download required." -PercentComplete 90
                     }
                     else {
+                        Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Downloading Teams MSIX...' -PercentComplete 15
+                        Save-OSDAppDownload -Uri $teamsMsixUri -DestinationPath $tempMsix -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" | Out-Null
+
+                        Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Reading MSIX package metadata...' -PercentComplete 85
+                        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+                        $archive = [System.IO.Compression.ZipFile]::OpenRead($tempMsix)
+                        try {
+                            $manifestEntry = $archive.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' } | Select-Object -First 1
+                            if (-not $manifestEntry) {
+                                throw 'AppxManifest.xml was not found in the downloaded Teams MSIX.'
+                            }
+
+                            $reader = New-Object System.IO.StreamReader($manifestEntry.Open())
+                            try {
+                                [xml]$appxManifest = $reader.ReadToEnd()
+                            }
+                            finally {
+                                $reader.Dispose()
+                            }
+
+                            $resolvedVersion = [string]$appxManifest.Package.Identity.Version
+                        }
+                        finally {
+                            $archive.Dispose()
+                        }
+
                         Move-Item -LiteralPath $tempMsix -Destination $msixPath -Force
                         $updated = $true
                     }
@@ -290,11 +307,15 @@ function Sync-OSDAppBuiltIn {
                     Write-Progress -Activity 'Synchronizing Microsoft Teams cache' -Status 'Updating cache metadata...' -PercentComplete 95
 
                     [ordered]@{
-                        Id           = 'Teams'
-                        Cached       = $true
-                        Version      = $resolvedVersion
-                        Architecture = $resolvedArchitecture
-                        SyncedAt     = (Get-Date).ToUniversalTime().ToString('o')
+                        Id                    = 'Teams'
+                        Cached                = $true
+                        Version               = $resolvedVersion
+                        Architecture          = $resolvedArchitecture
+                        RemoteETag            = $remoteMetadata.ETag
+                        RemoteLastModified    = $remoteMetadata.LastModified
+                        RemoteContentLength   = $remoteMetadata.ContentLength
+                        RemoteFinalUri        = $remoteMetadata.FinalUri
+                        SyncedAt              = (Get-Date).ToUniversalTime().ToString('o')
                     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Architecture = $resolvedArchitecture; Updated = $updated; Path = $root }
