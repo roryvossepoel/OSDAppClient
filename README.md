@@ -370,7 +370,7 @@ Microsoft365Apps
 Teams
 ```
 
-These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. In the current implementation they are intended for online installation during SetupComplete: OSDAppClient does not cache the full Microsoft 365 Apps or Teams installation payload in WinPE.
+These built-in applications are prepared directly by OSDAppClient and staged for installation during SetupComplete. By default, only the vendor bootstrapper and configuration are staged and the application payload is downloaded during SetupComplete. Optional local caching is available through `Sync-OSDAppBuiltIn` for deployments that should install Microsoft 365 Apps or Teams from staged local content.
 
 Examples:
 
@@ -438,6 +438,8 @@ The cache is stored below:
 ```
 
 After synchronization, `Get-OSDApp` reports the built-in as `Availability = Cached` and shows the detected cached version.
+
+When a Microsoft 365 Apps cache already exists, a plain `Add-OSDApp Microsoft365Apps` reuses the `configuration.xml` stored with that cache. Supplying Office parameters to `Add-OSDApp` explicitly overrides the cached configuration.
 
 ### Microsoft 365 Apps cache behavior
 
