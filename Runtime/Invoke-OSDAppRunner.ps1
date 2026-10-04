@@ -164,11 +164,22 @@ try {
                 }
 
                 $arguments = @('-p')
+
+                if ($app.OfflinePackage) {
+                    $offlinePackagePath = Join-Path $StagedPath $app.OfflinePackage
+                    if (-not (Test-Path -LiteralPath $offlinePackagePath -PathType Leaf)) {
+                        throw "Teams offline MSIX not found: $offlinePackagePath"
+                    }
+
+                    $arguments += '-o'
+                    $arguments += $offlinePackagePath
+                }
+
                 if ($app.InstallMeetingAddin -eq $true) {
                     $arguments += '--installTMA'
                 }
 
-                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Microsoft Teams provisioning.' -Data @{ Id = $app.Id; Setup = $setupPath; Arguments = ($arguments -join ' ') }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Microsoft Teams provisioning.' -Data @{ Id = $app.Id; Setup = $setupPath; Arguments = ($arguments -join ' '); Offline = [bool]$app.OfflinePackage }
 
                 $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -WorkingDirectory $workingDirectory -Wait -PassThru
                 if ($process.ExitCode -ne 0) {
