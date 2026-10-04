@@ -34,6 +34,10 @@ function Add-OSDApp {
         [ValidateSet('Cached','Online')]
         [string]$BuiltInInstallMode = 'Cached',
 
+        [double]$OfficeMinimumFreeSpaceGB = 8,
+
+        [double]$TeamsMinimumFreeSpaceGB = 2,
+
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
 
@@ -128,6 +132,8 @@ function Add-OSDApp {
                     OfficeDeviceBasedLicensing    = $OfficeDeviceBasedLicensing
                     OfficeDeploymentToolUri  = $OfficeDeploymentToolUri
                     TeamsBootstrapperUri     = $TeamsBootstrapperUri
+                    OfficeMinimumFreeSpaceGB = $OfficeMinimumFreeSpaceGB
+                    TeamsMinimumFreeSpaceGB  = $TeamsMinimumFreeSpaceGB
                     Confirm                  = $false
                 }
 
