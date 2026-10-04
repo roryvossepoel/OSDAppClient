@@ -699,3 +699,56 @@ Azure Blob Storage
                 └── <Architecture>/
                     └── Package.zip
 ```
+
+
+## Clearing the USB cache
+
+`Clear-OSDAppCache` only manages the OSD Apps cache on the volume labeled `OSDCloud`. It does **not** remove staged runtime content from `C:\OSDApps`.
+
+Clear all cached application content:
+
+```powershell
+Clear-OSDAppCache -All
+```
+
+Clear only repository packages and `CacheManifest.json`:
+
+```powershell
+Clear-OSDAppCache -Repository
+```
+
+Clear only built-in payload caches:
+
+```powershell
+Clear-OSDAppCache -BuiltIn
+```
+
+Clear a specific application:
+
+```powershell
+Clear-OSDAppCache -Name Teams
+Clear-OSDAppCache -Name Microsoft365Apps
+Clear-OSDAppCache -Name NotepadPlusPlus
+```
+
+For repository applications, the corresponding entry is also removed from `CacheManifest.json`.
+
+The client log is preserved by default. Every cache-clear operation is written to:
+
+```text
+<OSDCloud volume>:\OSDApps\Logs\Client.log
+```
+
+Logs are removed only when explicitly requested:
+
+```powershell
+Clear-OSDAppCache -All -IncludeLogs
+```
+
+When `-IncludeLogs` is used, the existing log files are cleared and a fresh `Client.log` is created immediately afterwards with `CacheLogsCleared` and `CacheClearComplete` events. This keeps the cleanup action itself auditable.
+
+The command supports `-WhatIf`:
+
+```powershell
+Clear-OSDAppCache -All -WhatIf
+```
