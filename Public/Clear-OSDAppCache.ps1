@@ -109,22 +109,31 @@ function Clear-OSDAppCache {
 
                     # Teams cache has a flat, known layout. Avoid recursive delete
                     # completely: direct DEL of files, then RD of the empty folder.
-                    & cmd.exe /d /c ('del /f /q "{0}\*" >nul 2>&1' -f $builtInAppPath)
-                    $deleteExitCode = $LASTEXITCODE
+                    $knownFiles = @(
+                        'teams.msix',
+                        'teamsbootstrapper.exe',
+                        'CacheInfo.json'
+                    )
+
+                    foreach ($knownFile in $knownFiles) {
+                        $knownPath = Join-Path $builtInAppPath $knownFile
+                        & cmd.exe /d /c ('if exist "{0}" del /f /q "{0}" >nul 2>&1' -f $knownPath)
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Failed to remove Teams cache file '$knownPath'. Exit code: $LASTEXITCODE"
+                        }
+                    }
 
                     & cmd.exe /d /c ('rd /q "{0}" >nul 2>&1' -f $builtInAppPath)
                     $directoryExitCode = $LASTEXITCODE
 
-                    # Verify existence through cmd.exe as well. Do not use Test-Path
-                    # here because the PowerShell/.NET filesystem provider has shown
-                    # pathological latency on freshly downloaded Teams MSIX files.
                     & cmd.exe /d /c ('if exist "{0}\." (exit /b 1) else (exit /b 0)' -f $builtInAppPath)
                     $stillExists = $LASTEXITCODE -ne 0
 
                     $stopwatch.Stop()
 
                     if ($stillExists) {
-                        throw "Failed to remove Teams cache. Native delete exit code: $deleteExitCode; directory exit code: $directoryExitCode"
+                        throw "Failed to remove Teams cache directory. Directory exit code: $directoryExitCode"
                     }
 
                     Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Teams cache removed using non-recursive native Windows delete.' -Data @{
