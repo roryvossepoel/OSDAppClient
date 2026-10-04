@@ -42,12 +42,38 @@ function Clear-OSDAppCache {
             [string]$Label
         )
 
-        if (Test-Path -LiteralPath $Path) {
-            if ($PSCmdlet.ShouldProcess($Path, "Remove $Label")) {
-                Remove-Item -LiteralPath $Path -Recurse -Force
-                $removed.Add($Label)
-            }
+        if (-not (Test-Path -LiteralPath $Path)) {
+            return
         }
+
+        if (-not $PSCmdlet.ShouldProcess($Path, "Remove $Label")) {
+            return
+        }
+
+        $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+        if ($item.PSIsContainer) {
+            & cmd.exe /d /c ('rmdir /s /q "{0}"' -f $item.FullName)
+        }
+        else {
+            & cmd.exe /d /c ('del /f /q "{0}"' -f $item.FullName)
+        }
+
+        $exitCode = $LASTEXITCODE
+        $stopwatch.Stop()
+
+        if ($exitCode -ne 0 -or (Test-Path -LiteralPath $Path)) {
+            throw "Failed to remove cache item '$Path' using native Windows delete. Exit code: $exitCode"
+        }
+
+        Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Cache item removed using native Windows delete.' -Data @{
+            Label      = $Label
+            Path       = $Path
+            DurationMs = $stopwatch.ElapsedMilliseconds
+        }
+
+        $removed.Add($Label)
     }
 
     $manifestPath = Join-Path $cachePath 'CacheManifest.json'
@@ -106,8 +132,10 @@ function Clear-OSDAppCache {
 
         if ($PSCmdlet.ShouldProcess($logsPath, 'Clear OSD App client logs')) {
             if (Test-Path -LiteralPath $logsPath) {
-                Get-ChildItem -LiteralPath $logsPath -File -ErrorAction SilentlyContinue |
-                    Remove-Item -Force -ErrorAction Stop
+                & cmd.exe /d /c ('del /f /q "{0}\*"' -f $logsPath)
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Failed to clear OSD App client logs using native Windows delete. Exit code: $LASTEXITCODE"
+                }
             }
 
             # Recreate Client.log after clearing so the cache-clear action itself remains auditable.
