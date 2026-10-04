@@ -31,6 +31,9 @@ function Add-OSDApp {
 
         [bool]$TeamsInstallMeetingAddin = $false,
 
+        [ValidateSet('Cached','Online')]
+        [string]$BuiltInInstallMode = 'Cached',
+
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
 
@@ -107,6 +110,51 @@ function Add-OSDApp {
                 Copy-OSDAppContent -Name $repositoryApps -CachePath $cachePath -WindowsPath $windowsPath | Out-Null
             }
 
+            $useBuiltInCache = $BuiltInInstallMode -eq 'Cached'
+
+            if ($useBuiltInCache -and ($officeRequested -or $teamsRequested)) {
+                $builtInNames = @()
+                if ($officeRequested) { $builtInNames += 'Microsoft365Apps' }
+                if ($teamsRequested) { $builtInNames += 'Teams' }
+
+                $syncParameters = @{
+                    Name                     = $builtInNames
+                    OfficeChannel            = $OfficeChannel
+                    OfficeArchitecture       = $OfficeArchitecture
+                    OfficeProductId          = $OfficeProductId
+                    OfficeLanguage           = $OfficeLanguage
+                    OfficeAcceptEula         = $OfficeAcceptEula
+                    OfficeSharedComputerLicensing = $OfficeSharedComputerLicensing
+                    OfficeDeviceBasedLicensing    = $OfficeDeviceBasedLicensing
+                    OfficeDeploymentToolUri  = $OfficeDeploymentToolUri
+                    TeamsBootstrapperUri     = $TeamsBootstrapperUri
+                    Confirm                  = $false
+                }
+
+                if ($OfficeExcludeApp) {
+                    $syncParameters.OfficeExcludeApp = $OfficeExcludeApp
+                }
+
+                if ($ConfigurationXml) {
+                    $syncParameters.ConfigurationXml = $ConfigurationXml
+                }
+
+                try {
+                    Sync-OSDAppBuiltIn @syncParameters | Out-Null
+                }
+                catch {
+                    $officeCacheAvailable = (-not $officeRequested) -or (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\Microsoft365Apps\Office\Data') -PathType Container)
+                    $teamsCacheAvailable = (-not $teamsRequested) -or (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\Teams\teams.msix') -PathType Leaf)
+
+                    if ($officeCacheAvailable -and $teamsCacheAvailable) {
+                        Write-Warning "Built-in cache refresh failed. Existing cached payload will be used. $($_.Exception.Message)"
+                    }
+                    else {
+                        throw
+                    }
+                }
+            }
+
             if ($officeRequested) {
                 $officeParameters = @{
                     CachePath               = $cachePath
@@ -118,7 +166,8 @@ function Add-OSDApp {
                     AcceptEula              = $OfficeAcceptEula
                     SharedComputerLicensing = $OfficeSharedComputerLicensing
                     DeviceBasedLicensing    = $OfficeDeviceBasedLicensing
-                    UseCachedConfiguration   = (-not $officeConfigurationOverridden)
+                    UseCachedConfiguration   = ($useBuiltInCache -and (-not $officeConfigurationOverridden))
+                    UseCachedPayload         = $useBuiltInCache
                     OfficeDeploymentToolUri = $OfficeDeploymentToolUri
                     Confirm                 = $false
                 }
@@ -135,7 +184,7 @@ function Add-OSDApp {
             }
 
             if ($teamsRequested) {
-                Add-OSDAppTeams -CachePath $cachePath -WindowsPath $windowsPath -InstallMeetingAddin $TeamsInstallMeetingAddin -TeamsBootstrapperUri $TeamsBootstrapperUri -Confirm:$false | Out-Null
+                Add-OSDAppTeams -CachePath $cachePath -WindowsPath $windowsPath -InstallMeetingAddin $TeamsInstallMeetingAddin -UseCachedPayload $useBuiltInCache -TeamsBootstrapperUri $TeamsBootstrapperUri -Confirm:$false | Out-Null
             }
 
             Add-OSDAppSetupComplete -WindowsPath $windowsPath | Out-Null
