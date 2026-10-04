@@ -37,16 +37,32 @@ function Get-OSDApp {
         }
     }
 
+    $officeCacheInfo = $null
+    $teamsCacheInfo = $null
+
+    if ($cachePath) {
+        $officeCacheInfoPath = Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json'
+        $teamsCacheInfoPath = Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json'
+
+        if (Test-Path -LiteralPath $officeCacheInfoPath -PathType Leaf) {
+            try { $officeCacheInfo = Get-Content -LiteralPath $officeCacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+        }
+
+        if (Test-Path -LiteralPath $teamsCacheInfoPath -PathType Leaf) {
+            try { $teamsCacheInfo = Get-Content -LiteralPath $teamsCacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+        }
+    }
+
     foreach ($builtInApp in @(
         [pscustomobject]@{
             PSTypeName   = 'OSDAppClient.App'
             Id           = 'Microsoft365Apps'
             Name         = 'Microsoft365Apps'
             DisplayName  = 'Microsoft 365 Apps'
-            Version      = 'Current'
-            Architecture = 'any'
+            Version      = if ($officeCacheInfo) { $officeCacheInfo.Version } else { 'Current' }
+            Architecture = if ($officeCacheInfo) { $officeCacheInfo.Architecture } else { 'any' }
             Source       = 'BuiltIn'
-            Availability = 'Available'
+            Availability = if ($officeCacheInfo) { 'Cached' } else { 'Available' }
             Valid        = $true
         },
         [pscustomobject]@{
@@ -54,10 +70,10 @@ function Get-OSDApp {
             Id           = 'Teams'
             Name         = 'Teams'
             DisplayName  = 'Microsoft Teams'
-            Version      = 'Current'
-            Architecture = 'any'
+            Version      = if ($teamsCacheInfo) { $teamsCacheInfo.Version } else { 'Current' }
+            Architecture = if ($teamsCacheInfo) { $teamsCacheInfo.Architecture } else { 'any' }
             Source       = 'BuiltIn'
-            Availability = 'Available'
+            Availability = if ($teamsCacheInfo) { 'Cached' } else { 'Available' }
             Valid        = $true
         }
     )) {
