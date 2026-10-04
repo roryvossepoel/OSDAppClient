@@ -1,0 +1,143 @@
+function Sync-OSDAppMicrosoft365Apps {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [ValidateSet('Current','MonthlyEnterprise','SemiAnnual','CurrentPreview','SemiAnnualPreview','BetaChannel')]
+        [string]$Channel = 'Current',
+
+        [ValidateSet('64','32')]
+        [string]$Architecture = '64',
+
+        [ValidateSet('O365ProPlusRetail','O365BusinessRetail')]
+        [string]$ProductId = 'O365ProPlusRetail',
+
+        [string[]]$Language = @('en-us'),
+        [bool]$AcceptEula = $true,
+        [bool]$SharedComputerLicensing = $false,
+        [bool]$DeviceBasedLicensing = $false,
+
+        [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
+        [string[]]$ExcludeApp,
+
+        [string]$ConfigurationXml,
+        [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe',
+        [double]$MinimumFreeSpaceGB = 8
+    )
+
+    if (Test-OSDAppWinPE) {
+        throw 'Sync-OSDAppMicrosoft365Apps is intended for full Windows. Pre-cache Microsoft 365 Apps from full Windows before deployment.'
+    }
+
+    if ($SharedComputerLicensing -and $DeviceBasedLicensing) {
+        throw 'SharedComputerLicensing and DeviceBasedLicensing cannot both be enabled.'
+    }
+
+    if (-not $ConfigurationXml -and (-not $Language -or @($Language).Count -eq 0)) {
+        throw 'At least one Office language must be specified.'
+    }
+
+    $cachePath = Get-OSDAppCachePath
+    $clientLogPath = Join-Path $cachePath 'Logs\Client.log'
+    $root = Join-Path $cachePath 'BuiltIn\Microsoft365Apps'
+    $setupPath = Join-Path $root 'setup.exe'
+    $configPath = Join-Path $root 'configuration.xml'
+    $cacheInfoPath = Join-Path $root 'CacheInfo.json'
+
+    New-Item -ItemType Directory -Path $root -Force | Out-Null
+
+    if (-not $PSCmdlet.ShouldProcess($root, 'Configure and synchronize Microsoft 365 Apps built-in cache')) { return }
+
+    Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
+    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
+
+    Save-OSDAppDownload -Uri $OfficeDeploymentToolUri -DestinationPath $setupPath -Activity 'Downloading Office Deployment Tool' | Out-Null
+
+    if ($ConfigurationXml) {
+        if (-not (Test-Path -LiteralPath $ConfigurationXml -PathType Leaf)) { throw "Office configuration XML not found: $ConfigurationXml" }
+        Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
+    }
+    else {
+        $settings = New-Object System.Xml.XmlWriterSettings
+        $settings.Indent = $true
+        $settings.Encoding = New-Object System.Text.UTF8Encoding($false)
+        $writer = [System.Xml.XmlWriter]::Create($configPath, $settings)
+        try {
+            $writer.WriteStartDocument()
+            $writer.WriteStartElement('Configuration')
+            $writer.WriteStartElement('Add')
+            $writer.WriteAttributeString('OfficeClientEdition', $Architecture)
+            $writer.WriteAttributeString('Channel', $Channel)
+            $writer.WriteStartElement('Product')
+            $writer.WriteAttributeString('ID', $ProductId)
+            foreach ($culture in $Language) {
+                if ([string]::IsNullOrWhiteSpace($culture)) { continue }
+                $writer.WriteStartElement('Language'); $writer.WriteAttributeString('ID', $culture); $writer.WriteEndElement()
+            }
+            foreach ($app in @($ExcludeApp)) {
+                if ([string]::IsNullOrWhiteSpace($app)) { continue }
+                $writer.WriteStartElement('ExcludeApp'); $writer.WriteAttributeString('ID', $app); $writer.WriteEndElement()
+            }
+            $writer.WriteEndElement()
+            $writer.WriteEndElement()
+            $writer.WriteStartElement('Display')
+            $writer.WriteAttributeString('Level', 'None')
+            $writer.WriteAttributeString('AcceptEULA', $(if ($AcceptEula) { 'TRUE' } else { 'FALSE' }))
+            $writer.WriteEndElement()
+            if ($SharedComputerLicensing) {
+                $writer.WriteStartElement('Property'); $writer.WriteAttributeString('Name', 'SharedComputerLicensing'); $writer.WriteAttributeString('Value', '1'); $writer.WriteEndElement()
+            }
+            if ($DeviceBasedLicensing) {
+                $writer.WriteStartElement('Property'); $writer.WriteAttributeString('Name', 'DeviceBasedLicensing'); $writer.WriteAttributeString('Value', '1'); $writer.WriteEndElement()
+            }
+            $writer.WriteStartElement('Updates'); $writer.WriteAttributeString('Enabled', 'TRUE'); $writer.WriteEndElement()
+            $writer.WriteEndElement()
+            $writer.WriteEndDocument()
+        }
+        finally { $writer.Dispose() }
+    }
+
+    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
+
+    $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -PassThru
+    try {
+        while (-not $process.HasExited) {
+            $downloadedBytes = 0L
+            $officeRoot = Join-Path $root 'Office'
+            if (Test-Path -LiteralPath $officeRoot -PathType Container) {
+                $downloadedBytes = (Get-ChildItem -LiteralPath $officeRoot -File -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            }
+            $downloadedGB = [math]::Round(([double]$downloadedBytes / 1GB), 2)
+            Write-Progress -Activity 'Downloading Microsoft 365 Apps content' -Status "$downloadedGB GB cached" -PercentComplete -1
+            Start-Sleep -Seconds 2
+            $process.Refresh()
+        }
+    }
+    finally { Write-Progress -Activity 'Downloading Microsoft 365 Apps content' -Completed }
+
+    if ($process.ExitCode -ne 0) { throw "Office Deployment Tool download failed with exit code $($process.ExitCode)." }
+
+    $officeData = Join-Path $root 'Office\Data'
+    if (-not (Test-Path -LiteralPath $officeData -PathType Container)) { throw "Office Deployment Tool completed but Office\Data was not found: $officeData" }
+
+    $versionFolders = @(Get-ChildItem -LiteralPath $officeData -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } | ForEach-Object { try { [pscustomobject]@{ Name = $_.Name; Version = [version]$_.Name } } catch { } } | Sort-Object Version -Descending)
+    $resolvedVersion = if ($versionFolders.Count -gt 0) { $versionFolders[0].Name } else { 'Unknown' }
+
+    [ordered]@{
+        Id = 'Microsoft365Apps'
+        Cached = $true
+        Version = $resolvedVersion
+        Architecture = $Architecture
+        Channel = $Channel
+        ProductId = $ProductId
+        Language = @($Language)
+        AcceptEula = $AcceptEula
+        SharedComputerLicensing = $SharedComputerLicensing
+        DeviceBasedLicensing = $DeviceBasedLicensing
+        ExcludeApp = @($ExcludeApp)
+        ConfigurationSource = if ($ConfigurationXml) { 'CustomXml' } else { 'Generated' }
+        SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
+    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+
+    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture }
+
+    [pscustomobject]@{ PSTypeName='OSDAppClient.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
+}
