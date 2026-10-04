@@ -3,7 +3,10 @@ param(
     [Parameter(Mandatory)]
     [string]$StagedPath,
 
-    [string]$CacheVolumeLabel = 'OSDCloud'
+    [string]$CacheVolumeLabel = 'OSDCloud',
+
+    [ValidateRange(1,120)]
+    [int]$OfficeRefreshTimeoutMinutes = 20
 )
 
 $ErrorActionPreference = 'Stop'
@@ -255,9 +258,28 @@ try {
 
                 try {
                     $previousVersion = Get-OfficeCacheVersion -OfficeRoot $usbOfficeRoot
-                    Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Refreshing Microsoft 365 Apps cache with Office Deployment Tool.' -Data @{ Id = 'Microsoft365Apps'; PreviousVersion = $previousVersion }
+                    Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Refreshing Microsoft 365 Apps cache with Office Deployment Tool.' -Data @{ Id = 'Microsoft365Apps'; PreviousVersion = $previousVersion; TimeoutMinutes = $OfficeRefreshTimeoutMinutes }
 
-                    $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configurationPath) -WorkingDirectory $usbOfficeRoot -Wait -PassThru
+                    $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configurationPath) -WorkingDirectory $usbOfficeRoot -PassThru
+                    $refreshStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+                    while (-not $process.HasExited) {
+                        if ($refreshStopwatch.Elapsed.TotalMinutes -ge $OfficeRefreshTimeoutMinutes) {
+                            try {
+                                $process.Kill()
+                                $process.WaitForExit()
+                            }
+                            catch { }
+
+                            throw "Office Deployment Tool cache refresh exceeded the $OfficeRefreshTimeoutMinutes minute timeout."
+                        }
+
+                        Start-Sleep -Seconds 2
+                        $process.Refresh()
+                    }
+
+                    $refreshStopwatch.Stop()
+
                     if ($process.ExitCode -ne 0) {
                         throw "Office Deployment Tool exited with code $($process.ExitCode)."
                     }
