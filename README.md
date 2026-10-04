@@ -193,7 +193,7 @@ This keeps troubleshooting data available without leaving several gigabytes of i
 
 ### Logging contract
 
-The runner uses structured JSON-lines logging. Important runtime events include:
+The runner and pre-install phase use CMTrace-compatible logging. Important runtime events include:
 
 ```text
 InstallStart
@@ -206,6 +206,8 @@ BuiltInInstallStart
 BuiltInInstallComplete
 InstallFailed
 InstallComplete
+CleanupScheduled
+CleanupSkipped
 ```
 
 
@@ -571,17 +573,17 @@ For Microsoft 365 Apps, `Sync-OSDAppMicrosoft365Apps` defines the desired Office
 
 Running `Sync-OSDAppMicrosoft365Apps` again can also change the desired Office settings. The cmdlet rewrites the generated `configuration.xml`, synchronizes the cache with ODT, and records the resulting configuration and detected Office version in `CacheInfo.json`.
 
-The same Office configuration options used by `Add-OSDApp Microsoft365Apps` are available on `the dedicated built-in sync cmdlets`.
+`Sync-OSDAppMicrosoft365Apps` exposes its own Office-specific parameter set for configuring and synchronizing the cache.
 
 Example:
 
 ```powershell
 Sync-OSDAppMicrosoft365Apps `
-    -OfficeChannel Current `
-    -OfficeArchitecture 64 `
-    -OfficeProductId O365ProPlusRetail `
-    -OfficeLanguage nl-nl,en-us `
-    -OfficeSharedComputerLicensing $true
+    -Channel Current `
+    -Architecture 64 `
+    -ProductId O365ProPlusRetail `
+    -Language nl-nl,en-us `
+    -SharedComputerLicensing $true
 ```
 
 When cached Office content is staged, SetupComplete still runs:
@@ -603,8 +605,8 @@ Sync-OSDAppTeams
 Architecture defaults to the current host architecture and can be overridden:
 
 ```powershell
-Sync-OSDAppTeams -TeamsArchitecture x64
-Sync-OSDAppTeams -TeamsArchitecture arm64
+Sync-OSDAppTeams -Architecture x64
+Sync-OSDAppTeams -Architecture arm64
 ```
 
 The module reads the version from the downloaded MSIX and stores it in `CacheInfo.json`. When the downloaded version matches the already cached version, the existing cached MSIX is retained.
@@ -709,7 +711,7 @@ Repository-based apps and Microsoft 365 Apps can also be staged in one call:
 Add-OSDApp NotepadPlusPlus,Microsoft365Apps
 ```
 
-Microsoft 365 Apps is the first built-in installer path. It is intentionally implemented separately from the repository package contract. In the current implementation only the ODT bootstrapper and configuration are staged in WinPE; Office payload caching is reserved for a future enhancement.
+Microsoft 365 Apps is implemented separately from the repository package contract. In cached mode, the complete existing Office cache is staged in WinPE and refreshed in full Windows immediately before installation.
 
 
 ## Built-in Microsoft Teams support
@@ -722,13 +724,13 @@ Add-OSDApp Teams
 
 In cached mode, WinPE stages the existing Teams bootstrapper and MSIX without refreshing the built-in cache. During SetupComplete in full Windows, the standalone pre-install phase checks Teams freshness, refreshes the USB cache when needed, restages the current payload, and then the runner provisions Teams.
 
-During SetupComplete, the OSD App Runner executes:
+During SetupComplete, the OSD App Runner uses the cached MSIX when available:
 
 ```text
-teamsbootstrapper.exe -p
+teamsbootstrapper.exe -p -o <local teams.msix>
 ```
 
-The Teams bootstrapper then downloads and provisions the latest Teams MSIX for all users on the device.
+In online mode, the runner uses `teamsbootstrapper.exe -p` and the bootstrapper downloads the Teams package.
 
 The optional Teams Meeting Add-in can be installed machine-wide with:
 
@@ -742,7 +744,7 @@ This causes SetupComplete to run:
 teamsbootstrapper.exe -p --installTMA
 ```
 
-Cached mode is the default for `Add-OSDApp Teams`: the built-in cache is refreshed first, the Teams MSIX is staged, and SetupComplete provisions Teams from the local package. Use `-BuiltInInstallMode Online` to skip MSIX caching and let `teamsbootstrapper.exe -p` download Teams during SetupComplete.
+Cached mode is the default for `Add-OSDApp Teams`: WinPE stages the existing Teams cache, the full-Windows pre-install phase refreshes it when possible, and SetupComplete provisions Teams from the local MSIX. Use `-BuiltInInstallMode Online` to let `teamsbootstrapper.exe -p` download Teams during SetupComplete.
 
 
 
@@ -842,7 +844,7 @@ or when explicitly pre-caching:
 
 ```powershell
 Sync-OSDAppMicrosoft365Apps `
-    -OfficeMinimumFreeSpaceGB 6
+    -MinimumFreeSpaceGB 6
 ```
 
 Every free-space check is written to `Client.log` as a `FreeSpaceCheck` event. If the threshold is not met, the sync stops before downloading payload content.
