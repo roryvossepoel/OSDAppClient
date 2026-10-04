@@ -32,6 +32,10 @@ function Sync-OSDAppBuiltIn {
         [ValidateSet('Auto','x86','x64','arm64')]
         [string]$TeamsArchitecture = 'Auto',
 
+        [double]$OfficeMinimumFreeSpaceGB = 8,
+
+        [double]$TeamsMinimumFreeSpaceGB = 2,
+
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
 
@@ -53,6 +57,7 @@ function Sync-OSDAppBuiltIn {
                 }
 
                 if ($PSCmdlet.ShouldProcess($root, 'Synchronize Microsoft 365 Apps built-in cache')) {
+                    Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $OfficeMinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
 
                     Invoke-WebRequest -Uri $OfficeDeploymentToolUri -OutFile $setupPath -UseBasicParsing -ErrorAction Stop
@@ -210,6 +215,7 @@ function Sync-OSDAppBuiltIn {
                 }
 
                 if ($PSCmdlet.ShouldProcess($root, "Synchronize Microsoft Teams built-in cache ($resolvedArchitecture)")) {
+                    Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $TeamsMinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $clientLogPath | Out-Null
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
 
                     Invoke-WebRequest -Uri $TeamsBootstrapperUri -OutFile $bootstrapperPath -UseBasicParsing -ErrorAction Stop
