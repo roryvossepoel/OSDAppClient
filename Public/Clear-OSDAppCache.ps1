@@ -42,58 +42,26 @@ function Clear-OSDAppCache {
             [string]$Label
         )
 
-        if (-not (Test-Path -LiteralPath $Path)) {
-            return
-        }
-
         if (-not $PSCmdlet.ShouldProcess($Path, "Remove $Label")) {
             return
         }
 
-        $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-        if ($item.PSIsContainer) {
-            # Avoid rmdir /s here. In testing, recursive directory deletion can take
-            # several minutes on freshly downloaded MSIX content even though a
-            # direct native file delete completes immediately.
-            $files = @(
-                Get-ChildItem -LiteralPath $item.FullName -File -Recurse -Force -ErrorAction Stop
-            )
+        # Important: keep cache deletion fully on the native Windows path.
+        # Do not use Test-Path, Get-Item or Get-ChildItem here. On freshly
+        # downloaded MSIX content those PowerShell/.NET provider calls can
+        # block for several minutes even though cmd.exe can remove the same
+        # file immediately.
+        $escapedPath = $Path.Replace('"', '""')
 
-            foreach ($file in $files) {
-                & cmd.exe /d /c ('del /f /q "{0}"' -f $file.FullName)
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Failed to remove cache file '$($file.FullName)' using native Windows delete. Exit code: $LASTEXITCODE"
-                }
-            }
+        # First try treating the target as a directory. Delete all files
+        # recursively using native DEL, then remove the now-empty tree.
+        & cmd.exe /d /c ('if exist "{0}\NUL" (del /f /q /s "{0}\*" >nul 2>&1 & rmdir /s /q "{0}") else if exist "{0}" (del /f /q "{0}")' -f $escapedPath)
 
-            $directories = @(
-                Get-ChildItem -LiteralPath $item.FullName -Directory -Recurse -Force -ErrorAction Stop |
-                    Sort-Object { $_.FullName.Length } -Descending
-            )
-
-            foreach ($directory in $directories) {
-                & cmd.exe /d /c ('rmdir /q "{0}"' -f $directory.FullName)
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Failed to remove cache directory '$($directory.FullName)' using native Windows delete. Exit code: $LASTEXITCODE"
-                }
-            }
-
-            & cmd.exe /d /c ('rmdir /q "{0}"' -f $item.FullName)
-            $exitCode = $LASTEXITCODE
-        }
-        else {
-            & cmd.exe /d /c ('del /f /q "{0}"' -f $item.FullName)
-            $exitCode = $LASTEXITCODE
-        }
-
+        $exitCode = $LASTEXITCODE
         $stopwatch.Stop()
 
-        # Do not verify native deletes with Test-Path here. On some freshly
-        # downloaded MSIX files the PowerShell/.NET FileSystem provider can
-        # block for several minutes even after cmd.exe has already deleted
-        # the file successfully. Trust the native process exit code instead.
         if ($exitCode -ne 0) {
             throw "Failed to remove cache item '$Path' using native Windows delete. Exit code: $exitCode"
         }
