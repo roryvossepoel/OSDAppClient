@@ -285,19 +285,20 @@ try {
                     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
                     $localVersion = Get-OfficeCacheVersion -OfficeRoot $localOfficeRoot
-                    $updated = ($currentVersion -ne $localVersion)
+                    $versionChanged = ($currentVersion -ne $localVersion)
 
+                    New-Item -ItemType Directory -Path $localOfficeRoot -Force | Out-Null
                     Copy-Item -LiteralPath $setupPath -Destination (Join-Path $localOfficeRoot 'setup.exe') -Force
                     Copy-Item -LiteralPath $configurationPath -Destination (Join-Path $localOfficeRoot 'configuration.xml') -Force
                     Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localOfficeRoot 'CacheInfo.json') -Force
 
-                    if ($updated -or -not (Test-Path -LiteralPath (Join-Path $localOfficeRoot 'Office\Data') -PathType Container)) {
-                        $usbOfficePayload = Join-Path $usbOfficeRoot 'Office'
-                        $localOfficePayload = Join-Path $localOfficeRoot 'Office'
-                        Copy-DirectoryReplace -Source $usbOfficePayload -Destination $localOfficePayload
-                    }
+                    # Always restage Office after a successful ODT sync. ODT can add or
+                    # change language/content files without changing the resolved build.
+                    $usbOfficePayload = Join-Path $usbOfficeRoot 'Office'
+                    $localOfficePayload = Join-Path $localOfficeRoot 'Office'
+                    Copy-DirectoryReplace -Source $usbOfficePayload -Destination $localOfficePayload
 
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps cache refresh completed.' -Data @{ Id = 'Microsoft365Apps'; Version = $currentVersion; UpdatedLocalPayload = $updated }
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps cache refresh completed and the staged payload was refreshed.' -Data @{ Id = 'Microsoft365Apps'; Version = $currentVersion; VersionChanged = $versionChanged }
                 }
                 catch {
                     Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{ Id = 'Microsoft365Apps'; Fallback = 'ExistingStagedPayload' }
