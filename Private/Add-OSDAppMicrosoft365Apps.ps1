@@ -31,6 +31,8 @@ function Add-OSDAppMicrosoft365Apps {
 
         [bool]$UseCachedConfiguration = $false,
 
+        [bool]$UseCachedPayload = $true,
+
         [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe'
     )
 
@@ -136,7 +138,14 @@ function Add-OSDAppMicrosoft365Apps {
         if (Test-Path -LiteralPath $destinationBuiltIn) {
             Remove-Item -LiteralPath $destinationBuiltIn -Recurse -Force
         }
-        Copy-Item -LiteralPath $builtInRoot -Destination $destinationBuiltIn -Recurse -Force
+        if ($UseCachedPayload) {
+            Copy-Item -LiteralPath $builtInRoot -Destination $destinationBuiltIn -Recurse -Force
+        }
+        else {
+            New-Item -ItemType Directory -Path $destinationBuiltIn -Force | Out-Null
+            Copy-Item -LiteralPath $setupPath -Destination (Join-Path $destinationBuiltIn 'setup.exe') -Force
+            Copy-Item -LiteralPath $configPath -Destination (Join-Path $destinationBuiltIn 'configuration.xml') -Force
+        }
 
         $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
         if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {
@@ -156,7 +165,7 @@ function Add-OSDAppMicrosoft365Apps {
             $builtInApps = @($deviceManifest.BuiltInApps | Where-Object { $_.Id -ne 'Microsoft365Apps' })
         }
 
-        $officePayloadCached = Test-Path -LiteralPath (Join-Path $builtInRoot 'Office\Data') -PathType Container
+        $officePayloadCached = $UseCachedPayload -and (Test-Path -LiteralPath (Join-Path $builtInRoot 'Office\Data') -PathType Container)
 
         $builtInApps += [pscustomobject]@{
             Id            = 'Microsoft365Apps'
