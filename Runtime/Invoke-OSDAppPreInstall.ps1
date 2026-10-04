@@ -354,7 +354,12 @@ try {
                         default { throw "Unsupported Teams architecture '$architecture'." }
                     }
 
-                    $bootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
+                    $bootstrapperUri = if ($cacheInfo -and $cacheInfo.BootstrapperUri) {
+                        [string]$cacheInfo.BootstrapperUri
+                    }
+                    else {
+                        'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
+                    }
 
                     Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Checking Microsoft Teams cache for updates.' -Data @{ Id = 'Teams'; Architecture = $architecture }
 
