@@ -9,50 +9,77 @@ It runs after OSDCloud v2 has applied Windows and drivers. The module consumes a
 
 ```mermaid
 flowchart TB
-    subgraph CATALOG["1. Central catalog"]
+    subgraph DISCOVERY["1. Catalog discovery"]
         A[Azure Blob Storage<br/>catalog.json]
         B[Set-OSDAppCatalog]
         C[Get-OSDAppCatalog]
-        A --> B
-        B --> C
+        A --> B --> C
     end
 
-    subgraph CACHE["2. Local OSDCloud cache"]
+    subgraph USB["2. OSDCloud USB cache"]
         D[Sync-OSDAppRepository]
-        E[OSDCloud volume<br/>\\OSDApps]
-        F[Get-OSDApp]
+        E[Repository cache<br/>Packages + CacheManifest.json]
+        F[Built-in cache<br/>Office Data + Teams MSIX]
+        G[Get-OSDApp]
+        H[Clear-OSDAppCache]
+
         D --> E
-        E --> F
+        E --> G
+        F --> G
+        H -. manages .-> E
+        H -. manages .-> F
     end
 
-    subgraph STAGE["3. Stage for installed Windows"]
-        G[Add-OSDApp]
-        H[Offline Windows<br/>C:\\OSDApps]
-        I[SetupComplete.cmd]
-        G --> H
-        H --> I
+    subgraph BUILTINS["3. Built-in acquisition"]
+        I{BuiltInInstallMode}
+        J[Cached - default<br/>Sync-OSDAppBuiltIn]
+        K[Online<br/>No payload cache]
+        L[Microsoft 365 Apps<br/>ODT download]
+        M[Microsoft Teams<br/>Bootstrapper + MSIX]
+
+        I -->|Cached| J
+        I -->|Online| K
+        J --> L
+        J --> M
+        L --> F
+        M --> F
     end
 
-    subgraph RUNTIME["4. SetupComplete runtime"]
-        J[OSD App Runner]
-        K{App source}
-        L[Repository app<br/>Expand Package.zip<br/>Run Install.ps1]
-        M[Built-in app<br/>Run vendor bootstrapper]
-        N[OOBE / Autopilot]
+    subgraph STAGE["4. Stage to offline Windows"]
+        N[Add-OSDApp]
+        O[Offline Windows<br/>C:\\OSDApps]
+        P[DeviceManifest.json]
+        Q[SetupComplete.cmd]
 
-        J --> K
-        K -->|Repository| L
-        K -->|BuiltIn| M
-        L --> N
-        M --> N
+        N --> O
+        O --> P
+        O --> Q
+    end
+
+    subgraph RUNTIME["5. SetupComplete runtime"]
+        R[OSD App Runner]
+        S{App source}
+        T[Repository app<br/>Verify SHA-256<br/>Expand Package.zip<br/>Run Install.ps1]
+        U[Built-in cached<br/>Install from local content]
+        V[Built-in online<br/>Download during install]
+        W[OOBE / Autopilot]
+
+        R --> S
+        S -->|Repository| T
+        S -->|BuiltIn Cached| U
+        S -->|BuiltIn Online| V
+        T --> W
+        U --> W
+        V --> W
     end
 
     C --> D
-    F --> G
-    I --> J
+    G --> N
+    K --> N
+    Q --> R
 
-    O[Built-ins<br/>Microsoft365Apps<br/>Teams] --> F
-    P[x64 / arm64 / any<br/>SHA-256 validation] --> D
+    X[x64 / arm64 / any<br/>Repository SHA-256 validation] --> D
+    Y[Free-space guard<br/>Office 8 GB / Teams 2 GB] --> J
 ```
 
 Typical WinPE usage after OSDCloud v2 has finished applying Windows and drivers:
