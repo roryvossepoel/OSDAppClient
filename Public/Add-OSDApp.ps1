@@ -141,43 +141,41 @@ function Add-OSDApp {
                 if ($SkipCacheRefresh) {
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'BuiltInCacheRefreshSkipped' -Message 'Built-in cache refresh was skipped by request.' -Data @{ Names = $builtInNames; Reason = 'SkipCacheRefresh' }
                 }
+                elseif ($isWinPE) {
+                    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'BuiltInCacheRefreshSkipped' -Message 'Built-in cache refresh is deferred until full Windows. Existing cached built-in payloads will be staged from WinPE.' -Data @{ Names = $builtInNames; Reason = 'WinPE' }
+                }
                 elseif (-not $networkAvailable) {
                     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'BuiltInCacheRefreshSkipped' -Message 'No active network connection was detected. Existing built-in cache will be used without an online refresh attempt.' -Data @{ Names = $builtInNames; Reason = 'Offline' }
                 }
                 else {
                     if ($officeRequested) {
-                        if ($isWinPE) {
-                            Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInCacheRefreshSkipped' -Message 'Microsoft 365 Apps cache refresh is skipped in WinPE. Existing cached Office content will be used.' -Data @{ Reason = 'WinPE'; Tool = 'OfficeDeploymentTool' }
+                        $officeSyncParameters = @{
+                            Name                            = 'Microsoft365Apps'
+                            OfficeChannel                   = $OfficeChannel
+                            OfficeArchitecture              = $OfficeArchitecture
+                            OfficeProductId                 = $OfficeProductId
+                            OfficeLanguage                  = $OfficeLanguage
+                            OfficeAcceptEula                = $OfficeAcceptEula
+                            OfficeSharedComputerLicensing   = $OfficeSharedComputerLicensing
+                            OfficeDeviceBasedLicensing      = $OfficeDeviceBasedLicensing
+                            OfficeDeploymentToolUri         = $OfficeDeploymentToolUri
+                            OfficeMinimumFreeSpaceGB        = $OfficeMinimumFreeSpaceGB
+                            Confirm                         = $false
                         }
-                        else {
-                            $officeSyncParameters = @{
-                                Name                            = 'Microsoft365Apps'
-                                OfficeChannel                   = $OfficeChannel
-                                OfficeArchitecture              = $OfficeArchitecture
-                                OfficeProductId                 = $OfficeProductId
-                                OfficeLanguage                  = $OfficeLanguage
-                                OfficeAcceptEula                = $OfficeAcceptEula
-                                OfficeSharedComputerLicensing   = $OfficeSharedComputerLicensing
-                                OfficeDeviceBasedLicensing      = $OfficeDeviceBasedLicensing
-                                OfficeDeploymentToolUri         = $OfficeDeploymentToolUri
-                                OfficeMinimumFreeSpaceGB        = $OfficeMinimumFreeSpaceGB
-                                Confirm                         = $false
-                            }
 
-                            if ($OfficeExcludeApp) {
-                                $officeSyncParameters.OfficeExcludeApp = $OfficeExcludeApp
-                            }
+                        if ($OfficeExcludeApp) {
+                            $officeSyncParameters.OfficeExcludeApp = $OfficeExcludeApp
+                        }
 
-                            if ($ConfigurationXml) {
-                                $officeSyncParameters.ConfigurationXml = $ConfigurationXml
-                            }
+                        if ($ConfigurationXml) {
+                            $officeSyncParameters.ConfigurationXml = $ConfigurationXml
+                        }
 
-                            try {
-                                Sync-OSDAppBuiltIn @officeSyncParameters | Out-Null
-                            }
-                            catch {
-                                Write-Warning "Microsoft 365 Apps cache refresh failed. Existing cached payload will be used when available. $($_.Exception.Message)"
-                            }
+                        try {
+                            Sync-OSDAppBuiltIn @officeSyncParameters | Out-Null
+                        }
+                        catch {
+                            Write-Warning "Microsoft 365 Apps cache refresh failed. Existing cached payload will be used when available. $($_.Exception.Message)"
                         }
                     }
 
