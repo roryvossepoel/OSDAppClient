@@ -534,7 +534,7 @@ teamsbootstrapper.exe -p -o <local teams.msix>
 
 Without a cached MSIX, the existing online `teamsbootstrapper.exe -p` behavior remains unchanged.
 
-> The current Teams version check requires downloading the current Microsoft MSIX before its embedded package version can be compared with the local cache. This can be optimized later if Microsoft exposes suitable lightweight version metadata.
+Teams cache freshness is checked first using lightweight HTTP response metadata from the official Microsoft MSIX endpoint. When the remote ETag matches the cached metadata, no MSIX payload is downloaded. If ETag is unavailable, Last-Modified plus Content-Length are used as a fallback. Only when the remote metadata differs, or when no trustworthy cached metadata exists, is the current MSIX downloaded and its embedded package version inspected.
 
 ## Built-in Microsoft 365 Apps support
 
