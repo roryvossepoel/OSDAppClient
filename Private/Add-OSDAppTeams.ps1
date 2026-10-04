@@ -18,9 +18,11 @@ function Add-OSDAppTeams {
 
     New-Item -ItemType Directory -Path $builtInRoot -Force | Out-Null
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BootstrapperAcquireStart' -Message 'Downloading the latest Microsoft Teams bootstrapper for SetupComplete.' -Data @{ Uri = $TeamsBootstrapperUri }
-    Invoke-WebRequest -Uri $TeamsBootstrapperUri -OutFile $bootstrapperPath -UseBasicParsing -ErrorAction Stop
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BootstrapperAcquireComplete' -Message 'Microsoft Teams bootstrapper acquired.' -Data @{ Path = $bootstrapperPath }
+    if (-not (Test-Path -LiteralPath $bootstrapperPath -PathType Leaf)) {
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BootstrapperAcquireStart' -Message 'Downloading the latest Microsoft Teams bootstrapper for SetupComplete.' -Data @{ Uri = $TeamsBootstrapperUri }
+        Invoke-WebRequest -Uri $TeamsBootstrapperUri -OutFile $bootstrapperPath -UseBasicParsing -ErrorAction Stop
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BootstrapperAcquireComplete' -Message 'Microsoft Teams bootstrapper acquired.' -Data @{ Path = $bootstrapperPath }
+    }
 
     $destinationRoot = Join-Path $WindowsPath 'OSDApps'
     $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\Teams'
@@ -52,11 +54,18 @@ function Add-OSDAppTeams {
             $builtInApps = @($deviceManifest.BuiltInApps | Where-Object { $_.Id -ne 'Teams' })
         }
 
+        $offlinePackage = $null
+        $cachedMsixPath = Join-Path $builtInRoot 'teams.msix'
+        if (Test-Path -LiteralPath $cachedMsixPath -PathType Leaf) {
+            $offlinePackage = 'BuiltIn\Teams\teams.msix'
+        }
+
         $builtInApps += [pscustomobject]@{
             Id                  = 'Teams'
             DisplayName         = 'Microsoft Teams'
             Type                = 'TeamsBootstrapper'
             Setup               = 'BuiltIn\Teams\teamsbootstrapper.exe'
+            OfflinePackage      = $offlinePackage
             InstallMeetingAddin = $InstallMeetingAddin
         }
 
@@ -74,7 +83,7 @@ function Add-OSDAppTeams {
         $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
         Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppRunner.ps1') -Force
 
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'TeamsStageComplete' -Message 'Microsoft Teams bootstrapper staged for SetupComplete.' -Data @{ Destination = $destinationBuiltIn; InstallMeetingAddin = $InstallMeetingAddin }
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'TeamsStageComplete' -Message 'Microsoft Teams staged for SetupComplete.' -Data @{ Destination = $destinationBuiltIn; InstallMeetingAddin = $InstallMeetingAddin; OfflinePackage = $offlinePackage }
     }
 
     [pscustomobject]@{
