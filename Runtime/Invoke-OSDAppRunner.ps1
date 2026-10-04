@@ -45,20 +45,36 @@ function Write-RunnerLog {
         }
     }
 
-    $entry = [ordered]@{
-        Timestamp = (Get-Date).ToUniversalTime().ToString('o')
-        Level     = $Level
-        Component = 'Install'
-        Event     = $Event
-        Message   = $Message
+    $type = switch ($Level) {
+        'Warning' { 2 }
+        'Error'   { 3 }
+        default   { 1 }
     }
 
+    $details = @()
     if ($Data) {
-        $entry.Data = $Data
+        foreach ($key in @($Data.Keys | Sort-Object)) {
+            $value = $Data[$key]
+            if ($value -is [System.Collections.IEnumerable] -and $value -isnot [string]) {
+                $value = @($value) -join ','
+            }
+            $details += ('{0}={1}' -f $key, $value)
+        }
     }
 
-    ($entry | ConvertTo-Json -Compress -Depth 10) |
-        Add-Content -LiteralPath $LogPath -Encoding UTF8
+    $logMessage = if ($Message) { "[$Event] $Message" } else { "[$Event]" }
+    if ($details.Count -gt 0) {
+        $logMessage += ' | ' + ($details -join '; ')
+    }
+    $logMessage = $logMessage -replace '\]LOG\]!>', ']LOG]! >'
+
+    $now = (Get-Date).ToUniversalTime()
+    $time = $now.ToString('HH:mm:ss.fff') + '+000'
+    $date = $now.ToString('MM-dd-yyyy')
+    $thread = [System.Threading.Thread]::CurrentThread.ManagedThreadId
+
+    $line = '<![LOG[{0}]LOG]!><time="{1}" date="{2}" component="Install" context="" type="{3}" thread="{4}" file="">' -f $logMessage, $time, $date, $type, $thread
+    Add-Content -LiteralPath $LogPath -Value $line -Encoding UTF8
 }
 
 $logPath = $null
