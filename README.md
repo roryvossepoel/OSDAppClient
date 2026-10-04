@@ -302,7 +302,7 @@ OSDAppRepo is the recommended authoring and repository-management module. It bui
 
 ## Logging
 
-OSD App Client writes structured JSON-lines logs designed for both human troubleshooting and machine analysis.
+OSD App Client writes CMTrace-compatible logs so deployment activity can be read directly in CMTrace and CMTrace Open.
 
 ### WinPE / client log
 
@@ -318,7 +318,9 @@ For the standard OSDCloud USB layout this is typically:
 E:\OSDApps\Logs\Client.log
 ```
 
-The log includes events such as synchronization start/completion, packages already current, package acquisition, SHA-256 validation, and staging.
+The log includes events such as synchronization start/completion, packages already current, package acquisition, SHA-256 validation, staging, cache operations, and built-in acquisition. Event names are included at the start of the CMTrace message and structured details are appended as `key=value` pairs.
+
+CMTrace severity types are used: information/debug = type 1, warning = type 2, error = type 3.
 
 Logs are bounded and rotated automatically. The default limit is 1 MB per file with three retained rotated files. This means up to four log files can exist at once: the active `Client.log` plus `Client.log.1`, `Client.log.2`, and `Client.log.3`.
 
@@ -330,7 +332,7 @@ Application installation events are written to:
 %SystemDrive%\OSDApps\Logs\Install.log
 ```
 
-Runtime logs use the same bounded JSON-lines format and automatic rotation: the active `Install.log` plus up to three rotated files.
+Runtime logs use the same CMTrace-compatible format and automatic rotation: the active `Install.log` plus up to three rotated files.
 
 
 ## Architecture resolution
