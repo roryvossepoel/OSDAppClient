@@ -293,7 +293,7 @@ E:\OSDApps\Logs\Client.log
 
 The log includes events such as synchronization start/completion, packages already current, package acquisition, SHA-256 validation, and staging.
 
-Logs are bounded and rotated automatically. The default limit is 1 MB per file with three retained rotated files.
+Logs are bounded and rotated automatically. The default limit is 1 MB per file with three retained rotated files. This means up to four log files can exist at once: the active `Client.log` plus `Client.log.1`, `Client.log.2`, and `Client.log.3`.
 
 ### Installed Windows / runtime log
 
@@ -303,7 +303,7 @@ Application installation events are written to:
 %SystemDrive%\OSDApps\Logs\Install.log
 ```
 
-Runtime logs use the same bounded JSON-lines format and automatic rotation.
+Runtime logs use the same bounded JSON-lines format and automatic rotation: the active `Install.log` plus up to three rotated files.
 
 
 ## Architecture resolution
@@ -699,6 +699,37 @@ Azure Blob Storage
                 └── <Architecture>/
                     └── Package.zip
 ```
+
+
+### Cache free-space guard
+
+Before synchronizing built-in payloads, OSDAppClient checks the remaining free space on the volume labeled `OSDCloud`.
+
+Default minimum free-space thresholds:
+
+```text
+Microsoft 365 Apps : 8 GB
+Microsoft Teams    : 2 GB
+```
+
+These are conservative safety thresholds, not exact payload-size predictions. They prevent a cache refresh from starting when the deployment media is already close to full.
+
+The thresholds can be overridden when needed:
+
+```powershell
+Add-OSDApp Microsoft365Apps,Teams `
+    -OfficeMinimumFreeSpaceGB 6 `
+    -TeamsMinimumFreeSpaceGB 1
+```
+
+or when explicitly pre-caching:
+
+```powershell
+Sync-OSDAppBuiltIn Microsoft365Apps `
+    -OfficeMinimumFreeSpaceGB 6
+```
+
+Every free-space check is written to `Client.log` as a `FreeSpaceCheck` event. If the threshold is not met, the sync stops before downloading payload content.
 
 
 ## Clearing the USB cache
