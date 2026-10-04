@@ -42,6 +42,8 @@ function Add-OSDApp {
 
         [switch]$SkipCacheRefresh,
 
+        [switch]$KeepSource,
+
         [string]$WindowsPath
     )
 
@@ -82,6 +84,7 @@ function Add-OSDApp {
         $repositoryApps = @($uniqueApps | Where-Object { $_ -ine 'Microsoft365Apps' -and $_ -ine 'Teams' })
 
         $cachePath = Get-OSDAppCachePath
+        $stagedRelativePath = 'Windows\Temp\OSDApps'
 
         if ($repositoryApps.Count -gt 0) {
             $cacheManifestPath = Join-Path $cachePath 'CacheManifest.json'
@@ -124,7 +127,7 @@ function Add-OSDApp {
 
         if ($PSCmdlet.ShouldProcess(($uniqueApps -join ', '), "Stage applications for SetupComplete on $windowsPath")) {
             if ($repositoryApps.Count -gt 0) {
-                Copy-OSDAppContent -Name $repositoryApps -CachePath $cachePath -WindowsPath $windowsPath | Out-Null
+                Copy-OSDAppContent -Name $repositoryApps -CachePath $cachePath -WindowsPath $windowsPath -DestinationRelativePath $stagedRelativePath | Out-Null
             }
 
             $useBuiltInCache = $BuiltInInstallMode -eq 'Cached'
@@ -236,6 +239,7 @@ function Add-OSDApp {
                     UseCachedConfiguration   = ($useBuiltInCache -and (-not $officeConfigurationOverridden))
                     UseCachedPayload         = $useBuiltInCache
                     OfficeDeploymentToolUri = $OfficeDeploymentToolUri
+                    StagedRelativePath       = $stagedRelativePath
                     Confirm                 = $false
                 }
 
@@ -251,10 +255,33 @@ function Add-OSDApp {
             }
 
             if ($teamsRequested) {
-                Add-OSDAppTeams -CachePath $cachePath -WindowsPath $windowsPath -InstallMeetingAddin $TeamsInstallMeetingAddin -UseCachedPayload $useBuiltInCache -TeamsBootstrapperUri $TeamsBootstrapperUri -Confirm:$false | Out-Null
+                Add-OSDAppTeams -CachePath $cachePath -WindowsPath $windowsPath -InstallMeetingAddin $TeamsInstallMeetingAddin -UseCachedPayload $useBuiltInCache -TeamsBootstrapperUri $TeamsBootstrapperUri -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
             }
 
-            Add-OSDAppSetupComplete -WindowsPath $windowsPath | Out-Null
+            $destinationRoot = Join-Path $windowsPath $stagedRelativePath
+            $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
+
+            if (-not (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf)) {
+                throw "Device manifest not found after staging: $deviceManifestPath"
+            }
+
+            $deviceManifest = Get-Content -LiteralPath $deviceManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $runtimePolicy = [pscustomobject]@{
+                KeepSource = [bool]$KeepSource
+                LogPath    = '%ProgramData%\OSDApps\Logs\Install.log'
+            }
+
+            if ($deviceManifest.PSObject.Properties.Name -contains 'Runtime') {
+                $deviceManifest.Runtime = $runtimePolicy
+            }
+            else {
+                $deviceManifest | Add-Member -NotePropertyName Runtime -NotePropertyValue $runtimePolicy
+            }
+
+            $deviceManifest | ConvertTo-Json -Depth 20 |
+                Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
+
+            Add-OSDAppSetupComplete -WindowsPath $windowsPath -StagedRelativePath $stagedRelativePath | Out-Null
         }
 
         foreach ($app in $uniqueApps) {
@@ -263,7 +290,7 @@ function Add-OSDApp {
                 Name        = $app
                 CachePath   = $cachePath
                 WindowsPath = $windowsPath
-                StagedPath  = Join-Path $windowsPath 'OSDApps'
+                StagedPath  = Join-Path $windowsPath $stagedRelativePath
                 Source      = if ($app -ieq 'Microsoft365Apps' -or $app -ieq 'Teams') { 'BuiltIn' } else { 'Repository' }
             }
         }
