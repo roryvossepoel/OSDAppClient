@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
-$logDirectory = Join-Path $StagedPath 'Logs'
+$logDirectory = Join-Path $env:ProgramData 'OSDApps\Logs'
 $logPath = Join-Path $logDirectory 'Install.log'
 
 function Write-PreInstallLog {
