@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.20.3
+
+### Changed
+
+- Replaced large SetupComplete `Invoke-WebRequest` downloads with streaming `HttpClient` transfers.
+- Uses temporary `.download` files and only replaces the destination after a successful transfer.
+- Added runtime transfer metrics: bytes, size, duration, and average MB/s.
+- Improved module download progress with transferred/total size, percentage, average speed, elapsed time, and estimated remaining time.
+- Applied the streaming path to Adobe Acrobat Unified, Teams MSIX/bootstrapper, and Office Deployment Tool bootstrapper downloads.
+
+
 ## 0.20.2
 
 ### Changed
