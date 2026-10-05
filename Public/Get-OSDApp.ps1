@@ -101,7 +101,7 @@ function Get-OSDApp {
         foreach ($definition in @(
             @{ Id='Microsoft365Apps'; Path=(Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json') },
             @{ Id='Teams'; Path=(Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json') },
-            @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath 'BuiltIn\AdobeAcrobatUnified\CacheInfo.json') }
+            @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) }
         )) {
             if (Test-Path -LiteralPath $definition.Path -PathType Leaf) {
                 try {
