@@ -103,6 +103,15 @@ The runtime decides the source automatically. USB cache availability changes per
 
 Use `-Verbose` to see Windows target resolution, OSDCloud cache detection, cache state, staging decisions, and the selected acquisition path.
 
+Verbose output uses a compact OSDCloud-style deployment format with timestamps, severity labels and short component names, for example:
+
+```text
+[2026-10-05T09:10:12] [INFO] Cache: OSDCloud cache found at E:\OSDApps
+[2026-10-05T09:10:12] [INFO] Microsoft365Apps: No existing cache found; cache will be created during SetupComplete
+```
+
+The same decisions are also written to the CMTrace-compatible logs.
+
 ## Runtime locations
 
 Temporary deployment source:
