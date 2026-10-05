@@ -14,6 +14,7 @@ function Add-OSDAppMicrosoft365AppsInternal {
         [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
         [string[]]$ExcludeApp,
         [string]$ConfigurationXml,
+        [bool]$UseCachedConfiguration = $true,
         [string]$OfficeDeploymentToolUri = 'https://officecdn.microsoft.com/pr/wsus/setup.exe',
         [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
@@ -46,7 +47,7 @@ function Add-OSDAppMicrosoft365AppsInternal {
     New-Item -ItemType Directory -Path $destinationBuiltIn -Force | Out-Null
 
     if ($cacheHasPayload) {
-        Copy-Item -LiteralPath (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force
+        Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force
     }
 
     $configPath = Join-Path $destinationBuiltIn 'configuration.xml'
@@ -57,7 +58,7 @@ function Add-OSDAppMicrosoft365AppsInternal {
         }
         Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
     }
-    elseif ($cacheHasPayload -and (Test-Path -LiteralPath $cacheConfig -PathType Leaf)) {
+    elseif ($UseCachedConfiguration -and $cacheHasPayload -and (Test-Path -LiteralPath $cacheConfig -PathType Leaf)) {
         Copy-Item -LiteralPath $cacheConfig -Destination $configPath -Force
     }
     else {
