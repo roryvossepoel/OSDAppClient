@@ -112,6 +112,25 @@ Verbose output uses a compact OSDCloud-style deployment format with timestamps, 
 
 The same decisions are also written to the CMTrace-compatible logs.
 
+## Validated deployment scenarios
+
+The built-in cache bootstrap flow has been validated end to end with a completely blank `OSDCloud` USB cache:
+
+```text
+blank USB with label OSDCloud
+→ Add-OSDAppMicrosoft365Apps
+→ Add-OSDAppTeams
+→ no usable built-in cache present in WinPE
+→ SetupComplete detects the OSDCloud volume
+→ Microsoft 365 Apps cache is created from scratch
+→ Microsoft Teams cache is created from scratch
+→ both payloads are staged locally
+→ both applications install successfully
+→ temporary runtime cleanup is scheduled
+```
+
+This confirms that pre-populating `<OSDCloud>:\OSDApps` is not required for built-in deployment.
+
 ## Runtime locations
 
 Temporary deployment source:
