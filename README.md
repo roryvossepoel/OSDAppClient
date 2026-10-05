@@ -7,12 +7,13 @@ It is designed around a simple deployment model:
 ```text
 WinPE
 → OSDCloud applies Windows and drivers
-→ OSDAppClient synchronizes repository packages
-→ Add-OSDApp stages selected applications
+→ repository applications are synchronized/cached in WinPE
+→ Add-* stages application intent and available content to the offline OS
 
 First boot / full Windows
-→ built-in Office / Teams cache refresh
-→ current payload is restaged
+→ built-in Office / Teams source is resolved automatically
+→ optional OSDCloud USB cache is used and updated when present
+→ otherwise content is acquired directly to the local Windows runtime
 → SetupComplete installs applications
 → temporary source is removed
 → OOBE / Autopilot continues
@@ -63,13 +64,44 @@ Sync-OSDAppMicrosoft365Apps `
 Sync-OSDAppTeams -Architecture x64
 ```
 
-## Important: keep the USB connected
+## Optional OSDCloud USB cache
 
-> **Keep the OSDCloud USB connected until OOBE is displayed.**
+USB media is optional for built-in applications.
 
-Repository packages are synchronized in WinPE immediately after OSDCloud completes.
+If a USB volume with the label `OSDCloud` is connected, OSD Apps detects it automatically and uses it as the cache source and destination. No `OSDApps` folder or pre-existing cache is required: a blank `OSDCloud` volume can be populated automatically during deployment.
 
-OSD Apps can run built-in applications without USB media. If a USB volume labeled `OSDCloud` is connected, cache functionality is enabled automatically. Built-in Office and Teams content is synchronized/updated during SetupComplete in full Windows; without an `OSDCloud` USB cache, the content is acquired directly to the local Windows runtime. Repository applications currently use the OSDCloud cache and synchronize in WinPE after OSDCloud completes.
+```text
+OSDCloud USB + online
+→ use existing cache when available
+→ refresh/update cache
+→ stage current content locally
+→ install
+
+OSDCloud USB + offline
+→ use complete cached content
+→ install
+
+No USB + online
+→ acquire directly to %SystemRoot%\Temp\OSDApps
+→ install
+```
+
+Repository applications synchronize/cache in WinPE. Built-in Microsoft 365 Apps and Teams synchronize/update during SetupComplete in full Windows.
+
+> **When an OSDCloud USB cache is detected, keep it connected until OOBE is displayed.**
+
+## Transparent source resolution
+
+The same built-in Add commands are used regardless of how content will be acquired:
+
+```powershell
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
+```
+
+The runtime decides the source automatically. USB cache availability changes performance and offline capability, not the deployment command.
+
+Use `-Verbose` to see Windows target resolution, OSDCloud cache detection, cache state, staging decisions, and the selected acquisition path.
 
 ## Runtime locations
 
@@ -87,12 +119,7 @@ Persistent logs:
 
 After a successful run, the temporary runtime/source directory is removed automatically. Logs remain available.
 
-Use `-KeepSource` when troubleshooting:
-
-```powershell
-Add-OSDAppMicrosoft365Apps
-Add-OSDAppTeams
-```
+On failure, the local runtime source is retained for troubleshooting.
 
 ## Built-in applications
 
@@ -137,12 +164,13 @@ See [Repository applications](docs/repository.md).
 
 The standalone runtime does not require the OSDAppClient module to be installed in Windows.
 
-`Add-OSDApp` stages everything needed for the first boot:
+The Add cmdlets stage everything needed for the first boot:
 - `DeviceManifest.json`
 - `Invoke-OSDAppPreInstall.ps1`
 - `Invoke-OSDAppRunner.ps1`
-- repository packages
-- built-in payloads
+- repository packages when applicable
+- built-in deployment intent
+- available built-in cache content when present
 
 SetupComplete runs the standalone pre-install phase first and the installer second.
 
