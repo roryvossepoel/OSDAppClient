@@ -14,6 +14,13 @@ This page tracks end-to-end deployment paths that have been exercised with OSDCl
 
 - Microsoft 365 Apps
 - Microsoft Teams
+- Adobe Acrobat Unified x64
+
+## Built-ins awaiting end-to-end validation
+
+- Google Chrome Enterprise x64/x86
+- Mozilla Firefox Enterprise Rapid/ESR x64/x86
+- Adobe Acrobat Unified x86
 
 ## Success criteria
 
