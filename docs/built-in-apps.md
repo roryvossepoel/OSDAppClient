@@ -75,9 +75,9 @@ The Teams cache contains:
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
 
-## Cached mode
+## Deployment flow
 
-Cached mode is the default:
+The same commands are used with or without USB cache:
 
 ```powershell
 Add-OSDAppMicrosoft365Apps
@@ -92,14 +92,15 @@ In full Windows, PreInstall resolves the source automatically:
 - current content is staged locally before the runner starts;
 - the runner installs from local content.
 
-## Online mode
+## No-USB mode
 
-```powershell
-Add-OSDAppMicrosoft365Apps
-Add-OSDAppTeams -BuiltInInstallMode Online
-```
+No alternate parameter or command is required.
 
-Online mode skips the cached payload model. The vendor bootstrapper/configuration is staged and installation downloads required content during SetupComplete.
+When no `OSDCloud` volume is connected, PreInstall downloads the current Microsoft 365 Apps and Teams content directly into the local Windows runtime under `%SystemRoot%\Temp\OSDApps`. The runner then installs from that local source.
+
+When an `OSDCloud` volume is connected, it is detected automatically. Existing cache content is used when available and the cache is refreshed/updated during SetupComplete.
+
+A completely blank `OSDCloud` volume is supported. OSD Apps creates the cache structure and populates it during the full-Windows pre-install phase.
 
 ## Fallback behavior
 
@@ -111,8 +112,32 @@ When a refresh/acquisition problem occurs, PreInstall uses a complete local or U
 
 Office refresh has a 20-minute timeout by default.
 
-## USB requirement
+## USB cache behavior
 
-Keep the OSDCloud USB connected until OOBE is displayed.
+USB is not required for built-in deployment.
 
-The built-in refresh/update phase runs in full Windows before installation. If cache functionality is being used, keep the `OSDCloud` USB connected until OOBE so the cache can be checked and updated. Without an `OSDCloud` USB cache, built-ins can be acquired directly to the local Windows runtime instead.
+If an `OSDCloud` USB volume is detected, cache functionality is enabled automatically. Keep that media connected until OOBE is displayed so SetupComplete can use and update the cache.
+
+If no `OSDCloud` volume is present, built-ins are acquired directly to the local Windows runtime.
+
+
+## Verbose staging diagnostics
+
+Use:
+
+```powershell
+Add-OSDAppMicrosoft365Apps -Verbose
+Add-OSDAppTeams -Verbose
+```
+
+Verbose output shows:
+- offline Windows target detection;
+- OSDCloud cache-volume detection;
+- whether an existing built-in cache is complete;
+- local staging decisions;
+- SetupComplete integration;
+- the selected acquisition path.
+
+When OSDCloud cache media is detected, the Add cmdlet also emits a warning to keep the USB connected until OOBE is displayed.
+
+The same decisions are written to the CMTrace-compatible logs.
