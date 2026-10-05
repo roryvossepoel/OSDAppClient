@@ -89,7 +89,7 @@ BuiltIn\
 Work\
 ```
 
-After a successful installation the runtime directory is removed automatically unless `-KeepSource` was specified.
+After a successful installation the runtime directory is removed automatically. On failure, the runtime source is retained for troubleshooting.
 
 
 ## Optional USB cache
