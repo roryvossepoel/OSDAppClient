@@ -128,6 +128,12 @@ The ZIP remains compressed while cached and staged. During installation the stan
 Setup.exe /sAll /msi ADDLOCAL=ALL
 ```
 
+The Adobe installation timeout defaults to 15 minutes. While Setup.exe is running, the runner logs a heartbeat every 60 seconds. Override the timeout when needed:
+
+```powershell
+Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
+```
+
 x64 is used when `-Architecture` is omitted. x86 and x64 caches are kept separately so a single OSDCloud USB can hold both variants.
 
 ## Deployment flow
