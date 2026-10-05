@@ -8,6 +8,8 @@ Currently supported:
 Microsoft365Apps
 Teams
 AdobeAcrobatUnified
+GoogleChromeEnterprise
+MozillaFirefoxEnterprise
 ```
 
 ## Vendor-only source policy
@@ -136,6 +138,75 @@ Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
 
 x64 is used when `-Architecture` is omitted. x86 and x64 caches are kept separately so a single OSDCloud USB can hold both variants.
 
+### Google Chrome Enterprise
+
+Google Chrome Enterprise uses Google's official Enterprise MSI directly from Google's download infrastructure. x64 is the default and x86 is optional. Google documents Windows Enterprise deployment with both 64-bit and 32-bit MSI packages.
+
+```powershell
+# x64 default
+Sync-OSDAppGoogleChromeEnterprise
+Add-OSDAppGoogleChromeEnterprise
+
+# optional x86
+Sync-OSDAppGoogleChromeEnterprise -Architecture x86
+Add-OSDAppGoogleChromeEnterprise -Architecture x86
+```
+
+Cache layout:
+
+```text
+BuiltIn\GoogleChromeEnterprise\
+├── x64\
+│   ├── Package.msi
+│   └── CacheInfo.json
+└── x86\
+    ├── Package.msi
+    └── CacheInfo.json
+```
+
+Installation uses Windows Installer:
+
+```text
+msiexec.exe /i Package.msi /qn /norestart
+```
+
+### Mozilla Firefox Enterprise
+
+Mozilla Firefox Enterprise uses Mozilla's official MSI redirect endpoint. Both Rapid Release and ESR are supported, with x64 as the default architecture and `en-US` as the default language.
+
+```powershell
+# Rapid Release, x64, en-US
+Sync-OSDAppMozillaFirefoxEnterprise
+Add-OSDAppMozillaFirefoxEnterprise
+
+# ESR
+Sync-OSDAppMozillaFirefoxEnterprise -Channel ESR
+Add-OSDAppMozillaFirefoxEnterprise -Channel ESR
+
+# x86 or another Mozilla locale
+Sync-OSDAppMozillaFirefoxEnterprise -Architecture x86 -Language nl
+Add-OSDAppMozillaFirefoxEnterprise -Architecture x86 -Language nl
+```
+
+Cache layout keeps channel, architecture, and language isolated:
+
+```text
+BuiltIn\MozillaFirefoxEnterprise\
+└── <Rapid|ESR>\
+    └── <x64|x86>\
+        └── <language>\
+            ├── Package.msi
+            └── CacheInfo.json
+```
+
+Installation uses:
+
+```text
+msiexec.exe /i Package.msi /qn /norestart
+```
+
+Mozilla notes that its MSI is a signed wrapper around the full Firefox installer, but it supports the standard MSI deployment options needed here.
+
 ## Deployment flow
 
 The same commands are used with or without USB cache:
@@ -144,6 +215,8 @@ The same commands are used with or without USB cache:
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppGoogleChromeEnterprise
+Add-OSDAppMozillaFirefoxEnterprise
 ```
 
 In WinPE, the built-in Add cmdlets stage deployment intent and any already-available cached payload into Windows Temp. A USB cache is not required.
@@ -191,6 +264,8 @@ Use:
 Add-OSDAppMicrosoft365Apps -Verbose
 Add-OSDAppTeams -Verbose
 Add-OSDAppAdobeAcrobatUnified -Verbose
+Add-OSDAppGoogleChromeEnterprise -Verbose
+Add-OSDAppMozillaFirefoxEnterprise -Verbose
 ```
 
 Verbose output shows:
