@@ -184,6 +184,110 @@ function Test-LocalAdobeAcrobatUnifiedSource {
     return (Test-Path -LiteralPath (Join-Path $Root 'Package.zip') -PathType Leaf)
 }
 
+function Test-LocalMsiSource {
+    param([string]$Root)
+    return (Test-Path -LiteralPath (Join-Path $Root 'Package.msi') -PathType Leaf)
+}
+
+function Sync-PreInstallVendorMsi {
+    param(
+        [Parameter(Mandatory)][psobject]$App,
+        [Parameter(Mandatory)][string]$RelativeRoot,
+        [Parameter(Mandatory)][string]$PackageUri,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+
+    $id = [string]$App.Id
+    $localRoot = Join-Path $StagedPath $RelativeRoot
+    New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
+
+    $acquireRoot = if ($usbRoot) { Join-Path $usbRoot $RelativeRoot } else { $localRoot }
+    New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
+
+    if ($usbRoot -and -not (Test-LocalMsiSource -Root $localRoot) -and (Test-LocalMsiSource -Root $acquireRoot)) {
+        Copy-Item -LiteralPath (Join-Path $acquireRoot 'Package.msi') -Destination (Join-Path $localRoot 'Package.msi') -Force
+        if (Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf) {
+            Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
+        }
+        Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message "Existing $DisplayName USB cache was staged locally." -Data @{ Id=$id }
+    }
+
+    if (-not $networkAvailable) {
+        if (Test-LocalMsiSource -Root $localRoot) {
+            Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message "No network is available. Existing staged $DisplayName payload will be used." -Data @{ Id=$id }
+            return
+        }
+        throw "$DisplayName has no staged or USB-cached payload and no network connection is available to acquire one."
+    }
+
+    try {
+        $cacheInfoPath = Join-Path $acquireRoot 'CacheInfo.json'
+        $cacheInfo = $null
+        if (Test-Path -LiteralPath $cacheInfoPath -PathType Leaf) {
+            try { $cacheInfo = Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+        }
+
+        $packagePath = Join-Path $acquireRoot 'Package.msi'
+        Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message "Checking $DisplayName cache for updates." -Data @{ Id=$id; Target=if($usbRoot){'USB'}else{'Local'} }
+
+        $remote = Get-RemoteMetadata -Uri $PackageUri
+        $matches = $false
+
+        if ((Test-Path -LiteralPath $packagePath -PathType Leaf) -and $cacheInfo) {
+            if ($remote.ETag -and $cacheInfo.RemoteETag) {
+                $matches = $remote.ETag -eq [string]$cacheInfo.RemoteETag
+            }
+            elseif ($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength) {
+                $matches = (
+                    $remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and
+                    [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength
+                )
+            }
+        }
+
+        $updated = $false
+        if (-not $matches) {
+            $tempRoot = Join-Path $StagedPath (Join-Path 'Work\Refresh' $id)
+            New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+            $tempPackage = Join-Path $tempRoot 'Package.msi'
+            Save-PreInstallDownload -Uri $PackageUri -DestinationPath $tempPackage -Id $id -Description "$DisplayName MSI" -TimeoutMinutes 15
+            Copy-Item -LiteralPath $tempPackage -Destination $packagePath -Force
+            $updated = $true
+        }
+
+        $cacheRecord = [ordered]@{
+            Id                  = $id
+            Cached              = [bool]$usbRoot
+            Version             = 'Current'
+            Architecture        = $App.Architecture
+            PackageUri          = $PackageUri
+            RemoteETag          = $remote.ETag
+            RemoteLastModified  = $remote.LastModified
+            RemoteContentLength = $remote.ContentLength
+            RemoteFinalUri      = $remote.FinalUri
+            SyncedAt            = (Get-Date).ToUniversalTime().ToString('o')
+        }
+        if ($App.PSObject.Properties.Name -contains 'Channel' -and $App.Channel) { $cacheRecord.Channel = [string]$App.Channel }
+        if ($App.PSObject.Properties.Name -contains 'Language' -and $App.Language) { $cacheRecord.Language = [string]$App.Language }
+
+        $cacheRecord | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+
+        if ($usbRoot) {
+            Copy-Item -LiteralPath $packagePath -Destination (Join-Path $localRoot 'Package.msi') -Force
+            Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
+        }
+
+        Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message "$DisplayName content is ready for installation." -Data @{ Id=$id; PackageUpdated=$updated; CacheSynchronized=[bool]$usbRoot }
+    }
+    catch {
+        if (Test-LocalMsiSource -Root $localRoot) {
+            Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{ Id=$id; Fallback='ExistingStagedPayload' }
+            return
+        }
+        throw "$DisplayName acquisition failed and no staged fallback is available. $($_.Exception.Message)"
+    }
+}
+
 try {
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Device manifest not found: $manifestPath" }
     $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -365,6 +469,38 @@ try {
                     }
                     throw "Adobe Acrobat Unified acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
+            }
+            'GoogleChromeEnterprise' {
+                $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }
+                $packageUri = if ($app.PackageUri) {
+                    [string]$app.PackageUri
+                }
+                else {
+                    switch ($architecture) {
+                        'x86' { 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise.msi' }
+                        default { 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi' }
+                    }
+                }
+
+                $relativeRoot = Join-Path 'BuiltIn\GoogleChromeEnterprise' $architecture
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Google Chrome Enterprise'
+            }
+            'MozillaFirefoxEnterprise' {
+                $channel = if ($app.Channel) { [string]$app.Channel } else { 'Rapid' }
+                $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }
+                $language = if ($app.Language) { [string]$app.Language } else { 'en-US' }
+
+                $packageUri = if ($app.PackageUri) {
+                    [string]$app.PackageUri
+                }
+                else {
+                    $product = if ($channel -eq 'ESR') { 'firefox-esr-msi-latest-ssl' } else { 'firefox-msi-latest-ssl' }
+                    $os = if ($architecture -eq 'x64') { 'win64' } else { 'win' }
+                    "https://download.mozilla.org/?product=$product&os=$os&lang=$language"
+                }
+
+                $relativeRoot = Join-Path 'BuiltIn\MozillaFirefoxEnterprise' (Join-Path $channel (Join-Path $architecture $language))
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Mozilla Firefox Enterprise'
             }
         }
     }
