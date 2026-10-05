@@ -134,3 +134,30 @@ Built-in Microsoft 365 Apps / Teams
 ```
 
 This separation keeps repository acquisition independent from vendor installers while allowing built-ins to use the full Windows runtime they require.
+
+
+## Validated blank-cache flow
+
+The following built-in scenario has been validated end to end:
+
+```text
+OSDCloud USB present
+OSDApps cache absent
+        ↓
+WinPE Add cmdlets stage deployment intent only
+        ↓
+First boot / SetupComplete
+        ↓
+OSDCloud cache volume detected
+        ↓
+Microsoft 365 Apps cache populated from Microsoft CDN
+Microsoft Teams cache populated from Microsoft endpoints
+        ↓
+Current payload staged to %SystemRoot%\Temp\OSDApps
+        ↓
+Runner installs both applications successfully
+        ↓
+Runtime cleanup scheduled
+```
+
+The validated run started with no usable Office or Teams cache. During PreInstall, Office resolved from no previous version to the current build and Teams reported a fresh package update. Both built-in installations completed with exit code `0`.
