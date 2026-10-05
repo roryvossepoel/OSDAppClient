@@ -231,6 +231,38 @@ try {
 
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Microsoft Teams provisioning completed.' -Data @{ Id = $app.Id; ExitCode = $process.ExitCode }
             }
+            'AdobeAcrobatUnifiedZip' {
+                $packagePath = Join-Path $StagedPath $app.Package
+                if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
+                    throw "Adobe Acrobat Unified package not found: $packagePath"
+                }
+
+                $adobeWork = Join-Path $workRoot 'AdobeAcrobatUnified'
+                if (Test-Path -LiteralPath $adobeWork) {
+                    Remove-Item -LiteralPath $adobeWork -Recurse -Force
+                }
+                New-Item -ItemType Directory -Path $adobeWork -Force | Out-Null
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInExtractStart' -Message 'Extracting Adobe Acrobat Unified package.' -Data @{ Id=$app.Id; Archive=$packagePath; Destination=$adobeWork }
+                Expand-Archive -LiteralPath $packagePath -DestinationPath $adobeWork -Force
+
+                $setupPath = Get-ChildItem -LiteralPath $adobeWork -Filter 'Setup.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+                if (-not $setupPath) {
+                    throw "Adobe Acrobat Unified Setup.exe was not found after extracting '$packagePath'."
+                }
+
+                $arguments = if ($app.InstallArguments) { [string]$app.InstallArguments } else { '/sAll /msi ADDLOCAL=ALL' }
+                $workingDirectory = Split-Path $setupPath -Parent
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Adobe Acrobat Unified installation.' -Data @{ Id=$app.Id; Setup=$setupPath; Arguments=$arguments; Offline=$true }
+
+                $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -WorkingDirectory $workingDirectory -Wait -PassThru
+                if ($process.ExitCode -notin @(0,3010)) {
+                    throw "Installation of '$($app.Id)' failed with exit code $($process.ExitCode)."
+                }
+
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Adobe Acrobat Unified installation completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+            }
             default {
                 throw "Unsupported built-in application type '$($app.Type)' for '$($app.Id)'."
             }
