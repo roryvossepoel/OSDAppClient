@@ -4,11 +4,13 @@ Contributions, issue reports, and built-in application requests are welcome.
 
 ## Built-in application requests
 
-Built-in applications are product-specific integrations maintained inside OSDAppClient. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path.
+Built-in applications are product-specific integrations maintained inside OSDAppClient. They are intentionally reserved for broadly used software with a stable, vendor-supported acquisition and unattended installation path. Built-in payloads must always be acquired directly from the software vendor; installers may never be bundled with, mirrored by, or redistributed through OSDAppClient.
 
 Before requesting a built-in, review the criteria in:
 
 - [Built-in application request policy](docs/built-in-apps.md#requesting-a-new-built-in-application)
+
+The installer source must be the vendor itself. Third-party mirrors, community package feeds, repackaged binaries, and module-hosted installer payloads are not accepted for built-ins.
 
 A strong request includes:
 
