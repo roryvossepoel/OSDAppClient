@@ -255,6 +255,8 @@ Low-level cache validation, content staging, repository synchronization internal
 - [Repository applications](docs/repository.md)
 - [Runtime and cleanup](docs/runtime.md)
 - [FAQ and troubleshooting](docs/faq.md)
+- [Validation matrix](docs/testing.md)
+- [Changelog](CHANGELOG.md)
 
 ## Related project
 
