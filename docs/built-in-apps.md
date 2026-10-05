@@ -117,9 +117,10 @@ The same commands are used with or without USB cache:
 ```powershell
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
+Add-OSDAppAdobeAcrobatUnified
 ```
 
-In WinPE, `Add-OSDAppMicrosoft365Apps` and `Add-OSDAppTeams` stage deployment intent and any already-available cached payload into Windows Temp. A USB cache is not required.
+In WinPE, the built-in Add cmdlets stage deployment intent and any already-available cached payload into Windows Temp. A USB cache is not required.
 
 In full Windows, PreInstall resolves the source automatically:
 - if an `OSDCloud` USB cache is present, it is used and updated;
@@ -131,7 +132,7 @@ In full Windows, PreInstall resolves the source automatically:
 
 No alternate parameter or command is required.
 
-When no `OSDCloud` volume is connected, PreInstall downloads the current Microsoft 365 Apps and Teams content directly into the local Windows runtime under `%SystemRoot%\Temp\OSDApps`. The runner then installs from that local source.
+When no `OSDCloud` volume is connected, PreInstall downloads the current built-in content directly into the local Windows runtime under `%SystemRoot%\Temp\OSDApps`. The runner then installs from that local source.
 
 When an `OSDCloud` volume is connected, it is detected automatically. Existing cache content is used when available and the cache is refreshed/updated during SetupComplete.
 
@@ -163,6 +164,7 @@ Use:
 ```powershell
 Add-OSDAppMicrosoft365Apps -Verbose
 Add-OSDAppTeams -Verbose
+Add-OSDAppAdobeAcrobatUnified -Verbose
 ```
 
 Verbose output shows:
@@ -209,3 +211,65 @@ complete Office and Teams cache present on OSDCloud USB
 ```
 
 This confirms that the same Add commands support both cache bootstrap and cache reuse without changing deployment syntax.
+
+
+## Requesting a new built-in application
+
+Built-ins are maintained as product-specific code in OSDAppClient, so they are deliberately selective. A request should only be considered when the application is a good fit for a generic, repeatable deployment path.
+
+### Required characteristics
+
+A built-in candidate should:
+
+- be broadly used in enterprise or managed Windows environments;
+- have a direct, deterministic vendor download source;
+- use a stable URL, documented API/endpoint, or similarly maintainable vendor-supported acquisition method;
+- support unattended installation with predictable exit codes;
+- work without customer-specific credentials, tenant-specific portals, or interactive download flows;
+- be maintainable without scraping HTML, browser automation, traffic sniffing, or reverse-engineering temporary download links.
+
+### Download-source rule
+
+OSD Apps must be able to acquire the installer directly from the vendor in a predictable way.
+
+A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when acquisition depends on techniques such as:
+
+```text
+scraping a download page
+sniffing browser/network traffic
+following undocumented JavaScript-generated links
+capturing short-lived signed URLs
+reusing session cookies or access tokens
+bypassing CDN / anti-bot protections
+reverse-engineering a protected download workflow
+```
+
+If the vendor changes a stable URL behind the scenes while keeping the published endpoint stable, that is fine. The module should not need to discover or reconstruct hidden CDN URLs itself.
+
+### When to use the repository instead
+
+The repository model is the default for applications that are:
+
+- customer-specific;
+- line-of-business or internally developed;
+- uncommon or narrowly used;
+- hosted internally;
+- accessible only after authentication;
+- distributed through portals with non-deterministic download links;
+- unsuitable for a generic vendor-native maintenance flow.
+
+Those applications belong in `catalog.json` / `Package.zip`, where the organization controls acquisition and packaging.
+
+### What to include in a request
+
+A useful built-in request should include:
+
+- product name and vendor;
+- vendor documentation URL;
+- direct installer URL(s) or documented download endpoint;
+- supported architectures;
+- unattended installation command;
+- evidence that the application is broadly used;
+- expected update/freshness mechanism if known.
+
+A request meeting these criteria can still be declined if the vendor's acquisition or installation model is too fragile to maintain safely.
