@@ -71,6 +71,94 @@ function Get-RemoteMetadata {
     } finally { $client.Dispose(); $handler.Dispose() }
 }
 
+function Save-PreInstallDownload {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][string]$DestinationPath,
+        [Parameter(Mandatory)][string]$Id,
+        [Parameter(Mandatory)][string]$Description,
+        [int]$TimeoutMinutes = 30
+    )
+
+    $directory = Split-Path -Path $DestinationPath -Parent
+    if ($directory) { New-Item -ItemType Directory -Path $directory -Force | Out-Null }
+
+    $tempPath = "$DestinationPath.download"
+    if (Test-Path -LiteralPath $tempPath) { Remove-Item -LiteralPath $tempPath -Force }
+
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $handler.AllowAutoRedirect = $true
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    $client.Timeout = [TimeSpan]::FromMinutes($TimeoutMinutes)
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    Write-PreInstallLog -Event 'DownloadStart' -Message "Downloading $Description." -Data @{ Id=$Id; Uri=$Uri; Destination=$DestinationPath }
+
+    try {
+        $response = $client.GetAsync($Uri, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+        try {
+            $response.EnsureSuccessStatusCode() | Out-Null
+            $totalBytes = $response.Content.Headers.ContentLength
+            $source = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+
+            $target = [System.IO.FileStream]::new(
+                $tempPath,
+                [System.IO.FileMode]::Create,
+                [System.IO.FileAccess]::Write,
+                [System.IO.FileShare]::None
+            )
+
+            try {
+                $buffer = New-Object byte[] (1024 * 1024)
+                [int64]$downloaded = 0
+
+                while (($read = $source.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                    $target.Write($buffer, 0, $read)
+                    $downloaded += $read
+                }
+            }
+            finally {
+                $target.Dispose()
+                $source.Dispose()
+            }
+        }
+        finally {
+            $response.Dispose()
+        }
+
+        if (Test-Path -LiteralPath $DestinationPath) {
+            Remove-Item -LiteralPath $DestinationPath -Force
+        }
+        Move-Item -LiteralPath $tempPath -Destination $DestinationPath -Force
+
+        $stopwatch.Stop()
+        $bytes = (Get-Item -LiteralPath $DestinationPath).Length
+        $seconds = [math]::Max($stopwatch.Elapsed.TotalSeconds, 0.001)
+        $averageMBps = [math]::Round(($bytes / 1MB) / $seconds, 1)
+
+        Write-PreInstallLog -Event 'DownloadComplete' -Message "$Description download completed." -Data @{
+            Id=$Id
+            Bytes=$bytes
+            SizeMB=[math]::Round($bytes / 1MB, 1)
+            DurationSeconds=[math]::Round($seconds, 1)
+            AverageMBps=$averageMBps
+            Destination=$DestinationPath
+        }
+    }
+    catch {
+        if (Test-Path -LiteralPath $tempPath) {
+            Remove-Item -LiteralPath $tempPath -Force -ErrorAction SilentlyContinue
+        }
+        throw
+    }
+    finally {
+        if ($stopwatch.IsRunning) { $stopwatch.Stop() }
+        $client.Dispose()
+        $handler.Dispose()
+    }
+}
+
+
 function Copy-DirectoryReplace {
     param([Parameter(Mandatory)][string]$Source,[Parameter(Mandatory)][string]$Destination)
     New-Item -ItemType Directory -Path (Split-Path $Destination -Parent) -Force | Out-Null
@@ -138,7 +226,7 @@ try {
                     Copy-Item -LiteralPath $localConfig -Destination $acquireConfig -Force
                     $setupPath=Join-Path $acquireRoot 'setup.exe'
                     $odtUri=if($app.OfficeDeploymentToolUri){[string]$app.OfficeDeploymentToolUri}else{'https://officecdn.microsoft.com/pr/wsus/setup.exe'}
-                    if(-not (Test-Path -LiteralPath $setupPath -PathType Leaf)){Invoke-WebRequest -Uri $odtUri -OutFile $setupPath -UseBasicParsing -TimeoutSec 120 -ErrorAction Stop}
+                    if(-not (Test-Path -LiteralPath $setupPath -PathType Leaf)){Save-PreInstallDownload -Uri $odtUri -DestinationPath $setupPath -Id 'Microsoft365Apps' -Description 'Office Deployment Tool' -TimeoutMinutes 5}
                     if(-not (Test-InternetEndpoint -Uri $odtUri)){throw 'Microsoft 365 Apps CDN is not reachable.'}
                     $previous=Get-OfficeCacheVersion -OfficeRoot $acquireRoot
                     Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Synchronizing Microsoft 365 Apps content.' -Data @{Id='Microsoft365Apps';Target=if($usbRoot){'USB'}else{'Local'};PreviousVersion=$previous;TimeoutMinutes=$OfficeRefreshTimeoutMinutes}
@@ -188,9 +276,9 @@ try {
                     $remote=Get-RemoteMetadata -Uri $msixUri; $matches=$false
                     if((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $cacheInfo){if($remote.ETag -and $cacheInfo.RemoteETag){$matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag}elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){$matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)}}
                     $tempRoot=Join-Path $StagedPath 'Work\Refresh\Teams'; New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Invoke-WebRequest -Uri $bootstrapperUri -OutFile $tempBootstrapper -UseBasicParsing -TimeoutSec 120 -ErrorAction Stop; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
+                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'Teams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
                     $updated=$false
-                    if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Invoke-WebRequest -Uri $msixUri -OutFile $tempMsix -UseBasicParsing -TimeoutSec 900 -ErrorAction Stop;$version=Get-TeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-TeamsPackageVersion -Path $msixPath}}
+                    if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'Teams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-TeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-TeamsPackageVersion -Path $msixPath}}
                     [ordered]@{Id='Teams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
                     Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='Teams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot}
@@ -245,7 +333,7 @@ try {
                         $tempRoot=Join-Path $StagedPath 'Work\Refresh\AdobeAcrobatUnified'
                         New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
                         $tempPackage=Join-Path $tempRoot 'Package.zip'
-                        Invoke-WebRequest -Uri $packageUri -OutFile $tempPackage -UseBasicParsing -TimeoutSec 1800 -ErrorAction Stop
+                        Save-PreInstallDownload -Uri $packageUri -DestinationPath $tempPackage -Id 'AdobeAcrobatUnified' -Description "Adobe Acrobat Unified $architecture package" -TimeoutMinutes 30
                         Copy-Item -LiteralPath $tempPackage -Destination $packagePath -Force
                         $updated=$true
                     }
