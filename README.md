@@ -67,7 +67,7 @@ Sync-OSDAppTeams -Architecture x64
 
 Repository packages are synchronized in WinPE immediately after OSDCloud completes.
 
-Microsoft 365 Apps and Teams use a different lifecycle. Their existing cache is staged in WinPE, but the refresh/update phase runs after the first boot in full Windows. The USB therefore needs to remain attached through SetupComplete so the shared built-in cache can be checked, updated, and restaged before installation.
+OSD Apps can run without USB media. If you want to use the cache functionality, connect a USB volume labeled `OSDCloud`; OSD Apps detects and uses it automatically. Repository applications synchronize their cache in WinPE after OSDCloud completes. Built-in applications such as Microsoft 365 Apps and Teams synchronize/update their cache later in full Windows during SetupComplete. For that reason, keep the OSDCloud USB connected until OOBE is displayed.
 
 ## Runtime locations
 
