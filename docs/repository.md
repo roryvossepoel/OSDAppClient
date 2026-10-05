@@ -6,16 +6,19 @@ Repository applications use the OSD Apps package contract.
 
 Every application is represented by a single `Package.zip`.
 
+The payload can contain any files required by the application, including EXE and MSI installers.
+
 ```text
 Package.zip
 ├── Install.ps1
 ├── setup.exe
+├── setup.msi
 ├── Config/
 ├── Modules/
 └── Files/
 ```
 
-`Install.ps1` must exist at the root of the archive.
+Only `Install.ps1` is mandatory at the archive root. OSD Apps does not require the installer itself to be an EXE; the package author decides how the payload is installed.
 
 ## Package author responsibility
 
@@ -39,6 +42,82 @@ Default success codes are:
 ```
 
 Packages can define their own `SuccessCodes` metadata.
+
+
+## Install.ps1 examples
+
+### EXE installer
+
+A typical silent EXE installer:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+
+$installer = Join-Path $PSScriptRoot 'setup.exe'
+
+if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+    throw "Installer not found: $installer"
+}
+
+$process = Start-Process `
+    -FilePath $installer `
+    -ArgumentList '/S' `
+    -WorkingDirectory $PSScriptRoot `
+    -Wait `
+    -PassThru
+
+if ($process.ExitCode -notin @(0,3010)) {
+    throw "Installer failed with exit code $($process.ExitCode)."
+}
+
+exit $process.ExitCode
+```
+
+The silent arguments are vendor-specific. Package authors must use the switches supported by the application vendor.
+
+### MSI installer
+
+MSI packages can be installed directly with `msiexec.exe`.
+
+This example also writes a verbose MSI log alongside the persistent OSD Apps runtime log under `%ProgramData%\OSDApps\Logs`:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+
+$installer = Join-Path $PSScriptRoot 'setup.msi'
+$logDirectory = Join-Path $env:ProgramData 'OSDApps\Logs'
+$msiLog = Join-Path $logDirectory 'ExampleApp-MSI.log'
+
+if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+    throw "Installer not found: $installer"
+}
+
+New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+
+$arguments = @(
+    '/i'
+    ('"{0}"' -f $installer)
+    '/qn'
+    '/norestart'
+    '/L*v'
+    ('"{0}"' -f $msiLog)
+)
+
+$process = Start-Process `
+    -FilePath 'msiexec.exe' `
+    -ArgumentList $arguments `
+    -WorkingDirectory $PSScriptRoot `
+    -Wait `
+    -PassThru
+
+if ($process.ExitCode -notin @(0,3010)) {
+    throw "MSI installation failed with exit code $($process.ExitCode). See $msiLog."
+}
+
+exit $process.ExitCode
+```
+
+Because the MSI log is written to `%ProgramData%\OSDApps\Logs`, it is preserved even when the temporary runtime source under `%SystemRoot%\Temp\OSDApps` is cleaned up after a successful deployment.
 
 ## Repository layout
 
