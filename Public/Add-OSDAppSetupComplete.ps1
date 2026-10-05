@@ -42,6 +42,7 @@ function Add-OSDAppSetupComplete {
         $preInstallMarker
         ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -StagedPath "%SystemDrive%\{1}"' -f $preInstallPath, $StagedRelativePath)
         'set "OSDAPPS_PREINSTALL_EXITCODE=%ERRORLEVEL%"'
+        'if not "%OSDAPPS_PREINSTALL_EXITCODE%"=="0" exit /b %OSDAPPS_PREINSTALL_EXITCODE%'
     )
 
     $runnerBlock = @(
