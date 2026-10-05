@@ -1,69 +1,34 @@
 # OSD Apps Architecture
 
-OSD Apps is split into two PowerShell modules with a shared repository contract.
+The maintained architecture documentation lives in [docs/architecture.md](docs/architecture.md).
 
-```mermaid
-flowchart TD
-    A[Upstream content] --> B[OSDAppRepo]
-    A1[Manual packaging] --> A
-    A2[Own PowerShell / CI-CD] --> A
-    A3[Intune export tooling] --> A
-    A4[Vendor automation] --> A
+OSD Apps consists of two complementary PowerShell modules:
 
-    B --> C[OSD App Repository]
-    C --> C1[manifest.json]
-    C --> C2[Package.zip]
+- **OSDAppClient** — deployment-time discovery, caching, staging, SetupComplete integration, and the standalone pre-OOBE runtime.
+- **OSDAppRepo** — package authoring and repository management for `catalog.json` and `Package.zip`.
 
-    C --> D[OSDAppClient in WinPE]
-    D --> E[Cache and SHA-256 validation]
-    E --> F[Stage selected packages to offline Windows]
-    F --> G[Append SetupComplete.cmd]
-    G --> H[Reboot into installed Windows]
-    H --> I[OSD App Runner]
-    I --> J[Expand Package.zip]
-    J --> K[Run Install.ps1]
-    K --> L[OOBE / Autopilot]
-```
-
-## Module boundary
-
-### OSDAppRepo
-
-Recommended authoring and repository-management layer.
-
-It creates and validates `Package.zip`, calculates hashes, publishes packages, and maintains `manifest.json`.
-
-Upstream integrations are not part of OSDAppRepo. Separate tooling may obtain content from Intune, vendor feeds, package feeds, GitHub Releases, or any other source and hand a source directory or compliant package to OSDAppRepo.
-
-### OSDAppClient
-
-WinPE consumer/runtime module designed specifically to complement OSDCloud v2.
-
-It runs after OSDCloud v2 has applied Windows and drivers. It does not authenticate to Intune or build packages. It consumes a prepared repository, caches and validates packages, stages selected content to the offline Windows volume, and prepares SetupComplete.
-
-## Shared package contract
-
-Each application is represented by exactly one archive named `Package.zip`.
-
-`Package.zip` must contain `Install.ps1` at the root.
-
-Repository layout:
+The current deployment model is:
 
 ```text
-Repository/
-├── manifest.json
-└── Packages/
-    └── <AppId>/
-        └── <Version>/
-            └── <Architecture>/
-                └── Package.zip
+WinPE / OSDCloud v2
+→ repository apps synchronize/cache in WinPE
+→ Add commands stage app intent and available content
+
+First boot / full Windows
+→ optional OSDCloud USB cache is detected automatically
+→ built-in Office / Teams content is synchronized or acquired
+→ current payload is staged locally
+→ SetupComplete installs applications
+→ runtime source is cleaned up
+→ OOBE / Autopilot
 ```
 
-The package stays compressed in the repository, cache, and staging location. It is extracted only when the OSD App Runner installs the application under the installed Windows environment before OOBE.
+Metadata terminology:
 
+```text
+catalog.json         online repository source of truth
+CacheCatalog.json    local OSDCloud USB repository snapshot
+DeviceManifest.json  per-device staged installation manifest
+```
 
-## Architecture contract
-
-Repository package entries are classified as `x64`, `arm64`, or `any`.
-
-OSDAppClient detects the current WinPE architecture and resolves one package variant per application. An exact match is preferred; `any` is used only as a fallback. Incompatible packages are not staged automatically.
+See [docs/architecture.md](docs/architecture.md) for source resolution, fallback behavior, validated cache scenarios, and runtime details.
