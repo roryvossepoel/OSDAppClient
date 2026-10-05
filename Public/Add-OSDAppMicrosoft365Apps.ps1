@@ -20,12 +20,14 @@ function Add-OSDAppMicrosoft365Apps {
     $cachePath = $null
     try { $cachePath = Get-OSDAppCachePath } catch { }
     $stagedRelativePath = 'Windows\Temp\OSDApps'
+    $configurationParameters = @('Channel','Architecture','ProductId','Language','AcceptEula','SharedComputerLicensing','DeviceBasedLicensing','ExcludeApp','ConfigurationXml')
+    $configurationOverridden = @($configurationParameters | Where-Object { $PSBoundParameters.ContainsKey($_) }).Count -gt 0
 
     $params = @{
         CachePath=$cachePath; WindowsPath=$resolvedWindowsPath; Channel=$Channel; Architecture=$Architecture;
         ProductId=$ProductId; Language=$Language; AcceptEula=$AcceptEula;
         SharedComputerLicensing=$SharedComputerLicensing; DeviceBasedLicensing=$DeviceBasedLicensing;
-        OfficeDeploymentToolUri=$OfficeDeploymentToolUri; StagedRelativePath=$stagedRelativePath; Confirm=$false
+        OfficeDeploymentToolUri=$OfficeDeploymentToolUri; UseCachedConfiguration=(-not $configurationOverridden); StagedRelativePath=$stagedRelativePath; Confirm=$false
     }
     if ($ExcludeApp) { $params.ExcludeApp = $ExcludeApp }
     if ($ConfigurationXml) { $params.ConfigurationXml = $ConfigurationXml }
