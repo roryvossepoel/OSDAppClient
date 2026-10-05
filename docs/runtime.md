@@ -34,12 +34,13 @@ SetupComplete.cmd
 ### PreInstall
 
 PreInstall:
-- finds the OSDCloud USB;
+- detects an optional USB volume labeled `OSDCloud`;
 - detects network availability;
-- refreshes cached built-ins in full Windows;
-- updates the shared USB cache;
-- restages current built-in content;
-- never blocks installation purely because refresh failed.
+- uses/updates the USB cache when present;
+- acquires built-ins directly to the local runtime when no USB cache is present;
+- restages current built-in content locally before installation;
+- falls back to a complete staged or USB-cached payload when refresh fails;
+- returns a fatal error only when no usable source exists.
 
 ### Runner
 
@@ -69,13 +70,7 @@ This allows the runner to remove its own source directory safely after PowerShel
 
 On failure, source is retained automatically.
 
-To retain source after success:
-
-```powershell
-Add-OSDApp Microsoft365Apps,Teams -KeepSource
-```
-
-Because retained source remains under Windows Temp, Windows may still remove it later during normal temporary-file maintenance.
+Runtime source is retained automatically when installation fails so the staged manifest, payload and work directory remain available for troubleshooting.
 
 ## Logging
 
@@ -97,6 +92,9 @@ Important events include:
 
 ```text
 RefreshStart
+CacheVolumeFound
+CacheVolumeNotFound
+BuiltInCacheRestaged
 BuiltInRefreshStart
 BuiltInRefreshComplete
 BuiltInRefreshFailed
