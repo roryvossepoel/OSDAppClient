@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.2
+
+### Changed
+
+- Added a 15-minute default timeout for Adobe Acrobat Unified installation during SetupComplete.
+- Added 60-second `BuiltInInstallWaiting` heartbeat events while Adobe Setup is still running.
+- Added `BuiltInInstallTimeout` logging and process-tree termination on timeout.
+- Added `-InstallTimeoutMinutes` to `Add-OSDAppAdobeAcrobatUnified` for controlled overrides.
+
+
 ## 0.20.1
 
 ### Added
