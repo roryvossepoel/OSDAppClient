@@ -148,7 +148,7 @@ function Sync-OSDAppCache {
 
     $cacheCatalogPath = Join-Path $CachePath 'CacheCatalog.json'
     $selectedCatalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $cacheCatalogPath -Encoding UTF8
-    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{ Manifest = $cacheCatalogPath; PackageCount = @($packages).Count }
+    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{ Catalog = $cacheCatalogPath; PackageCount = @($packages).Count }
 
     Get-Item -LiteralPath $cacheCatalogPath
 }
