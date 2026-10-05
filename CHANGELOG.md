@@ -1,10 +1,11 @@
 # Changelog
 
-## 0.20.0
+## 0.20.1
 
 ### Added
 
 - Added `AdobeAcrobatUnified` as a third built-in application.
+- Adobe Acrobat Unified now supports both x64 and x86 packages; x64 is the default and cache variants are stored separately.
 - Added `Sync-OSDAppAdobeAcrobatUnified` and `Add-OSDAppAdobeAcrobatUnified`.
 - Uses Adobe's official x64 Unified Acrobat/Reader ZIP as the vendor source.
 - Supports the same optional OSDCloud USB cache model as Microsoft 365 Apps and Teams.
