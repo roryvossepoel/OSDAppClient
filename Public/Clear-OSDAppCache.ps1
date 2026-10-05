@@ -91,7 +91,7 @@ function Clear-OSDAppCache {
         }
 
         foreach ($appName in @($Name | Select-Object -Unique)) {
-            if ($appName -ieq 'Microsoft365Apps' -or $appName -ieq 'Teams') {
+            if ($appName -ieq 'Microsoft365Apps' -or $appName -ieq 'Teams' -or $appName -ieq 'AdobeAcrobatUnified') {
                 Remove-CacheItem -Path (Join-Path $builtInPath $appName) -Label "Built-in app '$appName'"
                 continue
             }
