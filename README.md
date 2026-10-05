@@ -11,7 +11,7 @@ WinPE
 → Add-* stages application intent and available content to the offline OS
 
 First boot / full Windows
-→ built-in Office / Teams source is resolved automatically
+→ built-in application sources are resolved automatically
 → optional OSDCloud USB cache is used and updated when present
 → otherwise content is acquired directly to the local Windows runtime
 → SetupComplete installs applications
@@ -26,14 +26,16 @@ OSD Apps supports two application sources:
 | Source | Acquisition / sync | Installation |
 | --- | --- | --- |
 | Repository apps | WinPE | SetupComplete |
-| Built-in Microsoft 365 Apps / Teams | Full Windows pre-install phase | SetupComplete |
+| Built-in applications | Full Windows pre-install phase | SetupComplete |
 
 Repository apps use the OSD Apps package contract: `Package.zip` with a root-level `Install.ps1`.
 
 Built-in apps use vendor-native acquisition and installation:
 - Microsoft 365 Apps uses the Office Deployment Tool.
 - Microsoft Teams uses the Teams bootstrapper and official MSIX.
-- Adobe Acrobat Unified uses Adobe's official x64 Unified installer ZIP, which is cached compressed, extracted locally, and installed through Setup.exe.
+- Adobe Acrobat Unified uses Adobe's official Unified installer ZIP, which is cached compressed, extracted locally, and installed through Setup.exe.
+- Google Chrome Enterprise uses Google's official Enterprise MSI.
+- Mozilla Firefox Enterprise uses Mozilla's official MSI for Rapid Release or ESR.
 
 ## Quick start
 
@@ -55,6 +57,10 @@ Add-OSDApp NotepadPlusPlus
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppGoogleChromeEnterprise
+Add-OSDAppMozillaFirefoxEnterprise
+Add-OSDAppGoogleChromeEnterprise
+Add-OSDAppMozillaFirefoxEnterprise
 ```
 
 For built-ins only, no catalog or repository synchronization is required:
@@ -75,6 +81,8 @@ Sync-OSDAppMicrosoft365Apps `
     -Language nl-nl,en-us
 
 Sync-OSDAppTeams -Architecture x64
+Sync-OSDAppGoogleChromeEnterprise
+Sync-OSDAppMozillaFirefoxEnterprise
 ```
 
 ## Optional OSDCloud USB cache
@@ -99,7 +107,7 @@ No USB + online
 → install
 ```
 
-Repository applications synchronize/cache in WinPE. Built-in Microsoft 365 Apps and Teams synchronize/update during SetupComplete in full Windows.
+Repository applications synchronize/cache in WinPE. Built-in applications synchronize/update during SetupComplete in full Windows.
 
 > **When an OSDCloud USB cache is detected, keep it connected until OOBE is displayed.**
 
@@ -172,6 +180,8 @@ Currently supported:
 Microsoft365Apps
 Teams
 AdobeAcrobatUnified
+GoogleChromeEnterprise
+MozillaFirefoxEnterprise
 ```
 
 Each built-in has its own configuration/synchronization cmdlet and its own Add cmdlet:
@@ -180,6 +190,8 @@ Each built-in has its own configuration/synchronization cmdlet and its own Add c
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
 Sync-OSDAppAdobeAcrobatUnified
+Sync-OSDAppGoogleChromeEnterprise
+Sync-OSDAppMozillaFirefoxEnterprise
 
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
@@ -277,11 +289,15 @@ Sync-OSDAppRepository
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
 Sync-OSDAppAdobeAcrobatUnified
+Sync-OSDAppGoogleChromeEnterprise
+Sync-OSDAppMozillaFirefoxEnterprise
 
 Add-OSDApp
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppGoogleChromeEnterprise
+Add-OSDAppMozillaFirefoxEnterprise
 
 Clear-OSDAppCache
 ```
