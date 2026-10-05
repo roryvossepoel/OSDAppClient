@@ -62,6 +62,7 @@ For built-ins only, no catalog or repository synchronization is required:
 ```powershell
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
+Add-OSDAppAdobeAcrobatUnified
 ```
 
 For built-in cache configuration and synchronization on full Windows:
@@ -179,7 +180,6 @@ Each built-in has its own configuration/synchronization cmdlet and its own Add c
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
 Sync-OSDAppAdobeAcrobatUnified
-Sync-OSDAppAdobeAcrobatUnified
 
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
@@ -189,6 +189,22 @@ Add-OSDAppAdobeAcrobatUnified
 There is intentionally no generic `Sync-OSDAppBuiltIn` command. Each built-in owns its own parameter set and configuration.
 
 See [Built-in applications](docs/built-in-apps.md).
+
+## Requesting a built-in application
+
+Built-in applications are intentionally limited to broadly used products with a clean, vendor-supported acquisition path. Requests are welcome, but a built-in should meet all of these requirements:
+
+- the application is broadly used across organizations, not a customer-specific or niche line-of-business app;
+- the installer can be downloaded directly and reproducibly from the software vendor;
+- the vendor provides a stable URL, documented endpoint, or another deterministic download mechanism;
+- acquisition does not require scraping a website, sniffing browser traffic, extracting temporary URLs, session cookies, access tokens, or other brittle workarounds;
+- a CDN is fine when the vendor exposes a stable supported download URL, but not when CDN protection requires bypassing or reverse-engineering the download flow;
+- the installer supports a reliable unattended enterprise installation;
+- the acquisition and install flow can be maintained without depending on undocumented tricks.
+
+If an application does not meet these criteria, package it as a normal repository application instead. The repository model is the intended path for niche, customer-specific, internally hosted, authenticated, or otherwise non-generic applications.
+
+See [Built-in applications](docs/built-in-apps.md#requesting-a-new-built-in-application) for the full policy.
 
 ## Catalog and cache terminology
 
@@ -244,10 +260,12 @@ Get-OSDApp
 Sync-OSDAppRepository
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
+Sync-OSDAppAdobeAcrobatUnified
 
 Add-OSDApp
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
+Add-OSDAppAdobeAcrobatUnified
 
 Clear-OSDAppCache
 ```
