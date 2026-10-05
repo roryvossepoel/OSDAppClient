@@ -200,9 +200,10 @@ try {
                 }
             }
             'AdobeAcrobatUnified' {
-                $localRoot=Join-Path $StagedPath 'BuiltIn\AdobeAcrobatUnified'
+                $architecture=if($app.Architecture){[string]$app.Architecture}else{'x64'}
+                $localRoot=Join-Path $StagedPath (Join-Path 'BuiltIn\AdobeAcrobatUnified' $architecture)
                 New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
-                $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\AdobeAcrobatUnified'}else{$localRoot}
+                $acquireRoot=if($usbRoot){Join-Path $usbRoot (Join-Path 'BuiltIn\AdobeAcrobatUnified' $architecture)}else{$localRoot}
                 New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
 
                 if($usbRoot -and -not (Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot) -and (Test-LocalAdobeAcrobatUnifiedSource -Root $acquireRoot)){
@@ -220,7 +221,7 @@ try {
                 }
 
                 try {
-                    $packageUri=if($app.PackageUri){[string]$app.PackageUri}else{'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip'}
+                    $packageUri=if($app.PackageUri){[string]$app.PackageUri}else{switch($architecture){'x86'{'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_WWMUI.zip'}default{'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip'}}}
                     $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
                     $cacheInfo=$null
                     if(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf){try{$cacheInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json}catch{}}
@@ -253,7 +254,7 @@ try {
                         Id='AdobeAcrobatUnified'
                         Cached=[bool]$usbRoot
                         Version='Current'
-                        Architecture='x64'
+                        Architecture=$architecture
                         PackageUri=$packageUri
                         RemoteETag=$remote.ETag
                         RemoteLastModified=$remote.LastModified
