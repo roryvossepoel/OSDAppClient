@@ -36,17 +36,27 @@ function Get-OSDApp {
         }
     }
 
+    $hostArchitecture = Get-OSDAppHostArchitecture
+
     $repositoryIds = @(
-        @($onlinePackages.Id) + @($cachedPackages.Id) |
+        (@($onlinePackages.Id) + @($cachedPackages.Id)) |
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
             Select-Object -Unique
     )
 
     foreach ($id in $repositoryIds) {
-        $online = @($onlinePackages | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
-        $cached = @($cachedPackages | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
+        $onlineCandidates = @($onlinePackages | Where-Object { $_.Id -eq $id })
+        $onlinePackage = @(
+            $onlineCandidates | Where-Object { ([string]$_.Architecture).ToLowerInvariant() -eq $hostArchitecture } | Select-Object -First 1
+        )
+        if ($onlinePackage.Count -eq 0) {
+            $onlinePackage = @(
+                $onlineCandidates | Where-Object { ([string]$_.Architecture).ToLowerInvariant() -eq 'any' } | Select-Object -First 1
+            )
+        }
+        $onlinePackage = if ($onlinePackage.Count -gt 0) { $onlinePackage[0] } else { $null }
 
-        $onlinePackage = if ($online.Count -gt 0) { $online[0] } else { $null }
+        $cached = @($cachedPackages | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
         $cachedPackage = if ($cached.Count -gt 0) { $cached[0] } else { $null }
 
         $cachedValid = $null
