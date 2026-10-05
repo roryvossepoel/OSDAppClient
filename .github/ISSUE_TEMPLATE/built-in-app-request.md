@@ -32,6 +32,8 @@ Describe why the application is broadly used and why a generic built-in is usefu
 Please confirm:
 
 - [ ] The installer can be downloaded directly and reproducibly from the vendor.
+- [ ] The installer is hosted or published by the software vendor itself.
+- [ ] No installer binary needs to be bundled with, mirrored by, or redistributed through OSDAppClient.
 - [ ] The download does not require authentication or a customer-specific portal.
 - [ ] The download does not require scraping HTML or browser automation.
 - [ ] The download does not require sniffing network traffic or extracting temporary URLs.
