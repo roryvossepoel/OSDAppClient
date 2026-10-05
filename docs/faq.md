@@ -106,3 +106,14 @@ The same decisions are logged for later troubleshooting.
 Yes. This flow has been validated end to end.
 
 For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps` directory does not need to exist beforehand. During SetupComplete, OSD Apps creates the required structure, populates the Microsoft 365 Apps and Teams caches, stages the payload locally, installs both applications, and cleans up the temporary runtime after success.
+
+
+## What is the difference between catalog.json, CacheCatalog.json, and DeviceManifest.json?
+
+`catalog.json` is the online repository source of truth.
+
+`CacheCatalog.json` is the local OSDCloud USB snapshot written by repository synchronization.
+
+`DeviceManifest.json` describes what the current device will install during SetupComplete.
+
+The old `CacheManifest.json` filename is not used.
