@@ -91,6 +91,8 @@ Important events include:
 
 ```text
 RefreshStart
+DownloadStart
+DownloadComplete
 CacheVolumeFound
 CacheVolumeNotFound
 BuiltInCacheRestaged
@@ -130,3 +132,19 @@ The timeout can be overridden when staging:
 ```powershell
 Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
 ```
+
+
+Large built-in payloads are downloaded with the same streaming HttpClient approach used by the module cache downloader. Downloads are written to a temporary `.download` file and atomically moved into place only after success.
+
+Runtime download logging includes:
+
+```text
+DownloadStart
+DownloadComplete
+Bytes
+SizeMB
+DurationSeconds
+AverageMBps
+```
+
+This avoids the significant performance overhead observed with `Invoke-WebRequest -OutFile` for large payloads such as Adobe Acrobat Unified.
