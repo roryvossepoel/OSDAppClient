@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.20.0
+
+### Added
+
+- Added `AdobeAcrobatUnified` as a third built-in application.
+- Added `Sync-OSDAppAdobeAcrobatUnified` and `Add-OSDAppAdobeAcrobatUnified`.
+- Uses Adobe's official x64 Unified Acrobat/Reader ZIP as the vendor source.
+- Supports the same optional OSDCloud USB cache model as Microsoft 365 Apps and Teams.
+- Cached Adobe content remains compressed as `Package.zip`; the runner extracts it locally during SetupComplete and launches `Setup.exe /sAll /msi ADDLOCAL=ALL`.
+- Supports blank-cache bootstrap, cache reuse, no-USB online acquisition, and offline fallback when a complete cached payload has already been staged.
+
+
 ## 0.19.0
 
 ### Changed
