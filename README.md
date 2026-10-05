@@ -118,7 +118,7 @@ Repository packages remain compressed while cached and staged.
 ```text
 Package.zip
 ├── Install.ps1
-├── setup.exe
+├── setup.exe / setup.msi / other payload
 ├── Config/
 └── Files/
 ```
