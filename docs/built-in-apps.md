@@ -105,14 +105,9 @@ Online mode skips the cached payload model. The vendor bootstrapper/configuratio
 
 A refresh failure must not block deployment when a usable staged or USB-cached fallback exists. If there is no usable local/USB source and online acquisition also fails, PreInstall returns a fatal error and the runner is not started.
 
-If any of these occur:
-- USB is missing;
-- no active network is detected;
-- Office CDN is unavailable;
-- Office refresh times out;
-- Teams refresh fails;
+If an `OSDCloud` USB is not present, that is not an error: PreInstall acquires built-in content directly to the local Windows runtime.
 
-PreInstall logs a warning and continues with the payload already staged during WinPE.
+When a refresh/acquisition problem occurs, PreInstall uses a complete local or USB-cached payload as fallback when one is available. If no usable source exists and online acquisition also fails, PreInstall returns a fatal error and the runner is not started.
 
 Office refresh has a 20-minute timeout by default.
 
