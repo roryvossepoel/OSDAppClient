@@ -91,6 +91,11 @@ function Test-LocalTeamsSource {
     return ((Test-Path -LiteralPath (Join-Path $Root 'teamsbootstrapper.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'teams.msix') -PathType Leaf))
 }
 
+function Test-LocalAdobeAcrobatUnifiedSource {
+    param([string]$Root)
+    return (Test-Path -LiteralPath (Join-Path $Root 'Package.zip') -PathType Leaf)
+}
+
 try {
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Device manifest not found: $manifestPath" }
     $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -192,6 +197,84 @@ try {
                 } catch {
                     if(Test-LocalTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Teams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
+                }
+            }
+            'AdobeAcrobatUnified' {
+                $localRoot=Join-Path $StagedPath 'BuiltIn\AdobeAcrobatUnified'
+                New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
+                $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\AdobeAcrobatUnified'}else{$localRoot}
+                New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
+
+                if($usbRoot -and -not (Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot) -and (Test-LocalAdobeAcrobatUnifiedSource -Root $acquireRoot)){
+                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'Package.zip') -Destination (Join-Path $localRoot 'Package.zip') -Force
+                    if(Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf){Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
+                    Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Adobe Acrobat Unified USB cache was staged locally.' -Data @{Id='AdobeAcrobatUnified'}
+                }
+
+                if(-not $networkAvailable){
+                    if(Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot){
+                        Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Adobe Acrobat Unified payload will be used.' -Data @{Id='AdobeAcrobatUnified'}
+                        continue
+                    }
+                    throw 'Adobe Acrobat Unified has no staged or USB-cached payload and no network connection is available to acquire one.'
+                }
+
+                try {
+                    $packageUri=if($app.PackageUri){[string]$app.PackageUri}else{'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip'}
+                    $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'
+                    $cacheInfo=$null
+                    if(Test-Path -LiteralPath $cacheInfoPath -PathType Leaf){try{$cacheInfo=Get-Content -LiteralPath $cacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json}catch{}}
+                    $packagePath=Join-Path $acquireRoot 'Package.zip'
+
+                    Write-PreInstallLog -Event 'BuiltInRefreshStart' -Message 'Checking Adobe Acrobat Unified cache for updates.' -Data @{Id='AdobeAcrobatUnified';Target=if($usbRoot){'USB'}else{'Local'}}
+
+                    $remote=Get-RemoteMetadata -Uri $packageUri
+                    $matches=$false
+                    if((Test-Path -LiteralPath $packagePath -PathType Leaf) -and $cacheInfo){
+                        if($remote.ETag -and $cacheInfo.RemoteETag){
+                            $matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag
+                        }
+                        elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){
+                            $matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)
+                        }
+                    }
+
+                    $updated=$false
+                    if(-not $matches){
+                        $tempRoot=Join-Path $StagedPath 'Work\Refresh\AdobeAcrobatUnified'
+                        New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+                        $tempPackage=Join-Path $tempRoot 'Package.zip'
+                        Invoke-WebRequest -Uri $packageUri -OutFile $tempPackage -UseBasicParsing -TimeoutSec 1800 -ErrorAction Stop
+                        Copy-Item -LiteralPath $tempPackage -Destination $packagePath -Force
+                        $updated=$true
+                    }
+
+                    [ordered]@{
+                        Id='AdobeAcrobatUnified'
+                        Cached=[bool]$usbRoot
+                        Version='Current'
+                        Architecture='x64'
+                        PackageUri=$packageUri
+                        RemoteETag=$remote.ETag
+                        RemoteLastModified=$remote.LastModified
+                        RemoteContentLength=$remote.ContentLength
+                        RemoteFinalUri=$remote.FinalUri
+                        SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
+                    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+
+                    if($usbRoot){
+                        Copy-Item -LiteralPath $packagePath -Destination (Join-Path $localRoot 'Package.zip') -Force
+                        Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
+                    }
+
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Adobe Acrobat Unified content is ready for installation.' -Data @{Id='AdobeAcrobatUnified';PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot}
+                }
+                catch {
+                    if(Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot){
+                        Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='AdobeAcrobatUnified';Fallback='ExistingStagedPayload'}
+                        continue
+                    }
+                    throw "Adobe Acrobat Unified acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
         }
