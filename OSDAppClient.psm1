@@ -20,5 +20,7 @@ Export-ModuleMember -Function @(
     'Test-OSDAppCache',
     'Copy-OSDAppContent',
     'Add-OSDAppSetupComplete',
-    'Add-OSDApp'
+    'Add-OSDApp',
+    'Add-OSDAppMicrosoft365Apps',
+    'Add-OSDAppTeams'
 )
