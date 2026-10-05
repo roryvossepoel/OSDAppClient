@@ -28,7 +28,7 @@ Repository acquisition does not depend on a vendor bootstrapper and is designed 
 
 ## What happens if the USB is removed too early?
 
-The deployment can still install from the content already staged locally, but the full-Windows built-in refresh cannot update or use the shared USB cache.
+If cache functionality is being used, removing the `OSDCloud` USB early prevents the full-Windows built-in refresh from checking and updating that cache. OSD Apps itself does not require USB media; without an `OSDCloud` USB cache, content can be acquired directly to the local Windows runtime when online.
 
 Keep the USB connected until OOBE is displayed.
 
