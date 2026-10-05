@@ -95,16 +95,22 @@ function Get-OSDApp {
 
     $officeCacheInfo = $null
     $teamsCacheInfo = $null
+    $adobeCacheInfo = $null
 
     if ($cachePath) {
         foreach ($definition in @(
             @{ Id='Microsoft365Apps'; Path=(Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json') },
-            @{ Id='Teams'; Path=(Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json') }
+            @{ Id='Teams'; Path=(Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json') },
+            @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath 'BuiltIn\AdobeAcrobatUnified\CacheInfo.json') }
         )) {
             if (Test-Path -LiteralPath $definition.Path -PathType Leaf) {
                 try {
                     $info = Get-Content -LiteralPath $definition.Path -Raw -Encoding UTF8 | ConvertFrom-Json
-                    if ($definition.Id -eq 'Microsoft365Apps') { $officeCacheInfo = $info } else { $teamsCacheInfo = $info }
+                    switch ($definition.Id) {
+                        'Microsoft365Apps' { $officeCacheInfo = $info }
+                        'Teams' { $teamsCacheInfo = $info }
+                        'AdobeAcrobatUnified' { $adobeCacheInfo = $info }
+                    }
                 }
                 catch { }
             }
@@ -113,7 +119,8 @@ function Get-OSDApp {
 
     foreach ($builtIn in @(
         @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },
-        @{ Id='Teams'; DisplayName='Microsoft Teams'; Info=$teamsCacheInfo }
+        @{ Id='Teams'; DisplayName='Microsoft Teams'; Info=$teamsCacheInfo },
+        @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo }
     )) {
         $apps.Add([pscustomobject]@{
             PSTypeName    = 'OSDAppClient.App'
