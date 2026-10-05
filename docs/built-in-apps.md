@@ -7,6 +7,7 @@ Currently supported:
 ```text
 Microsoft365Apps
 Teams
+AdobeAcrobatUnified
 ```
 
 ## Configuration and synchronization
@@ -74,6 +75,31 @@ The Teams cache contains:
 - `CacheInfo.json`
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
+
+### Adobe Acrobat Unified
+
+Adobe Acrobat Unified uses the official Adobe 64-bit unified Acrobat/Reader package.
+
+```powershell
+Sync-OSDAppAdobeAcrobatUnified
+Add-OSDAppAdobeAcrobatUnified
+```
+
+The cache contains:
+
+```text
+BuiltIn\AdobeAcrobatUnified\
+├── Package.zip
+└── CacheInfo.json
+```
+
+The ZIP remains compressed while cached and staged. During installation the standalone runner extracts it to the local work directory, locates `Setup.exe`, and runs the Adobe-supported silent installation command:
+
+```text
+Setup.exe /sAll /msi ADDLOCAL=ALL
+```
+
+Only the x64 Unified installer is supported by this built-in.
 
 ## Deployment flow
 
