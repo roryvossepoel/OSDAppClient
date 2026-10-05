@@ -5,6 +5,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
         [Parameter(Mandatory)][string]$WindowsPath,
         [ValidateSet('x64','x86')][string]$Architecture = 'x64',
         [Parameter(Mandatory)][string]$PackageUri,
+        [ValidateRange(1,120)][int]$InstallTimeoutMinutes = 15,
         [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
 
@@ -56,6 +57,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
         PackageUri = $PackageUri
         CachePreferred = [bool]$CachePath
         InstallArguments = '/sAll /msi ADDLOCAL=ALL'
+        InstallTimeoutMinutes = $InstallTimeoutMinutes
     }
 
     if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') {
@@ -70,7 +72,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
 
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'StageTarget' -Message 'Adobe Acrobat Unified deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'AdobeStageComplete' -Message 'Adobe Acrobat Unified deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture }
+    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'AdobeStageComplete' -Message 'Adobe Acrobat Unified deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
     [pscustomobject]@{
         PSTypeName='OSDAppClient.StagedApp'
