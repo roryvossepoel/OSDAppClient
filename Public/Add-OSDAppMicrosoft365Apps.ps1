@@ -16,19 +16,19 @@ function Add-OSDAppMicrosoft365Apps {
         [string]$WindowsPath
     )
 
-    Write-Verbose 'Resolving offline Windows installation...'
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Windows' -Message 'Resolving offline Windows installation' }
     $resolvedWindowsPath = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
-    Write-Verbose ("Windows installation found at {0}" -f $resolvedWindowsPath)
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Windows' -Message ("Windows installation found at {0}" -f $resolvedWindowsPath) }
 
-    Write-Verbose "Looking for an OSD Apps cache volume with label 'OSDCloud'..."
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Cache' -Message "Detecting volume with label 'OSDCloud'" }
     $cachePath = $null
     try {
         $cachePath = Get-OSDAppCachePath
-        Write-Verbose ("OSDCloud cache volume found. Cache root: {0}" -f $cachePath)
+        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Cache' -Message ("OSDCloud cache found at {0}" -f $cachePath) }
     }
     catch {
-        Write-Verbose 'No OSDCloud cache volume was found.'
-        Write-Verbose 'Built-in content will be acquired directly to the OS disk during SetupComplete.'
+        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Cache' -Message 'No OSDCloud cache volume found' }
+        if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Source' -Message 'Built-in content will be acquired directly to the OS disk during SetupComplete' }
     }
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
@@ -52,14 +52,14 @@ function Add-OSDAppMicrosoft365Apps {
         )
 
         if ($existingOfficeCache) {
-            Write-Verbose 'Existing Microsoft 365 Apps cache found. Cached payload will be staged as fallback and refreshed during SetupComplete.'
+            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Microsoft365Apps' -Message 'Existing cache found; cached payload will be staged as fallback and refreshed during SetupComplete' }
         }
         else {
-            Write-Verbose 'No existing Microsoft 365 Apps cache was found. The cache will be created during SetupComplete.'
+            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Microsoft365Apps' -Message 'No existing cache found; cache will be created during SetupComplete' }
         }
     }
 
-    Write-Verbose 'Staging Microsoft 365 Apps deployment intent to the OS disk...'
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Microsoft365Apps' -Message 'Staging deployment intent to the OS disk' }
     $result = Add-OSDAppMicrosoft365AppsInternal @params
 
     $manifestPath = Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'
@@ -70,8 +70,8 @@ function Add-OSDAppMicrosoft365Apps {
     }
 
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
-    Write-Verbose 'Device manifest updated and SetupComplete integration verified.'
-    Write-Verbose ("Staging summary: Application=Microsoft365Apps; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' }))
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Microsoft365Apps' -Message 'Device manifest updated and SetupComplete integration verified' }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=Microsoft365Apps; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB device connected until OOBE is displayed.'
