@@ -1,9 +1,20 @@
 function Add-OSDAppAdobeAcrobatUnified {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [string]$PackageUri = 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip',
+        [ValidateSet('x64','x86')]
+        [string]$Architecture = 'x64',
+
+        [string]$PackageUri,
+
         [string]$WindowsPath
     )
+
+    if (-not $PackageUri) {
+        $PackageUri = switch ($Architecture) {
+            'x64' { 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip' }
+            'x86' { 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_WWMUI.zip' }
+        }
+    }
 
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Windows' -Message 'Resolving offline Windows installation' }
     $resolvedWindowsPath = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
@@ -23,7 +34,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     $stagedRelativePath = 'Windows\Temp\OSDApps'
 
     if ($cachePath) {
-        $existingCache = Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\AdobeAcrobatUnified\Package.zip') -PathType Leaf
+        $existingCache = Test-Path -LiteralPath (Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $Architecture 'Package.zip'))) -PathType Leaf
         if ($existingCache) {
             if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'AdobeAcrobatUnified' -Message 'Existing cache found; cached package will be staged as fallback and refreshed during SetupComplete' }
         }
@@ -37,6 +48,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     $result = Add-OSDAppAdobeAcrobatUnifiedInternal `
         -CachePath $cachePath `
         -WindowsPath $resolvedWindowsPath `
+        -Architecture $Architecture `
         -PackageUri $PackageUri `
         -StagedRelativePath $stagedRelativePath `
         -Confirm:$false
@@ -51,7 +63,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'AdobeAcrobatUnified' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=AdobeAcrobatUnified; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=AdobeAcrobatUnified; Architecture=$Architecture; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB device connected until OOBE is displayed.'
