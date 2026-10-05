@@ -17,6 +17,8 @@ function Add-OSDApp {
             if($app -ieq 'Microsoft365Apps'){throw "'Microsoft365Apps' is a built-in application. Use Add-OSDAppMicrosoft365Apps instead."}
             if($app -ieq 'Teams'){throw "'Teams' is a built-in application. Use Add-OSDAppTeams instead."}
             if($app -ieq 'AdobeAcrobatUnified'){throw "'AdobeAcrobatUnified' is a built-in application. Use Add-OSDAppAdobeAcrobatUnified instead."}
+            if($app -ieq 'GoogleChromeEnterprise'){throw "'GoogleChromeEnterprise' is a built-in application. Use Add-OSDAppGoogleChromeEnterprise instead."}
+            if($app -ieq 'MozillaFirefoxEnterprise'){throw "'MozillaFirefoxEnterprise' is a built-in application. Use Add-OSDAppMozillaFirefoxEnterprise instead."}
         }
 
         $cachePath=Get-OSDAppCachePath
