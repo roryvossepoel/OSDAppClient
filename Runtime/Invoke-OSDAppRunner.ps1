@@ -254,14 +254,42 @@ try {
                 $arguments = if ($app.InstallArguments) { [string]$app.InstallArguments } else { '/sAll /msi ADDLOCAL=ALL' }
                 $workingDirectory = Split-Path $setupPath -Parent
 
-                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Adobe Acrobat Unified installation.' -Data @{ Id=$app.Id; Setup=$setupPath; Arguments=$arguments; Offline=$true }
+                $timeoutMinutes = if ($app.InstallTimeoutMinutes) { [int]$app.InstallTimeoutMinutes } else { 15 }
 
-                $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -WorkingDirectory $workingDirectory -Wait -PassThru
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallStart' -Message 'Starting built-in Adobe Acrobat Unified installation.' -Data @{ Id=$app.Id; Setup=$setupPath; Arguments=$arguments; Offline=$true; TimeoutMinutes=$timeoutMinutes }
+
+                $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -WorkingDirectory $workingDirectory -PassThru
+                $installStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                $nextHeartbeat = [TimeSpan]::FromMinutes(1)
+
+                while (-not $process.HasExited) {
+                    if ($installStopwatch.Elapsed.TotalMinutes -ge $timeoutMinutes) {
+                        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallTimeout' -Level 'Error' -Message 'Adobe Acrobat Unified installation exceeded its timeout.' -Data @{ Id=$app.Id; ProcessId=$process.Id; ElapsedSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds); TimeoutMinutes=$timeoutMinutes }
+
+                        try {
+                            Start-Process -FilePath 'taskkill.exe' -ArgumentList @('/PID',[string]$process.Id,'/T','/F') -WindowStyle Hidden -Wait | Out-Null
+                        }
+                        catch { }
+
+                        throw "Installation of '$($app.Id)' exceeded the $timeoutMinutes minute timeout."
+                    }
+
+                    if ($installStopwatch.Elapsed -ge $nextHeartbeat) {
+                        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallWaiting' -Message 'Adobe Acrobat Unified installation is still running.' -Data @{ Id=$app.Id; ProcessId=$process.Id; ElapsedSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
+                        $nextHeartbeat = $nextHeartbeat.Add([TimeSpan]::FromMinutes(1))
+                    }
+
+                    Start-Sleep -Seconds 2
+                    $process.Refresh()
+                }
+
+                $installStopwatch.Stop()
+
                 if ($process.ExitCode -notin @(0,3010)) {
                     throw "Installation of '$($app.Id)' failed with exit code $($process.ExitCode)."
                 }
 
-                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Adobe Acrobat Unified installation completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode }
+                Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Adobe Acrobat Unified installation completed.' -Data @{ Id=$app.Id; ExitCode=$process.ExitCode; DurationSeconds=[math]::Round($installStopwatch.Elapsed.TotalSeconds) }
             }
             default {
                 throw "Unsupported built-in application type '$($app.Type)' for '$($app.Id)'."
