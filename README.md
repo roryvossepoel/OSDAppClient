@@ -46,7 +46,9 @@ Sync-OSDAppRepository
 
 Get-OSDApp
 
-Add-OSDApp NotepadPlusPlus,Microsoft365Apps,Teams
+Add-OSDApp NotepadPlusPlus
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
 ```
 
 For built-in cache configuration and synchronization on full Windows:
@@ -67,7 +69,7 @@ Sync-OSDAppTeams -Architecture x64
 
 Repository packages are synchronized in WinPE immediately after OSDCloud completes.
 
-OSD Apps can run without USB media. If you want to use the cache functionality, connect a USB volume labeled `OSDCloud`; OSD Apps detects and uses it automatically. Repository applications synchronize their cache in WinPE after OSDCloud completes. Built-in applications such as Microsoft 365 Apps and Teams synchronize/update their cache later in full Windows during SetupComplete. For that reason, keep the OSDCloud USB connected until OOBE is displayed.
+OSD Apps can run built-in applications without USB media. If a USB volume labeled `OSDCloud` is connected, cache functionality is enabled automatically. Built-in Office and Teams content is synchronized/updated during SetupComplete in full Windows; without an `OSDCloud` USB cache, the content is acquired directly to the local Windows runtime. Repository applications currently use the OSDCloud cache and synchronize in WinPE after OSDCloud completes.
 
 ## Runtime locations
 
@@ -88,7 +90,8 @@ After a successful run, the temporary runtime/source directory is removed automa
 Use `-KeepSource` when troubleshooting:
 
 ```powershell
-Add-OSDApp Microsoft365Apps,Teams -KeepSource
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
 ```
 
 ## Built-in applications
@@ -100,11 +103,14 @@ Microsoft365Apps
 Teams
 ```
 
-Each built-in has its own configuration/synchronization cmdlet:
+Each built-in has its own configuration/synchronization cmdlet and its own Add cmdlet:
 
 ```powershell
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
+
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
 ```
 
 There is intentionally no generic `Sync-OSDAppBuiltIn` command. Each built-in owns its own parameter set and configuration.
@@ -154,6 +160,8 @@ Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
 Get-OSDApp
 Add-OSDApp
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
 Clear-OSDAppCache
 ```
 
