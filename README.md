@@ -33,6 +33,7 @@ Repository apps use the OSD Apps package contract: `Package.zip` with a root-lev
 Built-in apps use vendor-native acquisition and installation:
 - Microsoft 365 Apps uses the Office Deployment Tool.
 - Microsoft Teams uses the Teams bootstrapper and official MSIX.
+- Adobe Acrobat Unified uses Adobe's official x64 Unified installer ZIP, which is cached compressed, extracted locally, and installed through Setup.exe.
 
 ## Quick start
 
@@ -53,6 +54,7 @@ Get-OSDApp
 Add-OSDApp NotepadPlusPlus
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
+Add-OSDAppAdobeAcrobatUnified
 ```
 
 For built-ins only, no catalog or repository synchronization is required:
@@ -168,6 +170,7 @@ Currently supported:
 ```text
 Microsoft365Apps
 Teams
+AdobeAcrobatUnified
 ```
 
 Each built-in has its own configuration/synchronization cmdlet and its own Add cmdlet:
@@ -175,9 +178,12 @@ Each built-in has its own configuration/synchronization cmdlet and its own Add c
 ```powershell
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
+Sync-OSDAppAdobeAcrobatUnified
+Sync-OSDAppAdobeAcrobatUnified
 
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
+Add-OSDAppAdobeAcrobatUnified
 ```
 
 There is intentionally no generic `Sync-OSDAppBuiltIn` command. Each built-in owns its own parameter set and configuration.
