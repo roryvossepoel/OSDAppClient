@@ -103,4 +103,6 @@ The same decisions are logged for later troubleshooting.
 
 ## Can the OSDCloud USB be completely blank?
 
-Yes. For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps` directory does not need to exist beforehand. During SetupComplete, OSD Apps creates the required structure and fills/updates the Office and Teams cache automatically.
+Yes. This flow has been validated end to end.
+
+For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps` directory does not need to exist beforehand. During SetupComplete, OSD Apps creates the required structure, populates the Microsoft 365 Apps and Teams caches, stages the payload locally, installs both applications, and cleans up the temporary runtime after success.
