@@ -190,12 +190,28 @@ There is intentionally no generic `Sync-OSDAppBuiltIn` command. Each built-in ow
 
 See [Built-in applications](docs/built-in-apps.md).
 
+## Built-in source policy
+
+OSDAppClient never ships built-in application binaries, installers, archives, or repackaged vendor content.
+
+For every built-in application, deployment content is always acquired directly from the software vendor at deployment/cache time. The module contains only the logic and vendor source definitions required to locate, cache, stage, and install that content.
+
+```text
+Built-in application
+→ source is always the vendor
+→ OSDAppClient may cache/stage the vendor content
+→ OSDAppClient never redistributes the installer itself
+```
+
+This policy applies only to built-in applications. Repository applications are organization-controlled packages; their content, hosting, licensing, and provenance are the repository owner's responsibility.
+
 ## Requesting a built-in application
 
 Built-in applications are intentionally limited to broadly used products with a clean, vendor-supported acquisition path. Requests are welcome, but a built-in should meet all of these requirements:
 
 - the application is broadly used across organizations, not a customer-specific or niche line-of-business app;
 - the installer can be downloaded directly and reproducibly from the software vendor;
+- the built-in content will always be acquired from the vendor at runtime/cache time; no installer may be bundled with or redistributed through OSDAppClient;
 - the vendor provides a stable URL, documented endpoint, or another deterministic download mechanism;
 - acquisition does not require scraping a website, sniffing browser traffic, extracting temporary URLs, session cookies, access tokens, or other brittle workarounds;
 - a CDN is fine when the vendor exposes a stable supported download URL, but not when CDN protection requires bypassing or reverse-engineering the download flow;
