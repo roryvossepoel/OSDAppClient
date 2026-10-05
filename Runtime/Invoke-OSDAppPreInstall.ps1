@@ -152,7 +152,8 @@ try {
                         Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
                         Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
                     }
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheUpdated=[bool]$usbRoot}
+                    $versionChanged = ($previous -ne $version)
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged}
                 } catch {
                     if(Test-LocalOfficeSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
@@ -187,7 +188,7 @@ try {
                     if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Invoke-WebRequest -Uri $msixUri -OutFile $tempMsix -UseBasicParsing -TimeoutSec 900 -ErrorAction Stop;$version=Get-TeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-TeamsPackageVersion -Path $msixPath}}
                     [ordered]@{Id='Teams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='Teams';Version=$version;Updated=$updated;CacheUpdated=[bool]$usbRoot}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='Teams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot}
                 } catch {
                     if(Test-LocalTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Teams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
