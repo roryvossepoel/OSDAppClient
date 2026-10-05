@@ -78,19 +78,28 @@ Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified
 
 ### Adobe Acrobat Unified
 
-Adobe Acrobat Unified uses the official Adobe 64-bit unified Acrobat/Reader package.
+Adobe Acrobat Unified supports Adobe's official x64 and x86 unified Acrobat/Reader packages. x64 is the default.
 
 ```powershell
+# x64 is the default
 Sync-OSDAppAdobeAcrobatUnified
 Add-OSDAppAdobeAcrobatUnified
+
+# optional x86
+Sync-OSDAppAdobeAcrobatUnified -Architecture x86
+Add-OSDAppAdobeAcrobatUnified -Architecture x86
 ```
 
 The cache contains:
 
 ```text
 BuiltIn\AdobeAcrobatUnified\
-├── Package.zip
-└── CacheInfo.json
+├── x64\
+│   ├── Package.zip
+│   └── CacheInfo.json
+└── x86\
+    ├── Package.zip
+    └── CacheInfo.json
 ```
 
 The ZIP remains compressed while cached and staged. During installation the standalone runner extracts it to the local work directory, locates `Setup.exe`, and runs the Adobe-supported silent installation command:
@@ -99,7 +108,7 @@ The ZIP remains compressed while cached and staged. During installation the stan
 Setup.exe /sAll /msi ADDLOCAL=ALL
 ```
 
-Only the x64 Unified installer is supported by this built-in.
+x64 is used when `-Architecture` is omitted. x86 and x64 caches are kept separately so a single OSDCloud USB can hold both variants.
 
 ## Deployment flow
 
