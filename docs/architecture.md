@@ -26,7 +26,7 @@ Azure Blob / repository
 → catalog.json
 → Sync-OSDAppRepository in WinPE
 → validate SHA-256
-→ cache Package.zip on OSDCloud USB
+→ use/update the OSDCloud USB cache when available
 → Add-OSDApp
 → stage Package.zip to Windows Temp
 → runner validates SHA-256 again
@@ -39,11 +39,11 @@ Repository acquisition stays in WinPE because it does not depend on a vendor ins
 ## Built-in lifecycle
 
 ```text
-Existing USB cache
+Optional OSDCloud USB cache
 → stage in WinPE
 → first boot into full Windows
 → pre-install refresh/update
-→ update shared USB cache
+→ update OSDCloud USB cache when present
 → restage current local payload
 → install
 ```
