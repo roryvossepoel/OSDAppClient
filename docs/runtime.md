@@ -6,7 +6,7 @@ The OSDAppClient module itself does **not** need to be installed in deployed Win
 
 ## Runtime content
 
-`Add-OSDApp` stages everything required under:
+The public Add cmdlets stage their runtime content under:
 
 ```text
 %SystemRoot%\Temp\OSDApps
@@ -68,9 +68,7 @@ successful run
 
 This allows the runner to remove its own source directory safely after PowerShell releases the script.
 
-On failure, source is retained automatically.
-
-Runtime source is retained automatically when installation fails so the staged manifest, payload and work directory remain available for troubleshooting.
+On failure, source is retained automatically so the staged manifest, payload, and work directory remain available for troubleshooting.
 
 ## Logging
 
@@ -110,3 +108,13 @@ InstallComplete
 CleanupScheduled
 CleanupSkipped
 ```
+
+
+For built-in synchronization, completion data distinguishes synchronization from actual content changes:
+
+```text
+Microsoft 365 Apps: CacheSynchronized, VersionChanged
+Microsoft Teams:    CacheSynchronized, PackageUpdated
+```
+
+This prevents a successful cache synchronization from being misread as a new application version download.
