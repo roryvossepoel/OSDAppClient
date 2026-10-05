@@ -19,7 +19,7 @@ function Add-OSDApp {
         }
 
         $cachePath=Get-OSDAppCachePath
-        $cacheCatalogPath=Join-Path $cachePath 'CacheManifest.json'
+        $cacheCatalogPath=Join-Path $cachePath 'CacheCatalog.json'
         if(-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)){throw "OSD App repository cache metadata not found: $cacheCatalogPath. Run Sync-OSDAppRepository first."}
 
         $resolvedWindowsPath=Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
