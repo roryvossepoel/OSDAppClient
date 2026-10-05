@@ -50,6 +50,7 @@ Runner:
 - extracts repository packages;
 - executes `Install.ps1`;
 - installs built-ins;
+- extracts Adobe Acrobat Unified's cached ZIP locally before invoking Adobe Setup.exe;
 - stops on unrecoverable installation failure;
 - schedules cleanup after full success.
 
