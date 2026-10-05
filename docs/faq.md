@@ -79,7 +79,7 @@ Runtime source is retained automatically on failure so the staged payload, manif
 
 ## Do built-in apps require an OSDCloud USB stick?
 
-No. `Add-OSDAppMicrosoft365Apps` and `Add-OSDAppTeams` can stage deployment intent without USB media. During SetupComplete, PreInstall downloads the required content directly to the local Windows runtime when online.
+No. `Add-OSDAppMicrosoft365Apps`, `Add-OSDAppTeams`, and `Add-OSDAppAdobeAcrobatUnified` can stage deployment intent without USB media. During SetupComplete, PreInstall downloads the required content directly to the local Windows runtime when online.
 
 If a USB volume labeled `OSDCloud` is connected, OSD Apps automatically uses it as the cache source and destination and updates it during the built-in refresh phase.
 
@@ -117,3 +117,14 @@ For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps
 `DeviceManifest.json` describes what the current device will install during SetupComplete.
 
 The old `CacheManifest.json` filename is not used.
+
+
+## Can I request another built-in application?
+
+Yes, but built-ins are intentionally limited to broadly used applications with a stable vendor-native acquisition path.
+
+The installer must be obtainable directly and reproducibly from the vendor without scraping pages, sniffing traffic, capturing temporary URLs, reusing session state, or bypassing CDN/anti-bot protections. A CDN itself is fine when the vendor publishes a stable supported URL or endpoint.
+
+Customer-specific, niche, authenticated, or otherwise non-generic applications should use the repository model instead.
+
+See [Requesting a new built-in application](built-in-apps.md#requesting-a-new-built-in-application).
