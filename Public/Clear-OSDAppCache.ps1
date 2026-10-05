@@ -65,13 +65,13 @@ function Clear-OSDAppCache {
         }
     }
 
-    $manifestPath = Join-Path $cachePath 'CacheManifest.json'
+    $manifestPath = Join-Path $cachePath 'CacheCatalog.json'
     $packagesPath = Join-Path $cachePath 'Packages'
     $builtInPath = Join-Path $cachePath 'BuiltIn'
 
     if ($All -or $Repository) {
         Remove-CacheItem -Path $packagesPath -Label 'Repository packages'
-        Remove-CacheItem -Path $manifestPath -Label 'CacheManifest.json'
+        Remove-CacheItem -Path $manifestPath -Label 'CacheCatalog.json'
     }
 
     if ($All -or $BuiltIn) {
@@ -86,7 +86,7 @@ function Clear-OSDAppCache {
                 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
             }
             catch {
-                throw "Failed to read cache manifest '$manifestPath': $($_.Exception.Message)"
+                throw "Failed to read cache catalog '$manifestPath': $($_.Exception.Message)"
             }
         }
 
@@ -104,10 +104,10 @@ function Clear-OSDAppCache {
                 if (@($remainingPackages).Count -ne @($manifest.Packages).Count) {
                     $manifest.Packages = $remainingPackages
 
-                    if ($PSCmdlet.ShouldProcess($manifestPath, "Remove '$appName' from CacheManifest.json")) {
+                    if ($PSCmdlet.ShouldProcess($manifestPath, "Remove '$appName' from CacheCatalog.json")) {
                         $manifest | ConvertTo-Json -Depth 20 |
                             Set-Content -LiteralPath $manifestPath -Encoding UTF8
-                        $removed.Add("Cache manifest entry '$appName'")
+                        $removed.Add("Cache catalog entry '$appName'")
                     }
                 }
             }
