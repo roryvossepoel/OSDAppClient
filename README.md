@@ -41,13 +41,23 @@ Typical WinPE flow after OSDCloud v2 has finished:
 ```powershell
 Import-Module OSDAppClient
 
+# Optional: repository applications
 Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/catalog.json'
-
+Get-OSDAppCatalog
 Sync-OSDAppRepository
 
+# Discover repository and built-in applications
 Get-OSDApp
 
+# Stage applications
 Add-OSDApp NotepadPlusPlus
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
+```
+
+For built-ins only, no catalog or repository synchronization is required:
+
+```powershell
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 ```
@@ -131,6 +141,8 @@ blank USB with label OSDCloud
 
 This confirms that pre-populating `<OSDCloud>:\OSDApps` is not required for built-in deployment.
 
+An existing-cache + online refresh run has also been validated: both built-in caches were detected in WinPE, Office synchronized without a version change, Teams reported no package update, and both applications installed successfully from the local staged runtime.
+
 ## Runtime locations
 
 Temporary deployment source:
@@ -172,6 +184,18 @@ There is intentionally no generic `Sync-OSDAppBuiltIn` command. Each built-in ow
 
 See [Built-in applications](docs/built-in-apps.md).
 
+## Catalog and cache terminology
+
+OSD Apps uses three distinct metadata files:
+
+```text
+catalog.json         online repository source of truth
+CacheCatalog.json    local OSDCloud USB snapshot of cached repository packages
+DeviceManifest.json  per-device staged installation manifest
+```
+
+`Get-OSDAppCatalog` reports catalog status. `Get-OSDApp` is the application discovery command and combines online repository state, local cache state, and built-in applications.
+
 ## Repository applications
 
 Repository packages remain compressed while cached and staged.
@@ -204,24 +228,25 @@ SetupComplete runs the standalone pre-install phase first and the installer seco
 
 See [Runtime and cleanup](docs/runtime.md).
 
-## Commands
-
-Primary commands:
+## Public commands
 
 ```text
 Set-OSDAppCatalog
 Get-OSDAppCatalog
+Get-OSDApp
+
 Sync-OSDAppRepository
 Sync-OSDAppMicrosoft365Apps
 Sync-OSDAppTeams
-Get-OSDApp
+
 Add-OSDApp
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
+
 Clear-OSDAppCache
 ```
 
-Lower-level cache and staging commands are also exported for testing and advanced scenarios.
+Low-level cache validation, content staging, repository synchronization internals, and SetupComplete integration are private implementation details.
 
 ## Documentation
 
