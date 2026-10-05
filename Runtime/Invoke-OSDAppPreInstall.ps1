@@ -115,9 +115,17 @@ try {
                 $localConfig=Join-Path $localRoot 'configuration.xml'
                 if(-not (Test-Path -LiteralPath $localConfig -PathType Leaf)){throw 'Microsoft 365 Apps configuration.xml is missing from the staged deployment intent.'}
 
+                if($usbRoot -and -not (Test-LocalOfficeSource -Root $localRoot) -and (Test-LocalOfficeSource -Root $acquireRoot)){
+                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'setup.exe') -Destination (Join-Path $localRoot 'setup.exe') -Force
+                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'configuration.xml') -Destination $localConfig -Force
+                    if(Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf){Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
+                    Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
+                    Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft 365 Apps USB cache was staged locally.' -Data @{Id='Microsoft365Apps'}
+                }
+
                 if(-not $networkAvailable){
                     if(Test-LocalOfficeSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Office payload will be used.' -Data @{Id='Microsoft365Apps'}; continue}
-                    throw 'Microsoft 365 Apps has no staged payload and no network connection is available to acquire one.'
+                    throw 'Microsoft 365 Apps has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
 
                 try {
@@ -153,9 +161,16 @@ try {
             'Teams' {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\Teams'; New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
                 $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\Teams'}else{$localRoot}; New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
+                if($usbRoot -and -not (Test-LocalTeamsSource -Root $localRoot) -and (Test-LocalTeamsSource -Root $acquireRoot)){
+                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'teamsbootstrapper.exe') -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force
+                    Copy-Item -LiteralPath (Join-Path $acquireRoot 'teams.msix') -Destination (Join-Path $localRoot 'teams.msix') -Force
+                    if(Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf){Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
+                    Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft Teams USB cache was staged locally.' -Data @{Id='Teams'}
+                }
+
                 if(-not $networkAvailable){
                     if(Test-LocalTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='Teams'};continue}
-                    throw 'Microsoft Teams has no staged payload and no network connection is available to acquire one.'
+                    throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 try {
                     $architecture=if($app.Architecture){[string]$app.Architecture}elseif($env:PROCESSOR_ARCHITECTURE -eq 'ARM64'){'arm64'}else{'x64'}
