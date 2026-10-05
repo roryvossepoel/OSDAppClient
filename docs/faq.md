@@ -128,3 +128,14 @@ The installer must be obtainable directly and reproducibly from the vendor witho
 Customer-specific, niche, authenticated, or otherwise non-generic applications should use the repository model instead.
 
 See [Requesting a new built-in application](built-in-apps.md#requesting-a-new-built-in-application).
+
+
+## Does OSDAppClient distribute built-in installers?
+
+No.
+
+Built-in application payloads are never bundled with, mirrored by, or redistributed through OSDAppClient. Every built-in downloads its installation content directly from the software vendor when the cache is populated or refreshed.
+
+An `OSDCloud` USB may cache that vendor content locally for reuse, offline deployment, bandwidth reduction, and faster installation, but OSDAppClient itself does not act as a software distribution source.
+
+This restriction applies to built-ins only. Repository applications are controlled by the repository owner, who is responsible for package provenance, hosting, licensing, and redistribution rights.
