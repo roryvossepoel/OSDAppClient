@@ -3,7 +3,8 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
     param(
         [string]$CachePath,
         [Parameter(Mandatory)][string]$WindowsPath,
-        [string]$PackageUri = 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip',
+        [ValidateSet('x64','x86')][string]$Architecture = 'x64',
+        [Parameter(Mandatory)][string]$PackageUri,
         [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
 
@@ -12,7 +13,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
     $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
-    $cacheRoot = if ($CachePath) { Join-Path $CachePath 'BuiltIn\AdobeAcrobatUnified' } else { $null }
+    $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' $Architecture) } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
         $cacheHasPayload = Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.zip') -PathType Leaf
@@ -50,8 +51,8 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
         Id = 'AdobeAcrobatUnified'
         DisplayName = 'Adobe Acrobat Unified'
         Type = 'AdobeAcrobatUnifiedZip'
-        Package = 'BuiltIn\AdobeAcrobatUnified\Package.zip'
-        Architecture = 'x64'
+        Package = (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $Architecture 'Package.zip'))
+        Architecture = $Architecture
         PackageUri = $PackageUri
         CachePreferred = [bool]$CachePath
         InstallArguments = '/sAll /msi ADDLOCAL=ALL'
@@ -69,7 +70,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
 
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'StageTarget' -Message 'Adobe Acrobat Unified deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'AdobeStageComplete' -Message 'Adobe Acrobat Unified deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture='x64' }
+    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'AdobeStageComplete' -Message 'Adobe Acrobat Unified deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture }
 
     [pscustomobject]@{
         PSTypeName='OSDAppClient.StagedApp'
