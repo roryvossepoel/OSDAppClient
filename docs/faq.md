@@ -73,3 +73,14 @@ Use `-KeepSource` while troubleshooting.
 No.
 
 Runtime source is retained automatically on failure so the staged payload, manifest, and work directory remain available for investigation.
+
+
+## Do built-in apps require an OSDCloud USB stick?
+
+No. `Add-OSDAppMicrosoft365Apps` and `Add-OSDAppTeams` can stage deployment intent without USB media. During SetupComplete, PreInstall downloads the required content directly to the local Windows runtime when online.
+
+If a USB volume labeled `OSDCloud` is connected, OSD Apps automatically uses it as the cache source and destination and updates it during the built-in refresh phase.
+
+## What does a blank OSDCloud USB stick need?
+
+Only the volume label `OSDCloud` is required for built-in cache use. The `OSDApps` directory and built-in cache structure can be created automatically during the full-Windows pre-install phase.
