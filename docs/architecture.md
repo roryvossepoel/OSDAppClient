@@ -39,12 +39,13 @@ Repository acquisition stays in WinPE because it does not depend on a vendor ins
 ## Built-in lifecycle
 
 ```text
-Optional OSDCloud USB cache
-→ stage in WinPE
+Add built-in deployment intent in WinPE
+→ stage existing cache when available
 → first boot into full Windows
-→ pre-install refresh/update
-→ update OSDCloud USB cache when present
-→ restage current local payload
+→ detect optional OSDCloud USB cache
+→ USB present: use/update cache
+→ USB absent: acquire directly to Windows Temp
+→ ensure local payload is complete
 → install
 ```
 
@@ -84,3 +85,18 @@ Work\
 ```
 
 After a successful installation the runtime directory is removed automatically unless `-KeepSource` was specified.
+
+
+## Optional USB cache
+
+The built-in deployment path does not require USB media. Cache usage is automatic: when a connected volume with label `OSDCloud` is detected, it becomes the built-in cache source and destination. If no such volume exists, built-in content is downloaded directly to `%SystemRoot%\Temp\OSDApps` during the full-Windows pre-install phase.
+
+This gives three supported built-in scenarios:
+
+```text
+OSDCloud USB + online  → use cache, refresh/update it, then install locally
+OSDCloud USB + offline → use cached payload if complete
+No USB + online        → acquire directly to local runtime and install
+```
+
+No USB + offline requires a previously staged local payload; otherwise PreInstall fails before the runner starts.
