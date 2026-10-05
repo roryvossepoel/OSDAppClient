@@ -15,7 +15,7 @@ function Sync-OSDAppRepository {
     $cachePath = Get-OSDAppCachePath
 
     Sync-OSDAppCache `
-        -ManifestUri $sourceUri `
+        -CatalogUri $sourceUri `
         -CachePath $cachePath `
         -Name $Name `
         -Confirm:$false
