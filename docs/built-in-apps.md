@@ -80,30 +80,30 @@ Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified
 Cached mode is the default:
 
 ```powershell
-Add-OSDApp Microsoft365Apps,Teams
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
 ```
 
-In WinPE:
-- no built-in refresh is performed;
-- if an `OSDCloud` USB cache is present, existing built-in cache content can be staged to Windows Temp;
+In WinPE, `Add-OSDAppMicrosoft365Apps` and `Add-OSDAppTeams` stage deployment intent and any already-available cached payload into Windows Temp. A USB cache is not required.
 
-In full Windows:
-- PreInstall refreshes Office and Teams when possible;
-- if an `OSDCloud` USB cache is present, it is updated automatically;
-- current content is restaged locally;
+In full Windows, PreInstall resolves the source automatically:
+- if an `OSDCloud` USB cache is present, it is used and updated;
+- if no `OSDCloud` USB cache is present, content is acquired directly to the local Windows runtime;
+- current content is staged locally before the runner starts;
 - the runner installs from local content.
 
 ## Online mode
 
 ```powershell
-Add-OSDApp Microsoft365Apps,Teams -BuiltInInstallMode Online
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams -BuiltInInstallMode Online
 ```
 
 Online mode skips the cached payload model. The vendor bootstrapper/configuration is staged and installation downloads required content during SetupComplete.
 
 ## Fallback behavior
 
-Built-in refresh must never become a deployment dependency.
+A refresh failure must not block deployment when a usable staged or USB-cached fallback exists. If there is no usable local/USB source and online acquisition also fails, PreInstall returns a fatal error and the runner is not started.
 
 If any of these occur:
 - USB is missing;
