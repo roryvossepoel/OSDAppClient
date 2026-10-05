@@ -3,9 +3,9 @@ $moduleRoot = $PSScriptRoot
 foreach ($folder in @('Private','Public')) {
     $path = Join-Path $moduleRoot $folder
     if (Test-Path $path) {
-        Get-ChildItem -Path $path -Filter '*.ps1' -File | Sort-Object Name | ForEach-Object {
-            . $_.FullName
-        }
+        Get-ChildItem -Path $path -Filter '*.ps1' -File |
+            Sort-Object Name |
+            ForEach-Object { . $_.FullName }
     }
 }
 
@@ -17,9 +17,6 @@ Export-ModuleMember -Function @(
     'Sync-OSDAppMicrosoft365Apps',
     'Sync-OSDAppTeams',
     'Clear-OSDAppCache',
-    'Test-OSDAppCache',
-    'Copy-OSDAppContent',
-    'Add-OSDAppSetupComplete',
     'Add-OSDApp',
     'Add-OSDAppMicrosoft365Apps',
     'Add-OSDAppTeams'
