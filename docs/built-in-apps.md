@@ -157,3 +157,20 @@ Before reboot, both Add cmdlets reported that the OSDCloud cache volume was avai
 - the runner completed successfully and scheduled runtime cleanup.
 
 No pre-created `OSDApps` directory or built-in payload was required.
+
+
+## Validated existing-cache refresh
+
+The existing-cache + online path has also been validated successfully:
+
+```text
+complete Office and Teams cache present on OSDCloud USB
+→ WinPE detects CacheAvailable=True for both built-ins
+→ cached payload is staged as fallback
+→ SetupComplete synchronizes Office against the existing cache
+→ Office remains on the same current build
+→ Teams metadata check reports no package update
+→ both applications install successfully
+```
+
+This confirms that the same Add commands support both cache bootstrap and cache reuse without changing deployment syntax.
