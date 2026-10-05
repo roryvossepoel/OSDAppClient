@@ -1,27 +1,37 @@
 function Sync-OSDAppAdobeAcrobatUnified {
     [CmdletBinding(SupportsShouldProcess)]
     param(
+        [ValidateSet('x64','x86')]
+        [string]$Architecture = 'x64',
+
         [double]$MinimumFreeSpaceGB = 3,
 
-        [string]$PackageUri = 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip'
+        [string]$PackageUri
     )
 
     if (Test-OSDAppWinPE) {
         throw 'Sync-OSDAppAdobeAcrobatUnified is intended for full Windows. Built-in cache refresh is deferred until the pre-install phase.'
     }
 
+    if (-not $PackageUri) {
+        $PackageUri = switch ($Architecture) {
+            'x64' { 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_x64_WWMUI.zip' }
+            'x86' { 'https://trials.adobe.com/AdobeProducts/APRO/Acrobat_HelpX/win32/Acrobat_DC_Web_WWMUI.zip' }
+        }
+    }
+
     $cachePath = Get-OSDAppCachePath
     $clientLogPath = Join-Path $cachePath 'Logs\Client.log'
-    $root = Join-Path $cachePath 'BuiltIn\AdobeAcrobatUnified'
+    $root = Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' $Architecture)
     $packagePath = Join-Path $root 'Package.zip'
     $cacheInfoPath = Join-Path $root 'CacheInfo.json'
 
     New-Item -ItemType Directory -Path $root -Force | Out-Null
 
-    if (-not $PSCmdlet.ShouldProcess($root, 'Synchronize Adobe Acrobat Unified built-in cache')) { return }
+    if (-not $PSCmdlet.ShouldProcess($root, "Synchronize Adobe Acrobat Unified built-in cache ($Architecture)")) { return }
 
-    Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Adobe Acrobat Unified cache synchronization' -LogPath $clientLogPath | Out-Null
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncStart' -Message 'Synchronizing Adobe Acrobat Unified built-in cache.'
+    Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Adobe Acrobat Unified $Architecture cache synchronization" -LogPath $clientLogPath | Out-Null
+    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncStart' -Message 'Synchronizing Adobe Acrobat Unified built-in cache.' -Data @{ Architecture=$Architecture }
 
     $remoteMetadata = Get-OSDAppRemoteFileMetadata -Uri $PackageUri
 
@@ -45,10 +55,10 @@ function Sync-OSDAppAdobeAcrobatUnified {
 
     if ($metadataMatches) {
         $updated = $false
-        Write-Verbose 'Cached Adobe Acrobat Unified package is current. No download required.'
+        Write-Verbose "Cached Adobe Acrobat Unified $Architecture package is current. No download required."
     }
     else {
-        Save-OSDAppDownload -Uri $PackageUri -DestinationPath $packagePath -Activity 'Downloading Adobe Acrobat Unified x64 package' | Out-Null
+        Save-OSDAppDownload -Uri $PackageUri -DestinationPath $packagePath -Activity "Downloading Adobe Acrobat Unified $Architecture package" | Out-Null
         $updated = $true
     }
 
@@ -56,7 +66,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
         Id                  = 'AdobeAcrobatUnified'
         Cached              = $true
         Version             = 'Current'
-        Architecture        = 'x64'
+        Architecture        = $Architecture
         PackageUri          = $PackageUri
         RemoteETag          = $remoteMetadata.ETag
         RemoteLastModified  = $remoteMetadata.LastModified
@@ -66,7 +76,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncComplete' -Message 'Adobe Acrobat Unified built-in cache synchronized.' -Data @{
-        Architecture='x64'
+        Architecture=$Architecture
         Updated=$updated
         Path=$root
     }
@@ -75,7 +85,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
         PSTypeName='OSDAppClient.BuiltInCache'
         Id='AdobeAcrobatUnified'
         Version='Current'
-        Architecture='x64'
+        Architecture=$Architecture
         CachePath=$root
         Cached=$true
         Updated=$updated
