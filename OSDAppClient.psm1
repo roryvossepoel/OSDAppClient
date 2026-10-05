@@ -16,8 +16,10 @@ Export-ModuleMember -Function @(
     'Sync-OSDAppRepository',
     'Sync-OSDAppMicrosoft365Apps',
     'Sync-OSDAppTeams',
+    'Sync-OSDAppAdobeAcrobatUnified',
     'Clear-OSDAppCache',
     'Add-OSDApp',
     'Add-OSDAppMicrosoft365Apps',
-    'Add-OSDAppTeams'
+    'Add-OSDAppTeams',
+    'Add-OSDAppAdobeAcrobatUnified'
 )
