@@ -151,10 +151,13 @@ OSD Apps does not silently run x64 repository packages on ARM64.
 ```powershell
 Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/catalog.json'
 
+# Status only: URI, availability and package count
 Get-OSDAppCatalog
 
+# Populate/update <OSDCloud>:\OSDApps\Packages and CacheCatalog.json
 Sync-OSDAppRepository
 
+# Unified application discovery
 Get-OSDApp
 
 Add-OSDApp NotepadPlusPlus
@@ -169,7 +172,26 @@ The runner validates the staged package hash again before extraction and install
 Repository packages are installed in the order supplied to `Add-OSDApp`.
 
 ```powershell
-Add-OSDApp VCPlusPlusRuntime,LineOfBusinessApp,Microsoft365Apps,Teams
+Add-OSDApp VCPlusPlusRuntime,LineOfBusinessApp
 ```
 
-Repository apps run first in the requested order. Built-ins run afterwards.
+Built-ins use their dedicated commands:
+
+```powershell
+Add-OSDAppMicrosoft365Apps
+Add-OSDAppTeams
+```
+
+`Add-OSDApp` is repository-only and returns a clear error if a built-in application is passed to it.
+
+
+## Local cache metadata
+
+Repository synchronization writes:
+
+```text
+<OSDCloud>:\OSDApps\CacheCatalog.json
+<OSDCloud>:\OSDApps\Packages\<AppId>\Package.zip
+```
+
+`CacheCatalog.json` is the local snapshot of repository packages selected for the current WinPE architecture. It is intentionally distinct from the online `catalog.json` and the per-device `DeviceManifest.json`.
