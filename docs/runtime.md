@@ -103,6 +103,8 @@ PackageIntegrityValidated
 PackageInstallStart
 PackageInstallComplete
 BuiltInInstallStart
+BuiltInInstallWaiting
+BuiltInInstallTimeout
 BuiltInInstallComplete
 InstallFailed
 InstallComplete
@@ -119,3 +121,12 @@ Microsoft Teams:    CacheSynchronized, PackageUpdated
 ```
 
 This prevents a successful cache synchronization from being misread as a new application version download.
+
+
+Adobe Acrobat Unified uses a 15-minute installation timeout by default. The runner writes a heartbeat every 60 seconds while Adobe Setup is still running. If the timeout is reached, the Adobe setup process tree is terminated, `BuiltInInstallTimeout` is logged, the deployment fails, and the runtime source is retained for troubleshooting.
+
+The timeout can be overridden when staging:
+
+```powershell
+Add-OSDAppAdobeAcrobatUnified -InstallTimeoutMinutes 20
+```
