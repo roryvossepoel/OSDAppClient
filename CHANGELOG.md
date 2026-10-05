@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.21.0
+
+### Added
+
+- Added `GoogleChromeEnterprise` built-in support using Google's vendor-hosted Enterprise MSI.
+- Added x64 and x86 Chrome cache variants; x64 is the default.
+- Added `MozillaFirefoxEnterprise` built-in support using Mozilla's official MSI download endpoint.
+- Added Firefox Rapid Release and ESR channels, x64/x86 architectures, and configurable Mozilla language.
+- Added generic `VendorMsi` SetupComplete runtime support using `msiexec.exe /i ... /qn /norestart`.
+- Added MSI installation heartbeat, timeout protection, and success handling for exit codes `0` and `3010`.
+
+### Validation
+
+- Chrome and Firefox integrations are implemented but still require end-to-end OSD validation.
+
+
 ## 0.20.3
 
 ### Changed
