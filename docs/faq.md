@@ -34,11 +34,13 @@ Keep the USB connected until OOBE is displayed.
 
 ## What happens if there is no network?
 
-PreInstall skips built-in refresh and installs from the previously staged payload.
+If a complete staged or OSDCloud USB-cached payload is available, PreInstall uses it and installation continues.
+
+If there is no usable local or USB-cached payload, PreInstall exits with an error before the runner starts.
 
 ## What happens if Office refresh hangs?
 
-The Office refresh has a 20-minute timeout by default. After the timeout, PreInstall falls back to staged Office content and installation continues.
+The Office refresh has a 20-minute timeout by default. After the timeout, PreInstall falls back to a complete staged or USB-cached Office payload when one exists. If no usable fallback exists, PreInstall exits with an error before the runner starts.
 
 ## Where are the logs?
 
@@ -66,7 +68,7 @@ Temporary source is stored under:
 
 and is removed after successful installation.
 
-Use `-KeepSource` while troubleshooting.
+On failure, source is retained automatically for troubleshooting.
 
 ## Does a failed installation remove the source?
 
@@ -84,3 +86,21 @@ If a USB volume labeled `OSDCloud` is connected, OSD Apps automatically uses it 
 ## What does a blank OSDCloud USB stick need?
 
 Only the volume label `OSDCloud` is required for built-in cache use. The `OSDApps` directory and built-in cache structure can be created automatically during the full-Windows pre-install phase.
+
+
+## How do I see which source path was selected?
+
+Use the built-in Add cmdlets with `-Verbose`:
+
+```powershell
+Add-OSDAppMicrosoft365Apps -Verbose
+Add-OSDAppTeams -Verbose
+```
+
+The output shows whether an `OSDCloud` cache volume was detected, whether a usable cache already exists, the offline Windows target and whether content will be acquired through the USB cache or directly to the OS disk.
+
+The same decisions are logged for later troubleshooting.
+
+## Can the OSDCloud USB be completely blank?
+
+Yes. For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps` directory does not need to exist beforehand. During SetupComplete, OSD Apps creates the required structure and fills/updates the Office and Teams cache automatically.
