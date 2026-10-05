@@ -161,3 +161,14 @@ Runtime cleanup scheduled
 ```
 
 The validated run started with no usable Office or Teams cache. During PreInstall, Office resolved from no previous version to the current build and Teams reported a fresh package update. Both built-in installations completed with exit code `0`.
+
+
+## Metadata model
+
+```text
+catalog.json         online repository source of truth
+CacheCatalog.json    local OSDCloud USB snapshot of cached repository apps
+DeviceManifest.json  per-device staged runtime manifest
+```
+
+These files have intentionally separate responsibilities. There is no backward-compatibility fallback to the old `CacheManifest.json` name.
