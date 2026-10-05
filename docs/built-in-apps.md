@@ -85,11 +85,11 @@ Add-OSDApp Microsoft365Apps,Teams
 
 In WinPE:
 - no built-in refresh is performed;
-- the existing USB cache is staged to Windows Temp.
+- if an `OSDCloud` USB cache is present, existing built-in cache content can be staged to Windows Temp;
 
 In full Windows:
 - PreInstall refreshes Office and Teams when possible;
-- the shared USB cache is updated;
+- if an `OSDCloud` USB cache is present, it is updated automatically;
 - current content is restaged locally;
 - the runner installs from local content.
 
@@ -120,4 +120,4 @@ Office refresh has a 20-minute timeout by default.
 
 Keep the OSDCloud USB connected until OOBE is displayed.
 
-The built-in refresh/update phase runs in full Windows before installation, so removing the USB early prevents the shared cache from being checked and updated.
+The built-in refresh/update phase runs in full Windows before installation. If cache functionality is being used, keep the `OSDCloud` USB connected until OOBE so the cache can be checked and updated. Without an `OSDCloud` USB cache, built-ins can be acquired directly to the local Windows runtime instead.
