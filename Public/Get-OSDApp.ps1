@@ -6,78 +6,118 @@ function Get-OSDApp {
     )
 
     $apps = [System.Collections.Generic.List[object]]::new()
-
     $cachePath = $null
-    try {
-        $cachePath = Get-OSDAppCachePath
-    }
-    catch {
-        Write-Verbose 'No OSDCloud volume was found. Returning built-in applications only.'
-    }
 
+    try { $cachePath = Get-OSDAppCachePath } catch { }
+
+    $cachedPackages = @()
     if ($cachePath) {
-        $manifestPath = Join-Path $cachePath 'CacheManifest.json'
-
-        if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
-            $manifest = Get-OSDAppManifest -Path $manifestPath
-
-            foreach ($package in @($manifest.Packages)) {
-                $apps.Add([pscustomobject]@{
-                    PSTypeName   = 'OSDAppClient.App'
-                    Id           = $package.Id
-                    Name         = $package.Id
-                    DisplayName  = $package.DisplayName
-                    Version      = $package.Version
-                    Architecture = $package.Architecture
-                    Source       = 'Repository'
-                    Availability = 'Cached'
-                    Valid        = (Test-OSDAppFileHash -Path (Join-Path $cachePath (Join-Path 'Packages' (Join-Path $package.Id 'Package.zip'))) -ExpectedSha256 $package.Archive.Sha256)
-                })
+        $cacheCatalogPath = Join-Path $cachePath 'CacheCatalog.json'
+        if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
+            try {
+                $cacheCatalog = Get-OSDAppManifest -Path $cacheCatalogPath
+                $cachedPackages = @($cacheCatalog.Packages)
+            }
+            catch {
+                Write-Warning "Failed to read OSD Apps cache catalog '$cacheCatalogPath': $($_.Exception.Message)"
             }
         }
+    }
+
+    $onlinePackages = @()
+    if ($script:OSDAppCatalogUri) {
+        try {
+            $response = Invoke-WebRequest -Uri $script:OSDAppCatalogUri -UseBasicParsing -ErrorAction Stop
+            $onlineCatalog = $response.Content | ConvertFrom-Json -ErrorAction Stop
+            $onlinePackages = @($onlineCatalog.Packages)
+        }
+        catch {
+            Write-Verbose "Online OSD App Catalog could not be read: $($_.Exception.Message)"
+        }
+    }
+
+    $repositoryIds = @(
+        @($onlinePackages.Id) + @($cachedPackages.Id) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Select-Object -Unique
+    )
+
+    foreach ($id in $repositoryIds) {
+        $online = @($onlinePackages | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
+        $cached = @($cachedPackages | Where-Object { $_.Id -eq $id } | Select-Object -First 1)
+
+        $onlinePackage = if ($online.Count -gt 0) { $online[0] } else { $null }
+        $cachedPackage = if ($cached.Count -gt 0) { $cached[0] } else { $null }
+
+        $cachedValid = $null
+        if ($cachedPackage -and $cachePath) {
+            $archivePath = Join-Path $cachePath (Join-Path 'Packages' (Join-Path $id 'Package.zip'))
+            $cachedValid = Test-OSDAppFileHash -Path $archivePath -ExpectedSha256 $cachedPackage.Archive.Sha256
+        }
+
+        $availability = if ($cachedPackage -and $cachedValid) {
+            if ($onlinePackage) { 'Cached' } else { 'CachedOnly' }
+        }
+        elseif ($onlinePackage) {
+            'Online'
+        }
+        elseif ($cachedPackage) {
+            'InvalidCache'
+        }
+        else {
+            'Unavailable'
+        }
+
+        $apps.Add([pscustomobject]@{
+            PSTypeName    = 'OSDAppClient.App'
+            Id            = $id
+            Name          = $id
+            DisplayName   = if ($onlinePackage -and $onlinePackage.DisplayName) { $onlinePackage.DisplayName } elseif ($cachedPackage) { $cachedPackage.DisplayName } else { $id }
+            Source        = 'Repository'
+            OnlineVersion = if ($onlinePackage) { $onlinePackage.Version } else { $null }
+            CachedVersion = if ($cachedPackage) { $cachedPackage.Version } else { $null }
+            Version       = if ($cachedPackage) { $cachedPackage.Version } elseif ($onlinePackage) { $onlinePackage.Version } else { $null }
+            Architecture  = if ($cachedPackage) { $cachedPackage.Architecture } elseif ($onlinePackage) { $onlinePackage.Architecture } else { $null }
+            Availability  = $availability
+            Valid         = $cachedValid
+        })
     }
 
     $officeCacheInfo = $null
     $teamsCacheInfo = $null
 
     if ($cachePath) {
-        $officeCacheInfoPath = Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json'
-        $teamsCacheInfoPath = Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json'
-
-        if (Test-Path -LiteralPath $officeCacheInfoPath -PathType Leaf) {
-            try { $officeCacheInfo = Get-Content -LiteralPath $officeCacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
-        }
-
-        if (Test-Path -LiteralPath $teamsCacheInfoPath -PathType Leaf) {
-            try { $teamsCacheInfo = Get-Content -LiteralPath $teamsCacheInfoPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+        foreach ($definition in @(
+            @{ Id='Microsoft365Apps'; Path=(Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json') },
+            @{ Id='Teams'; Path=(Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json') }
+        )) {
+            if (Test-Path -LiteralPath $definition.Path -PathType Leaf) {
+                try {
+                    $info = Get-Content -LiteralPath $definition.Path -Raw -Encoding UTF8 | ConvertFrom-Json
+                    if ($definition.Id -eq 'Microsoft365Apps') { $officeCacheInfo = $info } else { $teamsCacheInfo = $info }
+                }
+                catch { }
+            }
         }
     }
 
-    foreach ($builtInApp in @(
-        [pscustomobject]@{
-            PSTypeName   = 'OSDAppClient.App'
-            Id           = 'Microsoft365Apps'
-            Name         = 'Microsoft365Apps'
-            DisplayName  = 'Microsoft 365 Apps'
-            Version      = if ($officeCacheInfo) { $officeCacheInfo.Version } else { 'Current' }
-            Architecture = if ($officeCacheInfo) { $officeCacheInfo.Architecture } else { 'any' }
-            Source       = 'BuiltIn'
-            Availability = if ($officeCacheInfo) { 'Cached' } else { 'Available' }
-            Valid        = $true
-        },
-        [pscustomobject]@{
-            PSTypeName   = 'OSDAppClient.App'
-            Id           = 'Teams'
-            Name         = 'Teams'
-            DisplayName  = 'Microsoft Teams'
-            Version      = if ($teamsCacheInfo) { $teamsCacheInfo.Version } else { 'Current' }
-            Architecture = if ($teamsCacheInfo) { $teamsCacheInfo.Architecture } else { 'any' }
-            Source       = 'BuiltIn'
-            Availability = if ($teamsCacheInfo) { 'Cached' } else { 'Available' }
-            Valid        = $true
-        }
+    foreach ($builtIn in @(
+        @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },
+        @{ Id='Teams'; DisplayName='Microsoft Teams'; Info=$teamsCacheInfo }
     )) {
-        $apps.Add($builtInApp)
+        $apps.Add([pscustomobject]@{
+            PSTypeName    = 'OSDAppClient.App'
+            Id            = $builtIn.Id
+            Name          = $builtIn.Id
+            DisplayName   = $builtIn.DisplayName
+            Source        = 'BuiltIn'
+            OnlineVersion = 'Current'
+            CachedVersion = if ($builtIn.Info) { $builtIn.Info.Version } else { $null }
+            Version       = if ($builtIn.Info) { $builtIn.Info.Version } else { 'Current' }
+            Architecture  = if ($builtIn.Info -and $builtIn.Info.Architecture) { $builtIn.Info.Architecture } else { 'Auto' }
+            Availability  = if ($builtIn.Info) { 'Cached' } else { 'Available' }
+            Valid         = $true
+        })
     }
 
     $result = @($apps)
@@ -85,12 +125,8 @@ function Get-OSDApp {
     if ($Name) {
         $result = @(
             $result | Where-Object {
-                foreach ($pattern in $Name) {
-                    if ($_.Id -like $pattern -or $_.DisplayName -like $pattern) {
-                        return $true
-                    }
-                }
-                return $false
+                $app = $_
+                @($Name | Where-Object { $app.Id -like $_ -or $app.DisplayName -like $_ }).Count -gt 0
             }
         )
     }
