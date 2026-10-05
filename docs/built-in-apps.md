@@ -141,3 +141,19 @@ Verbose output shows:
 When OSDCloud cache media is detected, the Add cmdlet also emits a warning to keep the USB connected until OOBE is displayed.
 
 The same decisions are written to the CMTrace-compatible logs.
+
+
+## Validated cache bootstrap
+
+A blank-cache deployment has been validated successfully with only a connected USB volume labeled `OSDCloud`.
+
+Before reboot, both Add cmdlets reported that the OSDCloud cache volume was available but no usable built-in cache existed. During SetupComplete:
+
+- Microsoft 365 Apps was synchronized from no previous cached version to a current Office build;
+- Microsoft Teams downloaded and created a new cached MSIX;
+- both payloads were staged to the local Windows runtime;
+- Microsoft 365 Apps installation completed with exit code `0`;
+- Microsoft Teams provisioning completed with exit code `0`;
+- the runner completed successfully and scheduled runtime cleanup.
+
+No pre-created `OSDApps` directory or built-in payload was required.
