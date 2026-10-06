@@ -39,7 +39,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
         $deviceManifest = [pscustomobject]@{
             SchemaVersion='1.0'
             StagedAt=(Get-Date).ToUniversalTime().ToString('o')
-            Packages=@()
+            Apps=@()
         }
     }
 
