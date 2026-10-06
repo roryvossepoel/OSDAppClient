@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.25.0
+
+### Changed
+
+- Replaced fixed built-in priorities with a single global installation order.
+- Every `Add-*` call appends its application to `DeviceManifest.json` under `InstallOrder`.
+- Repository and built-in applications can now be interleaved in exactly the order they were added.
+- Re-adding an application moves it to the end of `InstallOrder` without duplicating it.
+- The runner logs the resolved global order through the `InstallOrder` event.
+- Manifests without `InstallOrder` retain a compatibility fallback of repository apps first, then built-ins.
+
 ## 0.24.3
 
 ### Changed
