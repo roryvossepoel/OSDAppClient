@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.24.0
+
+### Changed
+
+- Repository packages now use a single top-level `Package` directory inside `Package.zip`.
+- The runtime resolves repository installers from `Package/Install.ps1`.
+- Repository `Install.ps1` now runs with the extracted `Package` directory as its working directory.
+- Root-level `Install.ps1` archives are no longer supported.
+
 ## 0.23.0
 
 ### Changed
