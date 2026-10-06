@@ -17,7 +17,8 @@ function Add-OSDAppMozillaFirefoxEnterprise {
                 [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
             }
         })]
-        [ValidatePattern('^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?
+        [ValidatePattern('^[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?$')]
+        [string]$Language = 'en-US',
 
         [string]$PackageUri,
 
