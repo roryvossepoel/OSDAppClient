@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.24.1
+
+### Fixed
+
+- Repository staging no longer replaces the entire `DeviceManifest.json`.
+- Existing `BuiltInApps` and `Runtime` metadata are preserved when `Add-OSDApp` stages repository applications.
+- Existing repository package entries are merged by Id instead of being discarded.
+- This fixes deployments where built-in applications were staged first and then silently removed from the manifest by a later repository app stage.
+
 ## 0.24.0
 
 ### Changed
