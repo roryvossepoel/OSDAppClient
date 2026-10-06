@@ -1,6 +1,6 @@
-# OSD App Client
+# OSDApps
 
-OSD App Client is a PowerShell module and standalone runtime for OSDCloud v2 application caching, staging, refresh, and pre-OOBE installation.
+OSDApps is a PowerShell module and standalone runtime for OSDCloud v2 application caching, staging, refresh, and pre-OOBE installation.
 
 It is designed around a simple deployment model:
 
@@ -42,7 +42,7 @@ Built-in apps use vendor-native acquisition and installation:
 Typical WinPE flow after OSDCloud v2 has finished:
 
 ```powershell
-Import-Module OSDAppClient
+Import-Module OSDApps
 
 # General configuration
 Set-OSDAppConfiguration `
@@ -90,7 +90,7 @@ Sync-OSDAppMozillaFirefoxEnterprise
 
 ## General configuration
 
-OSDAppClient uses one session-scoped configuration object:
+OSDApps uses one session-scoped configuration object:
 
 ```powershell
 Set-OSDAppConfiguration `
@@ -236,15 +236,15 @@ See [Built-in applications](docs/built-in-apps.md).
 
 ## Built-in source policy
 
-OSDAppClient never ships built-in application binaries, installers, archives, or repackaged vendor content.
+OSDApps never ships built-in application binaries, installers, archives, or repackaged vendor content.
 
 For every built-in application, deployment content is always acquired directly from the software vendor at deployment/cache time. The module contains only the logic and vendor source definitions required to locate, cache, stage, and install that content.
 
 ```text
 Built-in application
 → source is always the vendor
-→ OSDAppClient may cache/stage the vendor content
-→ OSDAppClient never redistributes the installer itself
+→ OSDApps may cache/stage the vendor content
+→ OSDApps never redistributes the installer itself
 ```
 
 This policy applies only to built-in applications. Repository applications are organization-controlled packages; their content, hosting, licensing, and provenance are the repository owner's responsibility.
@@ -255,7 +255,7 @@ Built-in applications are intentionally limited to broadly used products with a 
 
 - the application is broadly used across organizations, not a customer-specific or niche line-of-business app;
 - the installer can be downloaded directly and reproducibly from the software vendor;
-- the built-in content will always be acquired from the vendor at runtime/cache time; no installer may be bundled with or redistributed through OSDAppClient;
+- the built-in content will always be acquired from the vendor at runtime/cache time; no installer may be bundled with or redistributed through OSDApps;
 - the vendor provides a stable URL, documented endpoint, or another deterministic download mechanism;
 - acquisition does not require scraping a website, sniffing browser traffic, extracting temporary URLs, session cookies, access tokens, or other brittle workarounds;
 - a CDN is fine when the vendor exposes a stable supported download URL, but not when CDN protection requires bypassing or reverse-engineering the download flow;
@@ -287,6 +287,32 @@ DeviceManifest.json  per-device staged installation manifest
 ```
 
 `Get-OSDAppCatalog` reports catalog status. `Get-OSDApp` resolves application manifests and combines online repository state, local cache state, and built-in applications.
+
+## Repository authoring helpers
+
+OSDApps includes optional helpers for creating and validating the static repository contract. They are convenience commands, not a repository service and not required at deployment time.
+
+```powershell
+New-OSDAppRepository -Path C:\OSDApps\Repository
+
+New-OSDAppPackage `
+    -Id ExampleApp `
+    -Version 1.0.0 `
+    -SourcePath C:\OSDApps\Packages\ExampleApp `
+    -OutputPath C:\OSDApps\Build\ExampleApp
+
+Add-OSDAppPackage `
+    -Id ExampleApp `
+    -DisplayName 'Example App' `
+    -Version 1.0.0 `
+    -Architecture x64 `
+    -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
+    -RepositoryPath C:\OSDApps\Repository
+
+Test-OSDAppRepository C:\OSDApps\Repository
+```
+
+The complete repository can also be created manually from the documented JSON contract and example structure.
 
 ## Repository applications
 
@@ -329,7 +355,7 @@ Teams
 
 ## Runtime behavior
 
-The standalone runtime does not require the OSDAppClient module to be installed in Windows.
+The standalone runtime does not require the OSDApps module to be installed in Windows.
 
 The Add cmdlets stage everything needed for the first boot:
 - `DeviceManifest.json`
@@ -366,6 +392,12 @@ Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppMozillaFirefoxEnterprise
 
 Clear-OSDAppCache
+
+New-OSDAppRepository
+New-OSDAppPackage
+Add-OSDAppPackage
+Test-OSDAppPackage
+Test-OSDAppRepository
 ```
 
 Low-level cache validation, content staging, repository synchronization internals, and SetupComplete integration are private implementation details.
@@ -380,6 +412,20 @@ Low-level cache validation, content staging, repository synchronization internal
 - [Validation matrix](docs/testing.md)
 - [Changelog](CHANGELOG.md)
 
-## Related project
+## Repository authoring
 
-[OSDAppRepo](https://github.com/roryvossepoel/OSDAppRepo) is the companion authoring and repository-management module. It builds and validates packages and maintains the central `catalog.json`.
+A repository is content, not a separate runtime component or module. OSDApps defines the repository contract, ships a working template under `Examples`, and includes lightweight authoring helpers:
+
+```powershell
+New-OSDAppRepository
+New-OSDAppPackage
+Add-OSDAppPackage
+Test-OSDAppPackage
+Test-OSDAppRepository
+```
+
+These helpers create the required folders and JSON, build the fixed `Package.zip` structure, calculate SHA-256, maintain `catalog.json`, and validate the repository before publication.
+
+The repository itself remains static content and can be hosted on any HTTP/HTTPS endpoint that preserves the documented paths. No separate OSDAppRepo module is required.
+
+See [Repository applications](docs/repository.md) and [Examples](Examples/README.md).
