@@ -21,12 +21,14 @@ function Sync-OSDAppCache {
         $sourceCatalog = Get-OSDAppManifest -Uri $CatalogUri
         $catalogSourceDescription = $CatalogUri.AbsoluteUri
         $repositoryRoot = $null
+        $repositoryBaseUri = [uri]::new($CatalogUri, '.')
     }
     else {
         $resolvedCatalogPath = (Resolve-Path -LiteralPath $CatalogPath -ErrorAction Stop).Path
         $sourceCatalog = Get-OSDAppManifest -Path $resolvedCatalogPath
         $catalogSourceDescription = $resolvedCatalogPath
         $repositoryRoot = Split-Path -Path $resolvedCatalogPath -Parent
+        $repositoryBaseUri = $null
     }
 
     $hostArchitecture = Get-OSDAppHostArchitecture
@@ -104,12 +106,21 @@ function Sync-OSDAppCache {
             Invoke-WebRequest -Uri $package.Archive.Uri -OutFile $tempArchive -UseBasicParsing
         }
         elseif ($package.Archive.SourcePath) {
-            if (-not $repositoryRoot) { throw "Package '$($package.Id)' uses SourcePath with -CatalogUri." }
-            $sourceArchive = Join-Path $repositoryRoot ($package.Archive.SourcePath -replace '/', [IO.Path]::DirectorySeparatorChar)
-            if (-not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) { throw "Source archive not found: $sourceArchive" }
-            Write-Verbose "Copying $sourceArchive"
-            Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Copying package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $sourceArchive }
-            Copy-Item -LiteralPath $sourceArchive -Destination $tempArchive -Force
+            if ($PSCmdlet.ParameterSetName -eq 'Uri') {
+                $relativeSourcePath = ([string]$package.Archive.SourcePath).Replace('\','/')
+                $sourceArchiveUri = [uri]::new($repositoryBaseUri, $relativeSourcePath)
+
+                Write-Verbose "Downloading $sourceArchiveUri"
+                Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Downloading package archive from repository-relative path.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $sourceArchiveUri.AbsoluteUri }
+                Invoke-WebRequest -Uri $sourceArchiveUri -OutFile $tempArchive -UseBasicParsing
+            }
+            else {
+                $sourceArchive = Join-Path $repositoryRoot ($package.Archive.SourcePath -replace '/', [IO.Path]::DirectorySeparatorChar)
+                if (-not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) { throw "Source archive not found: $sourceArchive" }
+                Write-Verbose "Copying $sourceArchive"
+                Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Copying package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $sourceArchive }
+                Copy-Item -LiteralPath $sourceArchive -Destination $tempArchive -Force
+            }
         }
         else {
             throw "Package '$($package.Id)' archive has neither Uri nor SourcePath."
