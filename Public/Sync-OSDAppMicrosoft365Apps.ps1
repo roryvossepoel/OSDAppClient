@@ -47,7 +47,7 @@ function Sync-OSDAppMicrosoft365Apps {
     if (-not $PSCmdlet.ShouldProcess($root, 'Configure and synchronize Microsoft 365 Apps built-in cache')) { return }
 
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft 365 Apps cache synchronization' -LogPath $clientLogPath | Out-Null
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft 365 Apps built-in cache.'
 
     Save-OSDAppDownload -Uri $OfficeDeploymentToolUri -DestinationPath $setupPath -Activity 'Downloading Office Deployment Tool' | Out-Null
 
@@ -95,7 +95,7 @@ function Sync-OSDAppMicrosoft365Apps {
         finally { $writer.Dispose() }
     }
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
 
     $process = Start-Process -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -PassThru
     try {
@@ -137,7 +137,7 @@ function Sync-OSDAppMicrosoft365Apps {
         SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture }
 
     [pscustomobject]@{ PSTypeName='OSDAppClient.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
 }
