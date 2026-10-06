@@ -78,7 +78,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'AdobeStageComplete' -Message 'Adobe Acrobat Unified deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
     [pscustomobject]@{
-        PSTypeName='OSDAppClient.StagedApp'
+        PSTypeName='OSDApps.StagedApp'
         Name='AdobeAcrobatUnified'
         CachePath=$CachePath
         WindowsPath=$WindowsPath
