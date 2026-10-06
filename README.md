@@ -44,8 +44,14 @@ Typical WinPE flow after OSDCloud v2 has finished:
 ```powershell
 Import-Module OSDAppClient
 
-# Repository applications
-Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/catalog.json'
+# General configuration
+Set-OSDAppConfiguration `
+    -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
+    -CleanupMode OnSuccess `
+    -CacheVolumeLabel 'OSDCloud' `
+    -LogPath '%ProgramData%\OSDApps\Logs\Install.log'
+
+Get-OSDAppConfiguration
 Get-OSDAppCatalog
 
 # Discover repository and built-in applications
@@ -81,6 +87,35 @@ Sync-OSDAppTeams -Architecture x64
 Sync-OSDAppGoogleChromeEnterprise
 Sync-OSDAppMozillaFirefoxEnterprise
 ```
+
+## General configuration
+
+OSDAppClient uses one session-scoped configuration object:
+
+```powershell
+Set-OSDAppConfiguration `
+    -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
+    -CleanupMode OnSuccess `
+    -CacheVolumeLabel 'OSDCloud' `
+    -LogPath '%ProgramData%\OSDApps\Logs\Install.log'
+```
+
+Current values can be inspected with:
+
+```powershell
+Get-OSDAppConfiguration
+```
+
+Settings can also be changed individually. Unspecified values are preserved.
+
+`CleanupMode` supports:
+
+```text
+OnSuccess  remove the staged runtime after a successful run
+Never      retain the staged runtime and work files
+```
+
+The effective runtime settings are written to `DeviceManifest.json` when applications are staged.
 
 ## Optional OSDCloud USB cache
 
@@ -165,7 +200,7 @@ Persistent logs:
 %ProgramData%\OSDApps\Logs\Install.log
 ```
 
-After a successful run, the temporary runtime/source directory is removed automatically. Logs remain available.
+With `CleanupMode OnSuccess`, the temporary runtime/source directory is removed after a successful run. With `CleanupMode Never`, the staged runtime and work files are retained. Logs are written to the configured `LogPath`.
 
 On failure, the local runtime source is retained for troubleshooting.
 
@@ -311,7 +346,8 @@ See [Runtime and cleanup](docs/runtime.md).
 ## Public commands
 
 ```text
-Set-OSDAppCatalog
+Set-OSDAppConfiguration
+Get-OSDAppConfiguration
 Get-OSDAppCatalog
 Get-OSDApp
 
