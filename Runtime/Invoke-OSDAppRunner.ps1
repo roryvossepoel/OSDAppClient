@@ -113,8 +113,8 @@ try {
     $logPath = Initialize-RunnerLog
     Write-RunnerLog -LogPath $logPath -Event 'InstallStart' -Message 'OSD App Runner started.' -Data @{ StagedPath = $StagedPath }
 
-    $packages = @($manifest.Packages)
-    if ($Name) { $packages = @($packages | Where-Object { $_.Id -in $Name }) }
+    $apps = if ($manifest.PSObject.Properties.Name -contains 'Apps') { @($manifest.Apps) } else { @() }
+    if ($Name) { $apps = @($apps | Where-Object { $_.Id -in $Name }) }
 
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 
@@ -167,12 +167,6 @@ try {
 
         Write-RunnerLog -LogPath $logPath -Event 'PackageInstallComplete' -Message 'Package installation completed.' -Data @{ Id = $package.Id; Version = $package.Version; ExitCode = $process.ExitCode }
     }
-
-    $builtInApps = @()
-    if ($manifest.PSObject.Properties.Name -contains 'BuiltInApps') {
-        $builtInApps = @($manifest.BuiltInApps)
-    }
-    if ($Name) { $builtInApps = @($builtInApps | Where-Object { $_.Id -in $Name }) }
 
     function Invoke-BuiltInApp {
         param([Parameter(Mandatory)]$app)
@@ -348,40 +342,20 @@ try {
         }
     }
 
-    $installOrder = @()
-    if ($manifest.PSObject.Properties.Name -contains 'InstallOrder' -and $manifest.InstallOrder) {
-        $installOrder = @($manifest.InstallOrder)
-    }
-    else {
-        # Fallback for manifests created before InstallOrder existed.
-        $installOrder = @(
-            @($packages | ForEach-Object { [pscustomobject]@{ Id = $_.Id; Source = 'Repository' } }) +
-            @($builtInApps | ForEach-Object { [pscustomobject]@{ Id = $_.Id; Source = 'BuiltIn' } })
-        )
-    }
-
-    if ($Name) {
-        $installOrder = @($installOrder | Where-Object { $_.Id -in $Name })
-    }
-
     Write-RunnerLog -LogPath $logPath -Event 'InstallOrder' -Message 'Resolved application installation order.' -Data @{
-        Order = @($installOrder | ForEach-Object { "$($_.Source):$($_.Id)" })
+        Order = @($apps | ForEach-Object { "$($_.Source):$($_.Id)" })
     }
 
-    foreach ($entry in $installOrder) {
-        switch ([string]$entry.Source) {
+    foreach ($app in $apps) {
+        switch ([string]$app.Source) {
             'Repository' {
-                $package = @($packages | Where-Object { $_.Id -eq $entry.Id } | Select-Object -First 1)
-                if ($package.Count -eq 0) { throw "InstallOrder references repository app '$($entry.Id)' that is not staged." }
-                Invoke-RepositoryPackage -package $package[0]
+                Invoke-RepositoryPackage -package $app
             }
             'BuiltIn' {
-                $app = @($builtInApps | Where-Object { $_.Id -eq $entry.Id } | Select-Object -First 1)
-                if ($app.Count -eq 0) { throw "InstallOrder references built-in app '$($entry.Id)' that is not staged." }
-                Invoke-BuiltInApp -app $app[0]
+                Invoke-BuiltInApp -app $app
             }
             default {
-                throw "Unsupported InstallOrder source '$($entry.Source)' for '$($entry.Id)'."
+                throw "Unsupported application source '$($app.Source)' for '$($app.Id)'."
             }
         }
     }
@@ -395,7 +369,7 @@ try {
         $keepSource = [bool]$manifest.Runtime.KeepSource
     }
 
-    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ PackageCount = @($packages).Count; BuiltInAppCount = @($builtInApps).Count; KeepSource = $keepSource }
+    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ ApplicationCount = @($apps).Count; KeepSource = $keepSource }
 
     if ($keepSource) {
         Write-RunnerLog -LogPath $logPath -Event 'CleanupSkipped' -Message 'Runtime source cleanup was skipped because KeepSource is enabled.' -Data @{ Path = $StagedPath }
