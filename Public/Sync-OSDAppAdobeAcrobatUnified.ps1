@@ -31,7 +31,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
     if (-not $PSCmdlet.ShouldProcess($root, "Synchronize Adobe Acrobat Unified built-in cache ($Architecture)")) { return }
 
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Adobe Acrobat Unified $Architecture cache synchronization" -LogPath $clientLogPath | Out-Null
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncStart' -Message 'Synchronizing Adobe Acrobat Unified built-in cache.' -Data @{ Architecture=$Architecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncStart' -Message 'Synchronizing Adobe Acrobat Unified built-in cache.' -Data @{ Architecture=$Architecture }
 
     $remoteMetadata = Get-OSDAppRemoteFileMetadata -Uri $PackageUri
 
@@ -75,7 +75,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
         SyncedAt            = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncComplete' -Message 'Adobe Acrobat Unified built-in cache synchronized.' -Data @{
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'AdobeAcrobatUnified' -Event 'BuiltInSyncComplete' -Message 'Adobe Acrobat Unified built-in cache synchronized.' -Data @{
         Architecture=$Architecture
         Updated=$updated
         Path=$root
