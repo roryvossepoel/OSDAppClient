@@ -21,7 +21,7 @@ function Assert-OSDAppCacheFreeSpace {
     $freeGB = [math]::Round($freeBytes / 1GB, 2)
 
     if ($LogPath) {
-        Write-OSDAppClientLog -LogPath $LogPath -Component 'Cache' -Event 'FreeSpaceCheck' -Message 'Checked free space on the OSDCloud cache volume.' -Data @{
+        Write-OSDAppLog -LogPath $LogPath -Component 'Cache' -Event 'FreeSpaceCheck' -Message 'Checked free space on the OSDCloud cache volume.' -Data @{
             Operation          = $Operation
             DriveLetter        = $driveLetter
             FreeSpaceGB        = $freeGB
