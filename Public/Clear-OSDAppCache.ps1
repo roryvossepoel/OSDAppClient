@@ -25,7 +25,7 @@ function Clear-OSDAppCache {
     }
 
     if (-not $WhatIfPreference) {
-        Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearStart' -Message 'Starting OSD App cache clear operation.' -Data @{
+        Write-OSDAppLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearStart' -Message 'Starting OSD App cache clear operation.' -Data @{
             Scope       = $scope
             Names       = @($Name)
             IncludeLogs = [bool]$IncludeLogs
@@ -54,7 +54,7 @@ function Clear-OSDAppCache {
             $stopwatch.Stop()
 
             if (-not $WhatIfPreference) {
-                Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Cache item removed.' -Data @{
+                Write-OSDAppLog -LogPath $logPath -Component 'Cache' -Event 'CacheItemRemoved' -Message 'Cache item removed.' -Data @{
                     Label      = $Label
                     Path       = $Path
                     DurationMs = $stopwatch.ElapsedMilliseconds
@@ -123,7 +123,7 @@ function Clear-OSDAppCache {
                     Remove-Item -Force -ErrorAction Stop
             }
 
-            Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheLogsCleared' -Message 'OSD App client logs were cleared by request.' -Data @{
+            Write-OSDAppLog -LogPath $logPath -Component 'Cache' -Event 'CacheLogsCleared' -Message 'OSD App client logs were cleared by request.' -Data @{
                 Scope     = $scope
                 Names     = @($Name)
                 CachePath = $cachePath
@@ -132,7 +132,7 @@ function Clear-OSDAppCache {
     }
 
     if (-not $WhatIfPreference) {
-        Write-OSDAppClientLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearComplete' -Message 'OSD App cache clear operation completed.' -Data @{
+        Write-OSDAppLog -LogPath $logPath -Component 'Cache' -Event 'CacheClearComplete' -Message 'OSD App cache clear operation completed.' -Data @{
             Scope       = $scope
             Names       = @($Name)
             IncludeLogs = [bool]$IncludeLogs
