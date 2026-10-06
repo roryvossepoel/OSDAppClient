@@ -270,21 +270,27 @@ The package author is responsible for making `Install.ps1` completely unattended
 
 See [Repository applications](docs/repository.md).
 
-## Built-in installation order
+## Installation order
 
-Built-in applications use a fixed runner-controlled installation order. The order in which the Add cmdlets are called does not determine installation order.
+Application installation order follows the order in which the `Add-*` commands are called, across both repository and built-in applications.
+
+```powershell
+Add-OSDAppTeams
+Add-OSDAppMicrosoft365Apps
+Add-OSDApp OmnissaHorizonClient
+Add-OSDAppAdobeAcrobatUnified
+```
+
+produces:
 
 ```text
-Microsoft 365 Apps
-→ Microsoft Teams
-→ Google Chrome Enterprise
-→ Mozilla Firefox Enterprise
+Teams
+→ Microsoft 365 Apps
+→ Omnissa Horizon Client
 → Adobe Acrobat Unified
 ```
 
-Repository applications continue to install before built-in applications.
-
-This keeps deployment behavior deterministic and allows the built-in order to be validated and adjusted centrally as new applications are added.
+The order is persisted in `DeviceManifest.json` as `InstallOrder`. Re-adding an application moves it to the end of the list instead of creating a duplicate.
 
 ## Runtime behavior
 
