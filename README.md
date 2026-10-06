@@ -45,7 +45,7 @@ Typical WinPE flow after OSDCloud v2 has finished:
 Import-Module OSDAppClient
 
 # Repository applications
-Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/manifest.json'
+Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/catalog.json'
 Get-OSDAppCatalog
 
 # Discover repository and built-in applications
@@ -231,17 +231,26 @@ If an application does not meet these criteria, package it as a normal repositor
 
 See [Built-in applications](docs/built-in-apps.md#requesting-a-new-built-in-application) for the full policy.
 
-## Catalog and cache terminology
+## Repository metadata model
 
-OSD Apps uses three distinct metadata files:
+Online repository metadata is layered:
 
 ```text
-catalog.json         online repository source of truth
-CacheCatalog.json    local OSDCloud USB snapshot of cached repository packages
+catalog.json
+└── Apps/<AppId>/manifest.json
+    └── <Version>/<Architecture>/Package.zip
+```
+
+`catalog.json` is only the root application index. Each application owns its own `manifest.json`, including display name, current package version(s), architecture, success codes, relative package path, and SHA-256.
+
+Local deployment metadata remains separate:
+
+```text
+CacheCatalog.json    local OSDCloud USB snapshot of selected repository packages
 DeviceManifest.json  per-device staged installation manifest
 ```
 
-`Get-OSDAppCatalog` reports catalog status. `Get-OSDApp` is the application discovery command and combines online repository state, local cache state, and built-in applications.
+`Get-OSDAppCatalog` reports catalog status. `Get-OSDApp` resolves application manifests and combines online repository state, local cache state, and built-in applications.
 
 ## Repository applications
 
