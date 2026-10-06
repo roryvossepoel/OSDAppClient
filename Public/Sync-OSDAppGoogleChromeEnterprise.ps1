@@ -77,7 +77,7 @@ function Sync-OSDAppGoogleChromeEnterprise {
     Write-OSDAppLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'BuiltInSyncComplete' -Message 'Google Chrome Enterprise built-in cache synchronized.' -Data @{ Architecture=$Architecture; Updated=$updated; Path=$root }
 
     [pscustomobject]@{
-        PSTypeName='OSDAppClient.BuiltInCache'
+        PSTypeName='OSDApps.BuiltInCache'
         Id='GoogleChromeEnterprise'
         Version='Current'
         Architecture=$Architecture
