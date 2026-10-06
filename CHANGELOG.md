@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.21.1
+
+### Changed
+
+- Kept Firefox Enterprise defaults intentionally simple: Rapid Release, x64, and `en-US`.
+- Added PowerShell tab completion for common Firefox locales on `Add-OSDAppMozillaFirefoxEnterprise` and `Sync-OSDAppMozillaFirefoxEnterprise`.
+- `-Language` remains open for other valid Mozilla locale values; completion is guidance rather than a hard allow-list.
+
+### Validation
+
+- Validated blank-cache bootstrap for Google Chrome Enterprise x64 and Mozilla Firefox Enterprise Rapid x64.
+- Both vendor MSI packages were downloaded during SetupComplete, persisted to the OSDCloud USB cache, staged locally, and installed successfully with exit code `0`.
+
 ## 0.21.0
 
 ### Added
