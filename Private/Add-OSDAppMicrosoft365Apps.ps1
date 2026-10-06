@@ -138,7 +138,9 @@ function Add-OSDAppMicrosoft365AppsInternal {
     } else {
         $deviceManifest | Add-Member -NotePropertyName BuiltInApps -NotePropertyValue $builtInApps
     }
-    $deviceManifest = Add-OSDAppInstallOrderEntry -Manifest $deviceManifest -Id 'Microsoft365Apps' -Source 'BuiltIn'
+    $manifestApp = @($builtInApps | Where-Object { $_.Id -eq 'Microsoft365Apps' } | Select-Object -First 1)[0]
+    $manifestApp | Add-Member -NotePropertyName Source -NotePropertyValue 'BuiltIn' -Force
+    $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
