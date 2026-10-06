@@ -77,6 +77,7 @@ function Add-OSDAppTeamsInternal {
     } else {
         $deviceManifest | Add-Member -NotePropertyName BuiltInApps -NotePropertyValue $builtInApps
     }
+    $deviceManifest = Add-OSDAppInstallOrderEntry -Manifest $deviceManifest -Id 'Teams' -Source 'BuiltIn'
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
