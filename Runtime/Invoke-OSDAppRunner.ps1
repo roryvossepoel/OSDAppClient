@@ -173,6 +173,16 @@ try {
     }
     if ($Name) { $builtInApps = @($builtInApps | Where-Object { $_.Id -in $Name }) }
 
+    # Keep built-in installation order deterministic. Microsoft 365 Apps is
+    # installed before the other built-ins, while Adobe Acrobat Unified is
+    # installed last. All remaining built-ins retain their manifest order.
+    if ($builtInApps.Count -gt 1) {
+        $officeApps = @($builtInApps | Where-Object { $_.Id -eq 'Microsoft365Apps' })
+        $otherApps = @($builtInApps | Where-Object { $_.Id -notin @('Microsoft365Apps','AdobeAcrobatUnified') })
+        $adobeApps = @($builtInApps | Where-Object { $_.Id -eq 'AdobeAcrobatUnified' })
+        $builtInApps = @($officeApps) + @($otherApps) + @($adobeApps)
+    }
+
     foreach ($app in $builtInApps) {
         switch ($app.Type) {
             'OfficeDeploymentTool' {
