@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDAppClient.psm1'
-    ModuleVersion     = '0.21.3'
+    ModuleVersion     = '0.21.4'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Description       = 'Application acquisition, caching, staging, and pre-OOBE installation for OSDCloud v2, with optional OSDCloud USB caching and standalone SetupComplete runtime.'
