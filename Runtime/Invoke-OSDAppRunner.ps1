@@ -118,7 +118,8 @@ try {
 
     New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 
-    foreach ($package in $packages) {
+    function Invoke-RepositoryPackage {
+        param([Parameter(Mandatory)]$package)
         $packageRoot = Join-Path $StagedPath (Join-Path 'Packages' $package.Id)
         $archivePath = Join-Path $packageRoot 'Package.zip'
 
@@ -173,38 +174,8 @@ try {
     }
     if ($Name) { $builtInApps = @($builtInApps | Where-Object { $_.Id -in $Name }) }
 
-    # Built-in applications use a fixed, tested installation order.
-    # The user selects which applications are staged; the runner determines
-    # their execution order independently from DeviceManifest.json ordering.
-    if ($builtInApps.Count -gt 1) {
-        $builtInPriority = @{
-            Microsoft365Apps         = 10
-            Teams                    = 20
-            GoogleChromeEnterprise   = 30
-            MozillaFirefoxEnterprise = 40
-            AdobeAcrobatUnified      = 90
-        }
-
-        $builtInApps = @(
-            $builtInApps |
-                Sort-Object `
-                    @{ Expression = {
-                        if ($builtInPriority.ContainsKey([string]$_.Id)) {
-                            [int]$builtInPriority[[string]$_.Id]
-                        }
-                        else {
-                            50
-                        }
-                    } }, `
-                    @{ Expression = { [string]$_.Id } }
-        )
-
-        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallOrder' -Message 'Resolved built-in installation order.' -Data @{
-            Order = @($builtInApps | ForEach-Object { $_.Id })
-        }
-    }
-
-    foreach ($app in $builtInApps) {
+    function Invoke-BuiltInApp {
+        param([Parameter(Mandatory)]$app)
         switch ($app.Type) {
             'OfficeDeploymentTool' {
                 $setupPath = Join-Path $StagedPath $app.Setup
@@ -373,6 +344,44 @@ try {
             }
             default {
                 throw "Unsupported built-in application type '$($app.Type)' for '$($app.Id)'."
+            }
+        }
+    }
+
+    $installOrder = @()
+    if ($manifest.PSObject.Properties.Name -contains 'InstallOrder' -and $manifest.InstallOrder) {
+        $installOrder = @($manifest.InstallOrder)
+    }
+    else {
+        # Fallback for manifests created before InstallOrder existed.
+        $installOrder = @(
+            @($packages | ForEach-Object { [pscustomobject]@{ Id = $_.Id; Source = 'Repository' } }) +
+            @($builtInApps | ForEach-Object { [pscustomobject]@{ Id = $_.Id; Source = 'BuiltIn' } })
+        )
+    }
+
+    if ($Name) {
+        $installOrder = @($installOrder | Where-Object { $_.Id -in $Name })
+    }
+
+    Write-RunnerLog -LogPath $logPath -Event 'InstallOrder' -Message 'Resolved application installation order.' -Data @{
+        Order = @($installOrder | ForEach-Object { "$($_.Source):$($_.Id)" })
+    }
+
+    foreach ($entry in $installOrder) {
+        switch ([string]$entry.Source) {
+            'Repository' {
+                $package = @($packages | Where-Object { $_.Id -eq $entry.Id } | Select-Object -First 1)
+                if ($package.Count -eq 0) { throw "InstallOrder references repository app '$($entry.Id)' that is not staged." }
+                Invoke-RepositoryPackage -package $package[0]
+            }
+            'BuiltIn' {
+                $app = @($builtInApps | Where-Object { $_.Id -eq $entry.Id } | Select-Object -First 1)
+                if ($app.Count -eq 0) { throw "InstallOrder references built-in app '$($entry.Id)' that is not staged." }
+                Invoke-BuiltInApp -app $app[0]
+            }
+            default {
+                throw "Unsupported InstallOrder source '$($entry.Source)' for '$($entry.Id)'."
             }
         }
     }
