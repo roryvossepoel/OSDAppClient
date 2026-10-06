@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.24.2
+
+### Changed
+
+- Built-in installation order is now deterministic.
+- Microsoft 365 Apps is installed before the other built-in applications.
+- Adobe Acrobat Unified is installed last.
+- Other built-in applications retain their relative order from `DeviceManifest.json`.
+- Repository applications continue to run before built-in applications.
+
 ## 0.24.1
 
 ### Fixed
