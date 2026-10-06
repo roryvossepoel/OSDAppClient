@@ -23,7 +23,7 @@ function Add-OSDAppAdobeAcrobatUnified {
     $resolvedWindowsPath = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
     if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Windows' -Message ("Windows installation found at {0}" -f $resolvedWindowsPath) }
 
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Cache' -Message "Detecting volume with label 'OSDCloud'" }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Cache' -Message "Detecting configured cache volume" }
     $cachePath = $null
     try {
         $cachePath = Get-OSDAppCachePath
@@ -59,10 +59,8 @@ function Add-OSDAppAdobeAcrobatUnified {
 
     $manifestPath = Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if (-not ($manifest.PSObject.Properties.Name -contains 'Runtime')) {
-        $manifest | Add-Member -NotePropertyName Runtime -NotePropertyValue ([pscustomobject]@{ KeepSource=$false; LogPath='%ProgramData%\OSDApps\Logs\Install.log' })
-        $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-    }
+    $manifest = Set-OSDAppManifestRuntimeConfiguration -Manifest $manifest
+    $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
 
