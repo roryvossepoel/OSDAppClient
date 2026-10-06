@@ -79,7 +79,7 @@ function Get-OSDApp {
         }
 
         $apps.Add([pscustomobject]@{
-            PSTypeName    = 'OSDAppClient.App'
+            PSTypeName    = 'OSDApps.App'
             Id            = $id
             Name          = $id
             DisplayName   = if ($onlinePackage -and $onlinePackage.DisplayName) { $onlinePackage.DisplayName } elseif ($cachedPackage) { $cachedPackage.DisplayName } else { $id }
@@ -149,7 +149,7 @@ function Get-OSDApp {
         @{ Id='MozillaFirefoxEnterprise'; DisplayName='Mozilla Firefox Enterprise'; Info=$firefoxCacheInfo }
     )) {
         $apps.Add([pscustomobject]@{
-            PSTypeName    = 'OSDAppClient.App'
+            PSTypeName    = 'OSDApps.App'
             Id            = $builtIn.Id
             Name          = $builtIn.Id
             DisplayName   = $builtIn.DisplayName
