@@ -290,7 +290,7 @@ Teams
 → Adobe Acrobat Unified
 ```
 
-The order is persisted in `DeviceManifest.json` as `InstallOrder`. Re-adding an application moves it to the end of the list instead of creating a duplicate.
+`DeviceManifest.json` contains a single ordered `Apps` array. The runner installs those entries from top to bottom. Re-adding an application moves that full app entry to the end of `Apps` instead of creating a duplicate.
 
 ## Runtime behavior
 
