@@ -68,7 +68,36 @@ function Add-OSDAppSetupComplete {
     $hasRunner = $existing -match [regex]::Escape($begin)
 
     if ($hasPreInstall -and $hasRunner) {
-        Write-Verbose 'OSD Apps SetupComplete blocks already exist. Existing SetupComplete.cmd is left unchanged.'
+        if ($PSCmdlet.ShouldProcess($setupComplete, 'Refresh existing OSD Apps SetupComplete blocks')) {
+            $existingText = [System.IO.File]::ReadAllText($setupComplete)
+            $lineEnding = if ($existingText -match "`r`n") { "`r`n" } else { "`n" }
+
+            $desiredBlock = @(
+                $preInstallBlock
+                $runnerBlock
+            ) -join $lineEnding
+
+            $pattern = '(?ms)^:: OSDApps PreInstall\r?\n.*?^:: OSDApps End(?:\r?\n)?'
+            if (-not [regex]::IsMatch($existingText, $pattern)) {
+                throw 'Existing OSD Apps SetupComplete block could not be parsed for refresh.'
+            }
+
+            $updatedText = [regex]::Replace(
+                $existingText,
+                $pattern,
+                [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $desiredBlock + $lineEnding },
+                1
+            )
+
+            [System.IO.File]::WriteAllText(
+                $setupComplete,
+                $updatedText,
+                [System.Text.Encoding]::ASCII
+            )
+
+            Write-Verbose 'Existing OSD Apps SetupComplete blocks were refreshed.'
+        }
+
         return Get-Item -LiteralPath $setupComplete
     }
 
