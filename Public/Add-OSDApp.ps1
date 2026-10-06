@@ -22,8 +22,25 @@ function Add-OSDApp {
         }
 
         $cachePath=Get-OSDAppCachePath
-        $cacheCatalogPath=Join-Path $cachePath 'CacheCatalog.json'
-        if(-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)){throw "OSD App repository cache metadata not found: $cacheCatalogPath. Run Sync-OSDAppRepository first."}
+
+        $sourceUri = $script:OSDAppCatalogUri
+        if (-not $sourceUri) {
+            $cacheCatalogPath = Join-Path $cachePath 'CacheCatalog.json'
+            if (-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)) {
+                throw 'No OSD App Catalog is configured and no repository cache is available. Run Set-OSDAppCatalog first, or synchronize the repository cache explicitly.'
+            }
+        }
+        else {
+            if ($VerbosePreference -ne 'SilentlyContinue') {
+                Write-OSDAppConsole -Level Info -Component 'Repository' -Message ("Synchronizing requested repository application(s): {0}" -f ($apps -join ', '))
+            }
+
+            Sync-OSDAppCache -CatalogUri $sourceUri -CachePath $cachePath -Name $apps -Confirm:$false | Out-Null
+
+            if ($VerbosePreference -ne 'SilentlyContinue') {
+                Write-OSDAppConsole -Level Success -Component 'Repository' -Message 'Requested repository application cache is current'
+            }
+        }
 
         $resolvedWindowsPath=Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
         $stagedRelativePath='Windows\Temp\OSDApps'
