@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.26.0
+
+### Changed
+
+- Simplified `DeviceManifest.json` to one ordered `Apps` array.
+- `Apps` contains both repository and built-in applications with a `Source` field and all metadata required by PreInstall and the runner.
+- The position of an application in `Apps` is its installation order; no separate `Packages`, `BuiltInApps`, or `InstallOrder` collections are used.
+- Every `Add-*` operation appends or moves its complete application entry to the end of `Apps`.
+- PreInstall filters built-ins from `Apps` for acquisition/refresh while preserving queue order.
+- The runner executes `Apps` from top to bottom across both repository and built-in sources.
+
 ## 0.25.0
 
 ### Changed
