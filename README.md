@@ -28,7 +28,7 @@ OSD Apps supports two application sources:
 | Repository apps | WinPE | SetupComplete |
 | Built-in applications | Full Windows pre-install phase | SetupComplete |
 
-Repository apps use the OSD Apps package contract: `Package.zip` with a root-level `Install.ps1`.
+Repository apps use the OSD Apps package contract: `Package.zip` with a top-level `Package` folder containing `Install.ps1` and the installation payload.
 
 Built-in apps use vendor-native acquisition and installation:
 - Microsoft 365 Apps uses the Office Deployment Tool.
@@ -259,10 +259,11 @@ Repository packages remain compressed while cached and staged.
 
 ```text
 Package.zip
-├── Install.ps1
-├── setup.exe / setup.msi / other payload
-├── Config/
-└── Files/
+└── Package/
+    ├── Install.ps1
+    ├── setup.exe / setup.msi / other payload
+    ├── Config/
+    └── Files/
 ```
 
 The package author is responsible for making `Install.ps1` completely unattended and suitable for SetupComplete.
