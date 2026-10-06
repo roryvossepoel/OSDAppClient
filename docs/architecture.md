@@ -172,7 +172,7 @@ CacheCatalog.json                                 local flattened cache snapshot
 DeviceManifest.json                               per-device ordered Apps queue
 ```
 
-The online repository is intentionally layered. OSDAppClient resolves app manifests into the flattened package objects used by cache and runtime staging.
+The online repository is intentionally layered. OSDApps resolves app manifests into the flattened package objects used by cache and runtime staging.
 
 ## Device manifest
 
