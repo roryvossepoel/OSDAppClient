@@ -48,3 +48,25 @@ WinPE/cache operations are logged to:
 ```text
 <OSDCloud>:\OSDApps\Logs\Client.log
 ```
+
+## Performance baselines
+
+For performance validation, use the same application order for both runs and compare:
+
+1. **Cold cache** — blank OSDCloud cache; all built-in content must be acquired.
+2. **Warm cache** — reuse the populated cache from the cold-cache run.
+
+Record at least:
+- PreInstall duration;
+- per-built-in acquisition/refresh duration;
+- Runner duration;
+- per-application installation duration;
+- total SetupComplete duration.
+
+For troubleshooting runs, use:
+
+```powershell
+Set-OSDAppConfiguration -CleanupMode Never
+```
+
+so the staged runtime, payloads, and `Work` directory remain available after success.
