@@ -145,14 +145,15 @@ try {
         Write-RunnerLog -LogPath $logPath -Event 'PackageExtractStart' -Message 'Extracting package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Archive = $archivePath }
         Expand-Archive -LiteralPath $archivePath -DestinationPath $packageWork -Force
 
-        $installScript = Join-Path $packageWork 'Install.ps1'
+        $payloadRoot = Join-Path $packageWork 'Package'
+        $installScript = Join-Path $payloadRoot 'Install.ps1'
         if (-not (Test-Path -LiteralPath $installScript -PathType Leaf)) {
-            throw "Package '$($package.Id)' does not contain Install.ps1 at the root of Package.zip."
+            throw "Package '$($package.Id)' does not contain Package\Install.ps1."
         }
 
         Write-RunnerLog -LogPath $logPath -Event 'PackageInstallStart' -Message 'Starting package installation.' -Data @{ Id = $package.Id; Version = $package.Version }
 
-        $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$installScript) -WorkingDirectory $packageWork -Wait -PassThru
+        $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$installScript) -WorkingDirectory $payloadRoot -Wait -PassThru
 
         $successCodes = @(0,3010)
         if ($package.SuccessCodes) {
