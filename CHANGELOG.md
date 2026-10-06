@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.5
+
+### Changed
+
+- `Add-OSDApp` now automatically synchronizes only the requested repository application(s) when an online catalog is configured.
+- Normal repository deployment no longer requires a separate `Sync-OSDAppRepository` step.
+- `Sync-OSDAppRepository` remains available for explicit full or selective cache preloading/refresh.
+- If no online catalog is configured, `Add-OSDApp` can still use an existing valid repository cache.
+
 ## 0.21.4
 
 ### Fixed
