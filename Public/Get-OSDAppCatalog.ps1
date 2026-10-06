@@ -1,19 +1,17 @@
 function Get-OSDAppCatalog {
     [CmdletBinding()]
-    param(
-        [uri]$Uri
-    )
+    param()
 
-    $catalogUri = if ($Uri) { $Uri } else { $script:OSDAppCatalogUri }
+    $catalogUri = (Get-OSDAppConfiguration).CatalogUri
 
     if (-not $catalogUri) {
         return [pscustomobject]@{
-            PSTypeName   = 'OSDAppClient.CatalogStatus'
-            Uri          = $null
-            Scope        = 'Session'
-            Available    = $false
+            PSTypeName       = 'OSDAppClient.CatalogStatus'
+            Uri              = $null
+            Scope            = 'Session'
+            Available        = $false
             ApplicationCount = 0
-            SchemaVersion = $null
+            SchemaVersion    = $null
         }
     }
 
@@ -22,22 +20,22 @@ function Get-OSDAppCatalog {
         $catalog = $response.Content | ConvertFrom-Json -ErrorAction Stop
 
         [pscustomobject]@{
-            PSTypeName    = 'OSDAppClient.CatalogStatus'
-            Uri           = $catalogUri
-            Scope         = 'Session'
-            Available     = $true
+            PSTypeName       = 'OSDAppClient.CatalogStatus'
+            Uri              = $catalogUri
+            Scope            = 'Session'
+            Available        = $true
             ApplicationCount = @($catalog.Applications).Count
-            SchemaVersion = $catalog.SchemaVersion
+            SchemaVersion    = $catalog.SchemaVersion
         }
     }
     catch {
         [pscustomobject]@{
-            PSTypeName    = 'OSDAppClient.CatalogStatus'
-            Uri           = $catalogUri
-            Scope         = 'Session'
-            Available     = $false
+            PSTypeName       = 'OSDAppClient.CatalogStatus'
+            Uri              = $catalogUri
+            Scope            = 'Session'
+            Available        = $false
             ApplicationCount = 0
-            SchemaVersion = $null
+            SchemaVersion    = $null
         }
     }
 }
