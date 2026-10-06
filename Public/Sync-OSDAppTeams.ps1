@@ -35,7 +35,7 @@ function Sync-OSDAppTeams {
     if (-not $PSCmdlet.ShouldProcess($root, "Configure and synchronize Microsoft Teams built-in cache ($resolvedArchitecture)")) { return }
 
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation 'Microsoft Teams cache synchronization' -LogPath $clientLogPath | Out-Null
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncStart' -Message 'Synchronizing Microsoft Teams built-in cache.' -Data @{ Architecture = $resolvedArchitecture }
 
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Checking current Microsoft package metadata...' -PercentComplete 5
     $remoteMetadata = Get-OSDAppRemoteFileMetadata -Uri $msixUri
@@ -64,7 +64,7 @@ function Sync-OSDAppTeams {
         Save-OSDAppDownload -Uri $msixUri -DestinationPath $msixPath -Activity "Downloading Microsoft Teams $resolvedArchitecture MSIX" -ProgressId 12 -ParentProgressId 10 | Out-Null
         Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Reading MSIX package metadata...' -PercentComplete 85
         $metadataStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadStart' -Message 'Reading Teams MSIX package metadata.' -Data @{ Path = $msixPath }
+        Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadStart' -Message 'Reading Teams MSIX package metadata.' -Data @{ Path = $msixPath }
         Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
         $archive = [System.IO.Compression.ZipFile]::OpenRead($msixPath)
         try {
@@ -76,7 +76,7 @@ function Sync-OSDAppTeams {
         }
         finally { $archive.Dispose() }
         $metadataStopwatch.Stop()
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadComplete' -Message 'Teams MSIX package metadata read completed.' -Data @{ Version = $resolvedVersion; DurationMs = $metadataStopwatch.ElapsedMilliseconds }
+        Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'MsixMetadataReadComplete' -Message 'Teams MSIX package metadata read completed.' -Data @{ Version = $resolvedVersion; DurationMs = $metadataStopwatch.ElapsedMilliseconds }
         $updated = $true
     }
 
@@ -87,7 +87,7 @@ function Sync-OSDAppTeams {
         RemoteFinalUri=$remoteMetadata.FinalUri; SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version=$resolvedVersion; Architecture=$resolvedArchitecture; Updated=$updated; Path=$root }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version=$resolvedVersion; Architecture=$resolvedArchitecture; Updated=$updated; Path=$root }
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Completed.' -PercentComplete 100
     Start-Sleep -Milliseconds 350
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Completed
