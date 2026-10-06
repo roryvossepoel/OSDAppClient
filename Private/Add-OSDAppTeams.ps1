@@ -88,7 +88,7 @@ function Add-OSDAppTeamsInternal {
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'TeamsStageComplete' -Message 'Microsoft Teams deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$resolvedArchitecture }
 
     [pscustomobject]@{
-        PSTypeName='OSDAppClient.StagedApp'
+        PSTypeName='OSDApps.StagedApp'
         Name='Teams'
         CachePath=$CachePath
         WindowsPath=$WindowsPath
