@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.24.3
+
+### Changed
+
+- Built-in applications now use an explicit installation priority independent of staging or manifest order.
+- Current built-in installation order:
+  1. Microsoft 365 Apps
+  2. Microsoft Teams
+  3. Google Chrome Enterprise
+  4. Mozilla Firefox Enterprise
+  5. Adobe Acrobat Unified
+- Unknown future built-ins use the default middle priority until an explicit position is assigned.
+- Repository applications continue to install before built-in applications.
+- The runner logs the resolved built-in order through the `BuiltInInstallOrder` event.
+
 ## 0.24.2
 
 ### Changed
