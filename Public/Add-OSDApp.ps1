@@ -54,6 +54,6 @@ function Add-OSDApp {
             Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
         }
 
-        foreach($app in $apps){[pscustomobject]@{PSTypeName='OSDAppClient.StagedApp';Name=$app;CachePath=$cachePath;WindowsPath=$resolvedWindowsPath;StagedPath=(Join-Path $resolvedWindowsPath $stagedRelativePath);Source='Repository'}}
+        foreach($app in $apps){[pscustomobject]@{PSTypeName='OSDApps.StagedApp';Name=$app;CachePath=$cachePath;WindowsPath=$resolvedWindowsPath;StagedPath=(Join-Path $resolvedWindowsPath $stagedRelativePath);Source='Repository'}}
     }
 }
