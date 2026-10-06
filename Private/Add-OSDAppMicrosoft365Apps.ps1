@@ -149,7 +149,7 @@ function Add-OSDAppMicrosoft365AppsInternal {
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeStageComplete' -Message 'Microsoft 365 Apps deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath }
 
     [pscustomobject]@{
-        PSTypeName='OSDAppClient.StagedApp'
+        PSTypeName='OSDApps.StagedApp'
         Name='Microsoft365Apps'
         CachePath=$CachePath
         WindowsPath=$WindowsPath
