@@ -173,14 +173,35 @@ try {
     }
     if ($Name) { $builtInApps = @($builtInApps | Where-Object { $_.Id -in $Name }) }
 
-    # Keep built-in installation order deterministic. Microsoft 365 Apps is
-    # installed before the other built-ins, while Adobe Acrobat Unified is
-    # installed last. All remaining built-ins retain their manifest order.
+    # Built-in applications use a fixed, tested installation order.
+    # The user selects which applications are staged; the runner determines
+    # their execution order independently from DeviceManifest.json ordering.
     if ($builtInApps.Count -gt 1) {
-        $officeApps = @($builtInApps | Where-Object { $_.Id -eq 'Microsoft365Apps' })
-        $otherApps = @($builtInApps | Where-Object { $_.Id -notin @('Microsoft365Apps','AdobeAcrobatUnified') })
-        $adobeApps = @($builtInApps | Where-Object { $_.Id -eq 'AdobeAcrobatUnified' })
-        $builtInApps = @($officeApps) + @($otherApps) + @($adobeApps)
+        $builtInPriority = @{
+            Microsoft365Apps         = 10
+            Teams                    = 20
+            GoogleChromeEnterprise   = 30
+            MozillaFirefoxEnterprise = 40
+            AdobeAcrobatUnified      = 90
+        }
+
+        $builtInApps = @(
+            $builtInApps |
+                Sort-Object `
+                    @{ Expression = {
+                        if ($builtInPriority.ContainsKey([string]$_.Id)) {
+                            [int]$builtInPriority[[string]$_.Id]
+                        }
+                        else {
+                            50
+                        }
+                    } }, `
+                    @{ Expression = { [string]$_.Id } }
+        )
+
+        Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallOrder' -Message 'Resolved built-in installation order.' -Data @{
+            Order = @($builtInApps | ForEach-Object { $_.Id })
+        }
     }
 
     foreach ($app in $builtInApps) {
