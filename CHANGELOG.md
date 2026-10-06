@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.28.0
+
+### Changed
+
+- Renamed the module and project identity from `OSDAppClient` to `OSDApps`.
+- The module entry files are now `OSDApps.psd1` and `OSDApps.psm1`; public cmdlets keep the `OSDApp` noun prefix.
+- Consolidated deployment, runtime, cache, and lightweight repository authoring into one module.
+- A separate OSDAppRepo module is no longer part of the architecture.
+
+### Added
+
+- Added `New-OSDAppRepository` for creating the static repository structure and empty `catalog.json`.
+- Added `New-OSDAppPackage` for building the fixed `Package/Install.ps1` archive contract.
+- Added `Add-OSDAppPackage` for generating package metadata, SHA-256, repository folders, and catalog references.
+- Added `Test-OSDAppPackage` and `Test-OSDAppRepository` validation helpers.
+- Added repository and package source templates under `Examples`.
+- Expanded repository documentation so a repository can also be built manually without helper cmdlets.
+
 ## 0.27.1
 
 ### Fixed
