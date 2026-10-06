@@ -25,9 +25,10 @@ function Get-OSDApp {
     }
 
     $onlinePackages = @()
-    if ($script:OSDAppCatalogUri) {
+    $catalogUri = (Get-OSDAppConfiguration).CatalogUri
+    if ($catalogUri) {
         try {
-            $onlineCatalog = Get-OSDAppCatalogPackages -CatalogUri $script:OSDAppCatalogUri
+            $onlineCatalog = Get-OSDAppCatalogPackages -CatalogUri $catalogUri
             $onlinePackages = @($onlineCatalog.Packages)
         }
         catch {
