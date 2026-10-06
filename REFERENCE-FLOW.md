@@ -6,7 +6,7 @@ OSD Apps has validated both repository and built-in deployment paths.
 
 ```text
 online catalog.json
-→ resolve Apps/<AppId>/manifest.json
+→ resolve Apps/<AppId>/<Version>/<Architecture>/manifest.json
 → Add-OSDApp automatically synchronizes requested app in WinPE
 → resolve compatible architecture
 → download Package.zip
