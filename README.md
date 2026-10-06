@@ -44,21 +44,18 @@ Typical WinPE flow after OSDCloud v2 has finished:
 ```powershell
 Import-Module OSDAppClient
 
-# Optional: repository applications
-Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/catalog.json'
+# Repository applications
+Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/manifest.json'
 Get-OSDAppCatalog
-Sync-OSDAppRepository
 
 # Discover repository and built-in applications
 Get-OSDApp
 
-# Stage applications
+# Add-OSDApp automatically synchronizes the requested repository package
 Add-OSDApp NotepadPlusPlus
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppAdobeAcrobatUnified
-Add-OSDAppGoogleChromeEnterprise
-Add-OSDAppMozillaFirefoxEnterprise
 Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppMozillaFirefoxEnterprise
 ```
@@ -107,7 +104,7 @@ No USB + online
 → install
 ```
 
-Repository applications synchronize/cache in WinPE. Built-in applications synchronize/update during SetupComplete in full Windows.
+Repository applications synchronize/cache in WinPE. When an online catalog is configured, `Add-OSDApp` automatically refreshes only the requested repository application(s) before staging. `Sync-OSDAppRepository` remains available for explicit cache preloading or maintenance. Built-in applications synchronize/update during SetupComplete in full Windows.
 
 > **When an OSDCloud USB cache is detected, keep it connected until OOBE is displayed.**
 
