@@ -94,7 +94,7 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
     Write-OSDAppLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'BuiltInSyncComplete' -Message 'Mozilla Firefox Enterprise built-in cache synchronized.' -Data @{ Channel=$Channel; Architecture=$Architecture; Language=$Language; Updated=$updated; Path=$root }
 
     [pscustomobject]@{
-        PSTypeName='OSDAppClient.BuiltInCache'
+        PSTypeName='OSDApps.BuiltInCache'
         Id='MozillaFirefoxEnterprise'
         Version='Current'
         Channel=$Channel
