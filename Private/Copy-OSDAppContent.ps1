@@ -88,7 +88,10 @@ function Copy-OSDAppContent {
         }
 
         foreach ($package in @($packages)) {
-            $deviceManifest = Add-OSDAppInstallOrderEntry -Manifest $deviceManifest -Id ([string]$package.Id) -Source 'Repository'
+            $manifestApp = $package | Select-Object *
+            $manifestApp | Add-Member -NotePropertyName Source -NotePropertyValue 'Repository' -Force
+            $manifestApp | Add-Member -NotePropertyName Type -NotePropertyValue 'RepositoryPackage' -Force
+            $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
         }
         $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
 
@@ -102,8 +105,7 @@ function Copy-OSDAppContent {
 
         Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'Application staging completed.' -Data @{
             Destination = $destinationRoot
-            PackageCount = @($mergedPackages).Count
-            BuiltInAppCount = if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') { @($deviceManifest.BuiltInApps).Count } else { 0 }
+            ApplicationCount = if ($deviceManifest.PSObject.Properties.Name -contains 'Apps') { @($deviceManifest.Apps).Count } else { 0 }
         }
     }
 
