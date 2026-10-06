@@ -26,9 +26,10 @@ First boot / full Windows
 Metadata terminology:
 
 ```text
-catalog.json         online repository source of truth
-CacheCatalog.json    local OSDCloud USB repository snapshot
-DeviceManifest.json  per-device staged installation manifest
+catalog.json                 online application index
+Apps/<AppId>/manifest.json   online per-application metadata
+CacheCatalog.json            local OSDCloud USB repository snapshot
+DeviceManifest.json          per-device staged installation manifest
 ```
 
 See [docs/architecture.md](docs/architecture.md) for source resolution, fallback behavior, validated cache scenarios, and runtime details.
