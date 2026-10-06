@@ -12,7 +12,7 @@ function Get-OSDAppCatalog {
             Uri          = $null
             Scope        = 'Session'
             Available    = $false
-            PackageCount = 0
+            ApplicationCount = 0
             SchemaVersion = $null
         }
     }
@@ -26,7 +26,7 @@ function Get-OSDAppCatalog {
             Uri           = $catalogUri
             Scope         = 'Session'
             Available     = $true
-            PackageCount  = @($catalog.Packages).Count
+            ApplicationCount = @($catalog.Applications).Count
             SchemaVersion = $catalog.SchemaVersion
         }
     }
@@ -36,7 +36,7 @@ function Get-OSDAppCatalog {
             Uri           = $catalogUri
             Scope         = 'Session'
             Available     = $false
-            PackageCount  = 0
+            ApplicationCount = 0
             SchemaVersion = $null
         }
     }
