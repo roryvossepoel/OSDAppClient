@@ -1,5 +1,10 @@
 # Architecture
 
+![OSDApps end-to-end architecture](images/osdapps-architecture.svg)
+
+![Source ownership and sync moments](images/source-ownership-sync.svg)
+
+
 OSD Apps separates application acquisition, staging, refresh, installation, and cleanup.
 
 ## End-to-end flow
