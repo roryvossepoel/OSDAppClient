@@ -4,8 +4,8 @@ The maintained architecture documentation lives in [docs/architecture.md](docs/a
 
 OSD Apps consists of two complementary PowerShell modules:
 
-- **OSDAppClient** — deployment-time discovery, caching, staging, SetupComplete integration, and the standalone pre-OOBE runtime.
-- **OSDAppRepo** — package authoring and repository management for `catalog.json` and `Package.zip`.
+- **OSDApps** — deployment-time discovery, caching, staging, SetupComplete integration, and the standalone pre-OOBE runtime.
+- **Repository contract** — static `catalog.json`, package manifests, and `Package.zip` content. OSDApps includes optional authoring/validation helpers; no separate repository module is required.
 
 The current deployment model is:
 
