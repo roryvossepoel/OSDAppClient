@@ -34,11 +34,12 @@ function Copy-OSDAppContent {
         throw "Cache validation failed for: $((@($invalid.Id | Select-Object -Unique)) -join ', ')"
     }
 
-    $clientLogPath = Join-Path $CachePath 'Logs\\Client.log'
+    $clientLogPath = Join-Path $CachePath 'Logs\Client.log'
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageStart' -Message 'Starting application staging.' -Data @{ WindowsPath = $WindowsPath; DestinationRelativePath = $DestinationRelativePath; Packages = @($packages | ForEach-Object { "$($_.Id):$($_.Architecture)" }) }
 
     $destinationRoot = Join-Path $WindowsPath $DestinationRelativePath
     $destinationPackages = Join-Path $destinationRoot 'Packages'
+    $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
 
     if ($PSCmdlet.ShouldProcess($destinationRoot, 'Stage OSD Apps content')) {
         New-Item -ItemType Directory -Path $destinationPackages -Force | Out-Null
@@ -54,19 +55,53 @@ function Copy-OSDAppContent {
             Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'PackageStaged' -Message 'Package copied to offline Windows volume.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Destination = $target }
         }
 
-        $deviceManifest = [ordered]@{
-            SchemaVersion = $manifest.SchemaVersion
-            StagedAt      = (Get-Date).ToUniversalTime().ToString('o')
-            Packages      = @($packages)
+        if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {
+            $deviceManifest = Get-Content -LiteralPath $deviceManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        }
+        else {
+            $deviceManifest = [pscustomobject]@{
+                SchemaVersion = $manifest.SchemaVersion
+                StagedAt      = (Get-Date).ToUniversalTime().ToString('o')
+                Packages      = @()
+            }
         }
 
-        $deviceManifest | ConvertTo-Json -Depth 20 |
-            Set-Content -LiteralPath (Join-Path $destinationRoot 'DeviceManifest.json') -Encoding UTF8
+        $existingPackages = @()
+        if ($deviceManifest.PSObject.Properties.Name -contains 'Packages' -and $deviceManifest.Packages) {
+            $existingPackages = @(
+                $deviceManifest.Packages |
+                    Where-Object { $_.Id -notin @($packages.Id) }
+            )
+        }
+
+        $mergedPackages = @($existingPackages) + @($packages)
+
+        if ($deviceManifest.PSObject.Properties.Name -contains 'Packages') {
+            $deviceManifest.Packages = $mergedPackages
+        }
+        else {
+            $deviceManifest | Add-Member -NotePropertyName Packages -NotePropertyValue $mergedPackages
+        }
+
+        if (-not ($deviceManifest.PSObject.Properties.Name -contains 'SchemaVersion')) {
+            $deviceManifest | Add-Member -NotePropertyName SchemaVersion -NotePropertyValue $manifest.SchemaVersion
+        }
+
+        $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
+
+        $deviceManifest |
+            ConvertTo-Json -Depth 20 |
+            Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
         $moduleRoot = Split-Path $PSScriptRoot -Parent
         $runtimeSource = Join-Path $moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1'
         Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $destinationRoot 'Invoke-OSDAppRunner.ps1') -Force
-        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'Application staging completed.' -Data @{ Destination = $destinationRoot; PackageCount = @($packages).Count }
+
+        Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Stage' -Event 'StageComplete' -Message 'Application staging completed.' -Data @{
+            Destination = $destinationRoot
+            PackageCount = @($mergedPackages).Count
+            BuiltInAppCount = if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') { @($deviceManifest.BuiltInApps).Count } else { 0 }
+        }
     }
 
     Get-Item -LiteralPath $destinationRoot
