@@ -1,5 +1,8 @@
 # Repository applications
 
+![Self-maintained repository contract](images/repository-contract.svg)
+
+
 OSD Apps repositories are static content. A separate repository service or PowerShell module is not required.
 
 OSDApps defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
