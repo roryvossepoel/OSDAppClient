@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.0
+
+### Changed
+
+- Simplified the repository contract again: every deployable package now keeps `manifest.json` directly beside `Package.zip`.
+- Root `catalog.json` points directly to package manifests per application and architecture.
+- Package manifests contain all package metadata: Id, display name, version, architecture, success codes, archive filename, and SHA-256.
+- `Package.zip` is resolved relative to its sibling package manifest; no `SourcePath` field is required.
+- No migration or legacy repository compatibility is provided.
+
 ## 0.22.0
 
 ### Changed
