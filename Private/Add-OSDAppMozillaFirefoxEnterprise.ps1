@@ -56,6 +56,7 @@ function Add-OSDAppMozillaFirefoxEnterpriseInternal {
     if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') { $deviceManifest.BuiltInApps = $builtInApps }
     else { $deviceManifest | Add-Member -NotePropertyName BuiltInApps -NotePropertyValue $builtInApps }
 
+    $deviceManifest = Add-OSDAppInstallOrderEntry -Manifest $deviceManifest -Id 'MozillaFirefoxEnterprise' -Source 'BuiltIn'
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
