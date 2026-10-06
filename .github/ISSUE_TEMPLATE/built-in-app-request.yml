@@ -1,0 +1,132 @@
+name: Built-in application request
+description: Request a new built-in application for OSDApps.
+title: "[Built-in request] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to request a new built-in application.
+
+        Built-ins are intended for broadly used applications that can be acquired directly and reproducibly from the software vendor and installed unattended. Customer-specific or niche applications should normally be packaged as repository applications instead.
+
+  - type: input
+    id: application
+    attributes:
+      label: Application
+      description: Product or application name.
+      placeholder: e.g. Google Chrome Enterprise
+    validations:
+      required: true
+
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor
+      description: Software vendor or publisher.
+      placeholder: e.g. Google
+    validations:
+      required: true
+
+  - type: input
+    id: vendor_documentation
+    attributes:
+      label: Vendor documentation
+      description: Link to official deployment, download, or enterprise documentation.
+      placeholder: https://...
+    validations:
+      required: true
+
+  - type: textarea
+    id: download_source
+    attributes:
+      label: Direct installer source
+      description: Provide the official installer URL, vendor endpoint, or documented download mechanism.
+      placeholder: |
+        Direct URL:
+        Endpoint:
+        Notes about version/freshness resolution:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architectures
+    attributes:
+      label: Architectures
+      description: Which architectures should the built-in support?
+      multiple: true
+      options:
+        - x64
+        - x86
+        - arm64
+        - Architecture independent
+    validations:
+      required: true
+
+  - type: input
+    id: silent_install
+    attributes:
+      label: Silent install command
+      description: Known unattended installation command or arguments.
+      placeholder: e.g. msiexec.exe /i Package.msi /qn /norestart
+    validations:
+      required: true
+
+  - type: input
+    id: success_codes
+    attributes:
+      label: Expected success codes
+      description: Exit codes that indicate a successful installation.
+      placeholder: e.g. 0, 3010
+    validations:
+      required: true
+
+  - type: textarea
+    id: update_mechanism
+    attributes:
+      label: Update / freshness mechanism
+      description: Explain how OSDApps can determine or acquire the current version.
+      placeholder: |
+        Stable evergreen URL, version endpoint, redirect behavior, ETag/Last-Modified support, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_builtin
+    attributes:
+      label: Why should this be a built-in?
+      description: Explain why this application is broadly used and why a generic built-in is useful across multiple organizations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acquisition_notes
+    attributes:
+      label: Acquisition requirements or caveats
+      description: Note authentication requirements, redirects, CDN behavior, licensing restrictions, or other acquisition considerations.
+
+  - type: textarea
+    id: install_notes
+    attributes:
+      label: Installation notes
+      description: Add any special installation behavior, prerequisites, reboot requirements, or detection considerations.
+
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: Built-in requirements
+      description: Confirm that the requested application fits the OSDApps built-in model.
+      options:
+        - label: The installer is acquired directly from the software vendor.
+          required: true
+        - label: The acquisition method does not require website scraping, browser-session data, or reverse-engineered temporary URLs.
+          required: true
+        - label: The application supports unattended enterprise installation.
+          required: true
+        - label: The application is broadly useful across multiple organizations rather than being customer-specific.
+          required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Anything else that may help evaluate or implement the request.
