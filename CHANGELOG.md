@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.0
+
+### Changed
+
+- Adopted a clean repository contract using root `catalog.json` plus one `Apps/<Id>/manifest.json` per application.
+- OSDAppClient resolves only the required application manifest(s), then flattens package metadata internally for the existing cache and runtime pipeline.
+- Package `SourcePath` is relative to the application manifest.
+- `Get-OSDAppCatalog` now reports application count instead of package count.
+- No legacy single-manifest repository compatibility is provided.
+
 ## 0.21.5
 
 ### Changed
