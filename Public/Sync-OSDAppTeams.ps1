@@ -91,5 +91,5 @@ function Sync-OSDAppTeams {
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Completed.' -PercentComplete 100
     Start-Sleep -Milliseconds 350
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Completed
-    [pscustomobject]@{ PSTypeName='OSDAppClient.BuiltInCache'; Id='Teams'; Version=$resolvedVersion; Architecture=$resolvedArchitecture; CachePath=$root; Cached=$true; Updated=$updated }
+    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Teams'; Version=$resolvedVersion; Architecture=$resolvedArchitecture; CachePath=$root; Cached=$true; Updated=$updated }
 }
