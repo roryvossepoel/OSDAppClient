@@ -207,6 +207,115 @@ msiexec.exe /i Package.msi /qn /norestart
 
 Mozilla notes that its MSI is a signed wrapper around the full Firefox installer, but it supports the standard MSI deployment options needed here.
 
+## How update freshness is determined
+
+Built-in applications use evergreen vendor sources, but OSDApps avoids downloading large installers again when the cached artifact is still current.
+
+The freshness mechanism is product-specific:
+
+| Application | Update check | Download behavior |
+| --- | --- | --- |
+| Microsoft 365 Apps | Office Deployment Tool `/download` synchronizes the configured channel/product/languages | ODT decides which Office files are missing or changed. OSDApps resolves the cached build from `Office\Data\<version>` before and after synchronization. |
+| Microsoft Teams | HTTP metadata for the official MSIX: `ETag` preferred, otherwise `Last-Modified + Content-Length` | MSIX is downloaded only when the metadata changed or no valid cached MSIX exists. The Teams bootstrapper is refreshed on every online sync. |
+| Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.zip` is downloaded only when the remote metadata changed or no cached ZIP exists. |
+| Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. |
+| Mozilla Firefox Enterprise | HTTP metadata for the Mozilla latest MSI endpoint: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. Channel, architecture, and language are cached separately. |
+
+### HTTP metadata comparison
+
+For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, and Mozilla Firefox Enterprise, OSDApps first asks the vendor endpoint for remote file metadata.
+
+The comparison order is:
+
+```text
+1. ETag
+   └─ if both remote and cached ETag are present, compare ETag
+
+2. Last-Modified + Content-Length
+   └─ used when ETag is not available
+
+3. No usable match
+   └─ download the current vendor artifact
+```
+
+The previous values are stored in the built-in `CacheInfo.json`, for example:
+
+```json
+{
+  "RemoteETag": "...",
+  "RemoteLastModified": "...",
+  "RemoteContentLength": 169652224,
+  "RemoteFinalUri": "...",
+  "SyncedAt": "..."
+}
+```
+
+This means OSDApps does **not** need to open an MSI or extract a ZIP just to decide whether Chrome, Firefox, or Adobe should be downloaded again. The update decision is based on cheap vendor metadata checks.
+
+A metadata match means:
+
+```text
+cached artifact exists
++
+vendor metadata still matches
+=
+reuse cached artifact
+```
+
+A metadata change means:
+
+```text
+vendor metadata changed
+or cache metadata/artifact is missing
+=
+download current vendor artifact
+→ replace cache
+→ update CacheInfo.json
+```
+
+### Microsoft 365 Apps is different
+
+Microsoft 365 Apps does not use the generic HTTP metadata comparison for the Office payload.
+
+OSDApps runs the Office Deployment Tool in download mode with the staged configuration:
+
+```text
+setup.exe /download configuration.xml
+```
+
+ODT is responsible for synchronizing the requested channel, architecture, product, languages, and exclusions. Existing Office content is reused by ODT where possible.
+
+OSDApps reads the concrete cached build from:
+
+```text
+Office\Data\<version>
+```
+
+and records that value in `CacheInfo.json`. Comparing the version before and after the ODT run allows the log to report whether the cached Office build actually changed.
+
+### Microsoft Teams bootstrapper
+
+The Teams MSIX uses the normal metadata comparison and is skipped when the cached MSIX is still current.
+
+The small `teamsbootstrapper.exe`, however, is intentionally downloaded again during an online synchronization so the provisioning bootstrapper itself remains current. This does not require re-downloading the much larger Teams MSIX when its metadata has not changed.
+
+### Sync timing
+
+Built-in freshness checks happen in **full Windows**, during PreInstall / SetupComplete.
+
+```text
+WinPE
+→ stage built-in intent and available fallback cache
+
+Full Windows
+→ check vendor freshness
+→ refresh cache only where required
+→ stage current payload locally
+→ Runner installs
+```
+
+Repository applications follow a different lifecycle: their versions and hashes are controlled by the self-maintained repository and repository synchronization occurs in **WinPE**, not during the full-Windows PreInstall phase.
+
 ## Deployment flow
 
 The same commands are used with or without USB cache:
