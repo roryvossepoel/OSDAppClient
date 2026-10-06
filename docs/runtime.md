@@ -2,7 +2,7 @@
 
 OSD Apps uses standalone runtime scripts during SetupComplete.
 
-The OSDAppClient module itself does **not** need to be installed in deployed Windows.
+The OSDApps module itself does **not** need to be installed in deployed Windows.
 
 ## Runtime content
 
