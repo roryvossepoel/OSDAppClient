@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.4
+
+### Fixed
+
+- Existing OSD Apps blocks in `SetupComplete.cmd` are now refreshed instead of being left untouched.
+- This repairs stale runner paths from older staging runs while preserving unrelated SetupComplete content.
+- Current repository and built-in staging both use `%SystemDrive%\Windows\Temp\OSDApps` for PreInstall and Runner execution.
+
 ## 0.21.3
 
 ### Fixed
