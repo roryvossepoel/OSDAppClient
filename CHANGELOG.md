@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.27.0
+
+### Changed
+
+- Added `Set-OSDAppConfiguration` and `Get-OSDAppConfiguration` as the single general configuration surface.
+- Removed the standalone `Set-OSDAppCatalog` configuration cmdlet.
+- General configuration now includes `CatalogUri`, `CleanupMode`, `CacheVolumeLabel`, and `LogPath`.
+- `CleanupMode` replaces the previous `KeepSource` runtime flag and supports `OnSuccess` or `Never`.
+- Staging writes the effective runtime configuration into `DeviceManifest.json`.
+- PreInstall uses the staged `CacheVolumeLabel` and `LogPath`.
+- The runner uses the staged `CleanupMode` and `LogPath`.
+- Repository discovery and synchronization use the configured `CatalogUri`.
+- Configuration values can be updated individually; unspecified values are preserved.
+
 ## 0.26.0
 
 ### Changed
