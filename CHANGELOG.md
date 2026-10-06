@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.27.1
+
+### Fixed
+
+- Selective repository synchronization now merges synchronized packages into the existing `CacheCatalog.json` instead of replacing the catalog with only the latest selection.
+- Existing cached repository applications remain registered when another application is synchronized later.
+- Re-synchronizing the same application replaces only that application's cache catalog entry.
+- Synchronization logging now reports both the number of packages synchronized in the current operation and the total cached package count.
+
 ## 0.27.0
 
 ### Changed
