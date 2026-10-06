@@ -23,11 +23,11 @@ function Add-OSDApp {
 
         $cachePath=Get-OSDAppCachePath
 
-        $sourceUri = $script:OSDAppCatalogUri
+        $sourceUri = (Get-OSDAppConfiguration).CatalogUri
         if (-not $sourceUri) {
             $cacheCatalogPath = Join-Path $cachePath 'CacheCatalog.json'
             if (-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)) {
-                throw 'No OSD App Catalog is configured and no repository cache is available. Run Set-OSDAppCatalog first, or synchronize the repository cache explicitly.'
+                throw 'No OSD App Catalog is configured and no repository cache is available. Configure CatalogUri with Set-OSDAppConfiguration, or synchronize the repository cache explicitly.'
             }
         }
         else {
@@ -49,10 +49,8 @@ function Add-OSDApp {
             Copy-OSDAppContent -Name $apps -CachePath $cachePath -WindowsPath $resolvedWindowsPath -DestinationRelativePath $stagedRelativePath | Out-Null
             $manifestPath=Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'
             $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if(-not ($manifest.PSObject.Properties.Name -contains 'Runtime')){
-                $manifest | Add-Member -NotePropertyName Runtime -NotePropertyValue ([pscustomobject]@{KeepSource=$false;LogPath='%ProgramData%\OSDApps\Logs\Install.log'})
-                $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-            }
+            $manifest = Set-OSDAppManifestRuntimeConfiguration -Manifest $manifest
+            $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
             Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
         }
 
