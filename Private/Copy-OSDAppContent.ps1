@@ -87,6 +87,9 @@ function Copy-OSDAppContent {
             $deviceManifest | Add-Member -NotePropertyName SchemaVersion -NotePropertyValue $manifest.SchemaVersion
         }
 
+        foreach ($package in @($packages)) {
+            $deviceManifest = Add-OSDAppInstallOrderEntry -Manifest $deviceManifest -Id ([string]$package.Id) -Source 'Repository'
+        }
         $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
 
         $deviceManifest |
