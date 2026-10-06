@@ -4,6 +4,9 @@ OSDApps is a PowerShell module and standalone runtime for OSDCloud v2 applicatio
 
 It is designed around a simple deployment model:
 
+![OSDApps end-to-end architecture](docs/images/osdapps-architecture.svg)
+
+
 ```text
 WinPE
 → OSDCloud applies Windows and drivers
@@ -20,6 +23,9 @@ First boot / full Windows
 ```
 
 ## Key concepts
+
+![Source ownership and sync moments](docs/images/source-ownership-sync.svg)
+
 
 OSD Apps supports two application sources:
 
@@ -118,6 +124,9 @@ Never      retain the staged runtime and work files
 The effective runtime settings are written to `DeviceManifest.json` when applications are staged.
 
 ## Optional OSDCloud USB cache
+
+![Cold and warm cache flow](docs/images/cache-flow.svg)
+
 
 USB media is optional for built-in applications.
 
@@ -332,6 +341,9 @@ The package author is responsible for making `Install.ps1` completely unattended
 See [Repository applications](docs/repository.md).
 
 ## Installation order
+
+![Application queue and install order](docs/images/application-queue.svg)
+
 
 Application installation order follows the order in which the `Add-*` commands are called, across both repository and built-in applications.
 
