@@ -1,12 +1,12 @@
 # FAQ and troubleshooting
 
-## Does OSDAppClient need to be installed in Windows?
+## Does OSDApps need to be installed in Windows?
 
 No.
 
-OSDAppClient is used for discovery, cache management, and staging. `Add-OSDApp` copies the standalone PreInstall and Runner scripts plus the manifest and required payloads into the offline Windows installation.
+OSDApps is used for discovery, cache management, and staging. `Add-OSDApp` copies the standalone PreInstall and Runner scripts plus the manifest and required payloads into the offline Windows installation.
 
-SetupComplete does not import the OSDAppClient module.
+SetupComplete does not import the OSDApps module.
 
 ## Why does Microsoft 365 Apps not refresh in WinPE?
 
@@ -130,12 +130,12 @@ Customer-specific, niche, authenticated, or otherwise non-generic applications s
 See [Requesting a new built-in application](built-in-apps.md#requesting-a-new-built-in-application).
 
 
-## Does OSDAppClient distribute built-in installers?
+## Does OSDApps distribute built-in installers?
 
 No.
 
-Built-in application payloads are never bundled with, mirrored by, or redistributed through OSDAppClient. Every built-in downloads its installation content directly from the software vendor when the cache is populated or refreshed.
+Built-in application payloads are never bundled with, mirrored by, or redistributed through OSDApps. Every built-in downloads its installation content directly from the software vendor when the cache is populated or refreshed.
 
-An `OSDCloud` USB may cache that vendor content locally for reuse, offline deployment, bandwidth reduction, and faster installation, but OSDAppClient itself does not act as a software distribution source.
+An `OSDCloud` USB may cache that vendor content locally for reuse, offline deployment, bandwidth reduction, and faster installation, but OSDApps itself does not act as a software distribution source.
 
 This restriction applies to built-ins only. Repository applications are controlled by the repository owner, who is responsible for package provenance, hosting, licensing, and redistribution rights.
