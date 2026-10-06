@@ -1,5 +1,8 @@
 # Runtime and cleanup
 
+![Application queue and install order](images/application-queue.svg)
+
+
 OSD Apps uses standalone runtime scripts during SetupComplete.
 
 The OSDApps module itself does **not** need to be installed in deployed Windows.
