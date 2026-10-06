@@ -29,10 +29,10 @@ flowchart TB
 ```text
 Azure Blob / repository
 → catalog.json
-→ Sync-OSDAppRepository in WinPE
+→ resolve Apps/<AppId>/manifest.json
+→ Add-OSDApp synchronizes requested app in WinPE
 → validate SHA-256
-→ use/update the OSDCloud USB cache when available
-→ Add-OSDApp
+→ use/update the OSDCloud USB cache
 → stage Package.zip to Windows Temp
 → runner validates SHA-256 again
 → extract
@@ -166,9 +166,10 @@ The validated run started with no usable Office or Teams cache. During PreInstal
 ## Metadata model
 
 ```text
-catalog.json         online repository source of truth
-CacheCatalog.json    local OSDCloud USB snapshot of cached repository apps
-DeviceManifest.json  per-device staged runtime manifest
+catalog.json                 online application index
+Apps/<AppId>/manifest.json   online application package metadata
+CacheCatalog.json            local flattened cache snapshot
+DeviceManifest.json          per-device staged runtime manifest
 ```
 
-These files have intentionally separate responsibilities. There is no backward-compatibility fallback to the old `CacheManifest.json` name.
+The online repository is intentionally layered. OSDAppClient resolves app manifests into the flattened package objects used by cache and runtime staging.
