@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.3
+
+### Fixed
+
+- Repository packages using a relative `Archive.SourcePath` can now be synchronized from an HTTP/HTTPS catalog.
+- Relative package paths are resolved against the catalog location, so a catalog such as `https://host/container/manifest.json` can reference `Packages/App/Version/Architecture/Package.zip`.
+- Local filesystem repositories continue to resolve `SourcePath` relative to the local manifest directory.
+
 ## 0.21.2
 
 ### Fixed
