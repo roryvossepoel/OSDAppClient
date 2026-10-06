@@ -270,6 +270,22 @@ The package author is responsible for making `Install.ps1` completely unattended
 
 See [Repository applications](docs/repository.md).
 
+## Built-in installation order
+
+Built-in applications use a fixed runner-controlled installation order. The order in which the Add cmdlets are called does not determine installation order.
+
+```text
+Microsoft 365 Apps
+→ Microsoft Teams
+→ Google Chrome Enterprise
+→ Mozilla Firefox Enterprise
+→ Adobe Acrobat Unified
+```
+
+Repository applications continue to install before built-in applications.
+
+This keeps deployment behavior deterministic and allows the built-in order to be validated and adjusted centrally as new applications are added.
+
 ## Runtime behavior
 
 The standalone runtime does not require the OSDAppClient module to be installed in Windows.
