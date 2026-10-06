@@ -62,25 +62,8 @@ function Copy-OSDAppContent {
             $deviceManifest = [pscustomobject]@{
                 SchemaVersion = $manifest.SchemaVersion
                 StagedAt      = (Get-Date).ToUniversalTime().ToString('o')
-                Packages      = @()
+                Apps          = @()
             }
-        }
-
-        $existingPackages = @()
-        if ($deviceManifest.PSObject.Properties.Name -contains 'Packages' -and $deviceManifest.Packages) {
-            $existingPackages = @(
-                $deviceManifest.Packages |
-                    Where-Object { $_.Id -notin @($packages.Id) }
-            )
-        }
-
-        $mergedPackages = @($existingPackages) + @($packages)
-
-        if ($deviceManifest.PSObject.Properties.Name -contains 'Packages') {
-            $deviceManifest.Packages = $mergedPackages
-        }
-        else {
-            $deviceManifest | Add-Member -NotePropertyName Packages -NotePropertyValue $mergedPackages
         }
 
         if (-not ($deviceManifest.PSObject.Properties.Name -contains 'SchemaVersion')) {
