@@ -62,9 +62,9 @@ function Add-OSDAppMozillaFirefoxEnterpriseInternal {
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'StageTarget' -Message 'Mozilla Firefox Enterprise deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'FirefoxStageComplete' -Message 'Mozilla Firefox Enterprise deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Channel=$Channel; Architecture=$Architecture; Language=$Language; InstallTimeoutMinutes=$InstallTimeoutMinutes }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'StageTarget' -Message 'Mozilla Firefox Enterprise deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'FirefoxStageComplete' -Message 'Mozilla Firefox Enterprise deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Channel=$Channel; Architecture=$Architecture; Language=$Language; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
     [pscustomobject]@{ PSTypeName='OSDApps.StagedApp'; Name='MozillaFirefoxEnterprise'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
 }
