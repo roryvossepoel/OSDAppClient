@@ -38,44 +38,57 @@ function Get-OSDAppCatalogPackages {
     $packages = [System.Collections.Generic.List[object]]::new()
 
     foreach ($application in $applications) {
-        if (-not $application.Id -or -not $application.Manifest) {
-            throw 'Catalog application entry must contain Id and Manifest.'
+        if (-not $application.Id) {
+            throw 'Catalog application entry must contain Id.'
         }
 
-        if ($PSCmdlet.ParameterSetName -eq 'Uri') {
-            $appManifestUri = [uri]::new($catalogBaseUri, ([string]$application.Manifest).Replace('\','/'))
-            $appManifest = Get-OSDAppManifest -Uri $appManifestUri
-            $appBaseUri = [uri]::new($appManifestUri, '.')
-        }
-        else {
-            $appManifestPath = Join-Path $catalogRoot (([string]$application.Manifest) -replace '/', [IO.Path]::DirectorySeparatorChar)
-            $appManifest = Get-OSDAppManifest -Path $appManifestPath
-            $appRoot = Split-Path -Path $appManifestPath -Parent
-        }
-
-        if ($appManifest.Id -and $appManifest.Id -ne $application.Id) {
-            throw "Application manifest Id '$($appManifest.Id)' does not match catalog Id '$($application.Id)'."
-        }
-
-        foreach ($package in @($appManifest.Packages)) {
-            $archive = [ordered]@{
-                FileName = if ($package.Archive.FileName) { [string]$package.Archive.FileName } else { 'Package.zip' }
-                Sha256   = [string]$package.Archive.Sha256
+        foreach ($packageRef in @($application.Packages)) {
+            if (-not $packageRef.Architecture -or -not $packageRef.Manifest) {
+                throw "Catalog package reference for '$($application.Id)' must contain Architecture and Manifest."
             }
 
             if ($PSCmdlet.ParameterSetName -eq 'Uri') {
-                $archive.Uri = ([uri]::new($appBaseUri, ([string]$package.Archive.SourcePath).Replace('\','/'))).AbsoluteUri
+                $packageManifestUri = [uri]::new($catalogBaseUri, ([string]$packageRef.Manifest).Replace('\','/'))
+                $packageManifest = Get-OSDAppManifest -Uri $packageManifestUri
+                $packageBaseUri = [uri]::new($packageManifestUri, '.')
             }
             else {
-                $archive.SourcePath = Join-Path $appRoot (([string]$package.Archive.SourcePath) -replace '/', [IO.Path]::DirectorySeparatorChar)
+                $packageManifestPath = Join-Path $catalogRoot (([string]$packageRef.Manifest) -replace '/', [IO.Path]::DirectorySeparatorChar)
+                $packageManifest = Get-OSDAppManifest -Path $packageManifestPath
+                $packageRoot = Split-Path -Path $packageManifestPath -Parent
+            }
+
+            if ([string]$packageManifest.Id -ne [string]$application.Id) {
+                throw "Package manifest Id '$($packageManifest.Id)' does not match catalog Id '$($application.Id)'."
+            }
+
+            if (([string]$packageManifest.Architecture).ToLowerInvariant() -ne ([string]$packageRef.Architecture).ToLowerInvariant()) {
+                throw "Package manifest architecture '$($packageManifest.Architecture)' does not match catalog architecture '$($packageRef.Architecture)' for '$($application.Id)'."
+            }
+
+            $fileName = if ($packageManifest.Archive.FileName) { [string]$packageManifest.Archive.FileName } else { 'Package.zip' }
+            if ($fileName -ne 'Package.zip') {
+                throw "Package '$($application.Id)' must use the fixed archive name Package.zip."
+            }
+
+            $archive = [ordered]@{
+                FileName = $fileName
+                Sha256   = [string]$packageManifest.Archive.Sha256
+            }
+
+            if ($PSCmdlet.ParameterSetName -eq 'Uri') {
+                $archive.Uri = ([uri]::new($packageBaseUri, $fileName)).AbsoluteUri
+            }
+            else {
+                $archive.SourcePath = Join-Path $packageRoot $fileName
             }
 
             $packages.Add([pscustomobject]@{
-                Id           = [string]$application.Id
-                DisplayName  = if ($appManifest.DisplayName) { [string]$appManifest.DisplayName } else { [string]$application.Id }
-                Version      = [string]$package.Version
-                Architecture = [string]$package.Architecture
-                SuccessCodes = @($package.SuccessCodes)
+                Id           = [string]$packageManifest.Id
+                DisplayName  = if ($packageManifest.DisplayName) { [string]$packageManifest.DisplayName } else { [string]$packageManifest.Id }
+                Version      = [string]$packageManifest.Version
+                Architecture = [string]$packageManifest.Architecture
+                SuccessCodes = @($packageManifest.SuccessCodes)
                 Archive      = [pscustomobject]$archive
             })
         }
