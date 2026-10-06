@@ -63,5 +63,5 @@ function Add-OSDAppGoogleChromeEnterpriseInternal {
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'StageTarget' -Message 'Google Chrome Enterprise deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'ChromeStageComplete' -Message 'Google Chrome Enterprise deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
-    [pscustomobject]@{ PSTypeName='OSDAppClient.StagedApp'; Name='GoogleChromeEnterprise'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
+    [pscustomobject]@{ PSTypeName='OSDApps.StagedApp'; Name='GoogleChromeEnterprise'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
 }
