@@ -16,7 +16,7 @@ MozillaFirefoxEnterprise
 
 Built-in applications are always sourced directly from their software vendor.
 
-OSDAppClient does not contain, embed, mirror, redistribute, or publish built-in application installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
+OSDApps does not contain, embed, mirror, redistribute, or publish built-in application installers or payloads. The module only contains acquisition and installation logic plus vendor-owned URLs or supported endpoints.
 
 ```text
 Vendor
@@ -26,11 +26,11 @@ Vendor
 → installation
 ```
 
-The OSDCloud USB cache is only a local deployment cache of vendor content. It is never a distribution source maintained by OSDAppClient.
+The OSDCloud USB cache is only a local deployment cache of vendor content. It is never a distribution source maintained by OSDApps.
 
 This rule is absolute for built-ins: if a product cannot be obtained directly and maintainably from the vendor, it is not eligible for built-in support.
 
-Repository applications are different. Repository content is controlled by the repository owner, and OSDAppClient does not prescribe where that organization obtains or hosts those packages.
+Repository applications are different. Repository content is controlled by the repository owner, and OSDApps does not prescribe where that organization obtains or hosts those packages.
 
 ## Configuration and synchronization
 
@@ -316,7 +316,7 @@ This confirms that the same Add commands support both cache bootstrap and cache 
 
 ## Requesting a new built-in application
 
-Built-ins are maintained as product-specific code in OSDAppClient, so they are deliberately selective. A request should only be considered when the application is a good fit for a generic, repeatable deployment path.
+Built-ins are maintained as product-specific code in OSDApps, so they are deliberately selective. A request should only be considered when the application is a good fit for a generic, repeatable deployment path.
 
 ### Required characteristics
 
@@ -324,7 +324,7 @@ A built-in candidate should:
 
 - be broadly used in enterprise or managed Windows environments;
 - have a direct, deterministic vendor download source;
-- be acquired from that vendor at runtime/cache time rather than being bundled, mirrored, or redistributed by OSDAppClient;
+- be acquired from that vendor at runtime/cache time rather than being bundled, mirrored, or redistributed by OSDApps;
 - use a stable URL, documented API/endpoint, or similarly maintainable vendor-supported acquisition method;
 - support unattended installation with predictable exit codes;
 - work without customer-specific credentials, tenant-specific portals, or interactive download flows;
@@ -334,7 +334,7 @@ A built-in candidate should:
 
 OSD Apps must be able to acquire the installer directly from the vendor in a predictable way.
 
-A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when the installer must come from a third-party mirror, community package source, OSDAppClient itself, or when acquisition depends on techniques such as:
+A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when the installer must come from a third-party mirror, community package source, OSDApps itself, or when acquisition depends on techniques such as:
 
 ```text
 scraping a download page
