@@ -132,16 +132,40 @@ function Sync-OSDAppCache {
         else { Move-Item -LiteralPath $packageTemp -Destination $targetRoot }
     }
 
-    $selectedCatalog = [ordered]@{
-        SchemaVersion  = $sourceCatalog.SchemaVersion
-        GeneratedAt    = $sourceCatalog.GeneratedAt
-        SourceCatalog = $catalogSourceDescription
-        Packages       = @($packages)
+    $cacheCatalogPath = Join-Path $CachePath 'CacheCatalog.json'
+
+    $existingPackages = @()
+    if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
+        try {
+            $existingCatalog = Get-OSDAppManifest -Path $cacheCatalogPath
+            $existingPackages = @($existingCatalog.Packages)
+        }
+        catch {
+            Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'CacheCatalogReadFailed' -Level 'Warning' -Message 'Existing cache catalog could not be read and will be rebuilt from synchronized packages.' -Data @{ Catalog = $cacheCatalogPath; Error = $_.Exception.Message }
+            $existingPackages = @()
+        }
     }
 
-    $cacheCatalogPath = Join-Path $CachePath 'CacheCatalog.json'
+    $updatedIds = @($packages.Id)
+    $mergedPackages = @(
+        @($existingPackages | Where-Object { $_.Id -notin $updatedIds }) +
+        @($packages)
+    )
+
+    $selectedCatalog = [ordered]@{
+        SchemaVersion = $sourceCatalog.SchemaVersion
+        GeneratedAt   = $sourceCatalog.GeneratedAt
+        SourceCatalog = $catalogSourceDescription
+        Packages      = @($mergedPackages)
+    }
+
     $selectedCatalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $cacheCatalogPath -Encoding UTF8
-    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{ Catalog = $cacheCatalogPath; PackageCount = @($packages).Count }
+
+    Write-OSDAppClientLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{
+        Catalog = $cacheCatalogPath
+        SyncedPackageCount = @($packages).Count
+        CachedPackageCount = @($mergedPackages).Count
+    }
 
     Get-Item -LiteralPath $cacheCatalogPath
 }
