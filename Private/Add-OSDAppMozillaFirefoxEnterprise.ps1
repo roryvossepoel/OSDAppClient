@@ -66,5 +66,5 @@ function Add-OSDAppMozillaFirefoxEnterpriseInternal {
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'StageTarget' -Message 'Mozilla Firefox Enterprise deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
     Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'FirefoxStageComplete' -Message 'Mozilla Firefox Enterprise deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Channel=$Channel; Architecture=$Architecture; Language=$Language; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
-    [pscustomobject]@{ PSTypeName='OSDAppClient.StagedApp'; Name='MozillaFirefoxEnterprise'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
+    [pscustomobject]@{ PSTypeName='OSDApps.StagedApp'; Name='MozillaFirefoxEnterprise'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
 }
