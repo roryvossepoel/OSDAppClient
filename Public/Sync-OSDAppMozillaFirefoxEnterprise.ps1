@@ -46,7 +46,7 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
     if (-not $PSCmdlet.ShouldProcess($root, "Synchronize Mozilla Firefox Enterprise $Channel cache ($Architecture, $Language)")) { return }
 
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Mozilla Firefox Enterprise $Channel $Architecture cache synchronization" -LogPath $clientLogPath | Out-Null
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'BuiltInSyncStart' -Message 'Synchronizing Mozilla Firefox Enterprise built-in cache.' -Data @{ Channel=$Channel; Architecture=$Architecture; Language=$Language }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'BuiltInSyncStart' -Message 'Synchronizing Mozilla Firefox Enterprise built-in cache.' -Data @{ Channel=$Channel; Architecture=$Architecture; Language=$Language }
 
     $remoteMetadata = Get-OSDAppRemoteFileMetadata -Uri $PackageUri
     $previousCacheInfo = $null
@@ -91,7 +91,7 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
         SyncedAt            = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'BuiltInSyncComplete' -Message 'Mozilla Firefox Enterprise built-in cache synchronized.' -Data @{ Channel=$Channel; Architecture=$Architecture; Language=$Language; Updated=$updated; Path=$root }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MozillaFirefoxEnterprise' -Event 'BuiltInSyncComplete' -Message 'Mozilla Firefox Enterprise built-in cache synchronized.' -Data @{ Channel=$Channel; Architecture=$Architecture; Language=$Language; Updated=$updated; Path=$root }
 
     [pscustomobject]@{
         PSTypeName='OSDAppClient.BuiltInCache'
