@@ -142,7 +142,7 @@ function Clear-OSDAppCache {
     }
 
     [pscustomobject]@{
-        PSTypeName  = 'OSDAppClient.CacheClearResult'
+        PSTypeName  = 'OSDApps.CacheClearResult'
         CachePath   = $cachePath
         Scope       = $scope
         Names       = @($Name)
