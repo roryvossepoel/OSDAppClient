@@ -169,7 +169,11 @@ The validated run started with no usable Office or Teams cache. During PreInstal
 catalog.json                                      online application/package index
 Apps/<AppId>/<Version>/<Architecture>/manifest.json  package metadata beside Package.zip
 CacheCatalog.json                                 local flattened cache snapshot
-DeviceManifest.json                               per-device staged runtime manifest
+DeviceManifest.json                               per-device ordered Apps queue
 ```
 
 The online repository is intentionally layered. OSDAppClient resolves app manifests into the flattened package objects used by cache and runtime staging.
+
+## Device manifest
+
+`DeviceManifest.json` uses one ordered `Apps` array for all staged applications. Repository and built-in entries are kept in the exact order in which their `Add-*` commands were called. `Source` identifies the execution path (`Repository` or `BuiltIn`). PreInstall filters the built-in entries for acquisition, while the runner executes the complete array from top to bottom.
