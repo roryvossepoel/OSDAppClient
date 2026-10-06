@@ -1,15 +1,14 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$StagedPath,
-    [string]$CacheVolumeLabel = 'OSDCloud',
     [ValidateRange(1,120)][int]$OfficeRefreshTimeoutMinutes = 20
 )
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
-$logDirectory = Join-Path $env:ProgramData 'OSDApps\Logs'
-$logPath = Join-Path $logDirectory 'Install.log'
+$logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Install.log')
+$logDirectory = Split-Path -Path $logPath -Parent
 
 function Write-PreInstallLog {
     param([string]$Event,[ValidateSet('Info','Warning','Error')][string]$Level='Info',[string]$Message,[hashtable]$Data)
@@ -291,11 +290,19 @@ function Sync-PreInstallVendorMsi {
 try {
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Device manifest not found: $manifestPath" }
     $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (-not $manifest.Runtime) { throw 'Device manifest Runtime configuration is missing.' }
+    if (-not $manifest.Runtime.CacheVolumeLabel) { throw 'Device manifest Runtime.CacheVolumeLabel is missing.' }
+    if (-not $manifest.Runtime.LogPath) { throw 'Device manifest Runtime.LogPath is missing.' }
+
+    $cacheVolumeLabel = [string]$manifest.Runtime.CacheVolumeLabel
+    $logPath = [Environment]::ExpandEnvironmentVariables([string]$manifest.Runtime.LogPath)
+    $logDirectory = Split-Path -Path $logPath -Parent
+
     $apps=if($manifest.PSObject.Properties.Name -contains 'Apps'){@($manifest.Apps)}else{@()}
     $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' })
     if($builtInApps.Count -eq 0){Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in applications are staged. Nothing to refresh.'; exit 0}
 
-    $cacheVolume=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.FileSystemLabel -eq $CacheVolumeLabel -and $_.DriveLetter } | Select-Object -First 1
+    $cacheVolume=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.FileSystemLabel -eq $cacheVolumeLabel -and $_.DriveLetter } | Select-Object -First 1
     $usbRoot=if($cacheVolume){"$($cacheVolume.DriveLetter):\OSDApps"}else{$null}
     Write-PreInstallLog -Event 'RefreshStart' -Message 'Starting built-in acquisition and refresh before installation.' -Data @{StagedPath=$StagedPath;BuiltInApps=@($builtInApps.Id);CacheAvailable=[bool]$usbRoot;CacheRoot=$usbRoot}
     if($usbRoot){New-Item -ItemType Directory -Path $usbRoot -Force | Out-Null; Write-PreInstallLog -Event 'CacheVolumeFound' -Message 'OSDCloud USB cache is available and will be used automatically.' -Data @{CacheRoot=$usbRoot}}
