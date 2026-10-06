@@ -233,15 +233,16 @@ See [Built-in applications](docs/built-in-apps.md#requesting-a-new-built-in-appl
 
 ## Repository metadata model
 
-Online repository metadata is layered:
+Online repository metadata is deliberately simple:
 
 ```text
 catalog.json
-└── Apps/<AppId>/manifest.json
-    └── <Version>/<Architecture>/Package.zip
+└── Apps/<AppId>/<Version>/<Architecture>/
+    ├── manifest.json
+    └── Package.zip
 ```
 
-`catalog.json` is only the root application index. Each application owns its own `manifest.json`, including display name, current package version(s), architecture, success codes, relative package path, and SHA-256.
+`catalog.json` is only the root index. Every deployable package is self-contained: its `manifest.json` sits directly beside `Package.zip` and contains the Id, display name, version, architecture, success codes, archive filename, and SHA-256.
 
 Local deployment metadata remains separate:
 
