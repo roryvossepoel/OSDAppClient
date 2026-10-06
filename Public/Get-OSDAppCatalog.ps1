@@ -6,7 +6,7 @@ function Get-OSDAppCatalog {
 
     if (-not $catalogUri) {
         return [pscustomobject]@{
-            PSTypeName       = 'OSDAppClient.CatalogStatus'
+            PSTypeName       = 'OSDApps.CatalogStatus'
             Uri              = $null
             Scope            = 'Session'
             Available        = $false
@@ -20,7 +20,7 @@ function Get-OSDAppCatalog {
         $catalog = $response.Content | ConvertFrom-Json -ErrorAction Stop
 
         [pscustomobject]@{
-            PSTypeName       = 'OSDAppClient.CatalogStatus'
+            PSTypeName       = 'OSDApps.CatalogStatus'
             Uri              = $catalogUri
             Scope            = 'Session'
             Available        = $true
@@ -30,7 +30,7 @@ function Get-OSDAppCatalog {
     }
     catch {
         [pscustomobject]@{
-            PSTypeName       = 'OSDAppClient.CatalogStatus'
+            PSTypeName       = 'OSDApps.CatalogStatus'
             Uri              = $catalogUri
             Scope            = 'Session'
             Available        = $false
