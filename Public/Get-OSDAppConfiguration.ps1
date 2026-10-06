@@ -12,7 +12,7 @@ function Get-OSDAppConfiguration {
     }
 
     [pscustomobject]@{
-        PSTypeName       = 'OSDAppClient.Configuration'
+        PSTypeName       = 'OSDApps.Configuration'
         CatalogUri       = $script:OSDAppConfiguration.CatalogUri
         CleanupMode      = $script:OSDAppConfiguration.CleanupMode
         CacheVolumeLabel = $script:OSDAppConfiguration.CacheVolumeLabel
