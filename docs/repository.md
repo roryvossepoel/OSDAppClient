@@ -57,7 +57,7 @@ Supported architectures are `x64`, `arm64`, and `any`. OSDAppClient prefers an e
 
 ## Package contract
 
-`Package.zip` must contain `Install.ps1` at the archive root. The package author is responsible for a fully unattended install.
+`Package.zip` must contain a top-level `Package` folder, with `Install.ps1` directly inside it. The package author is responsible for a fully unattended install.
 
 ## WinPE flow
 
