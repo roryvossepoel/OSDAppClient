@@ -83,9 +83,9 @@ function Add-OSDAppTeamsInternal {
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'StageTarget' -Message 'Microsoft Teams deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'Teams' -Event 'TeamsStageComplete' -Message 'Microsoft Teams deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$resolvedArchitecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'StageTarget' -Message 'Microsoft Teams deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'TeamsStageComplete' -Message 'Microsoft Teams deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$resolvedArchitecture }
 
     [pscustomobject]@{
         PSTypeName='OSDApps.StagedApp'
