@@ -139,5 +139,5 @@ function Sync-OSDAppMicrosoft365Apps {
 
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture }
 
-    [pscustomobject]@{ PSTypeName='OSDAppClient.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
+    [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
 }
