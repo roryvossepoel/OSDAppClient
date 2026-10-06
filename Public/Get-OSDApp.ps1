@@ -27,8 +27,7 @@ function Get-OSDApp {
     $onlinePackages = @()
     if ($script:OSDAppCatalogUri) {
         try {
-            $response = Invoke-WebRequest -Uri $script:OSDAppCatalogUri -UseBasicParsing -ErrorAction Stop
-            $onlineCatalog = $response.Content | ConvertFrom-Json -ErrorAction Stop
+            $onlineCatalog = Get-OSDAppCatalogPackages -CatalogUri $script:OSDAppCatalogUri
             $onlinePackages = @($onlineCatalog.Packages)
         }
         catch {
