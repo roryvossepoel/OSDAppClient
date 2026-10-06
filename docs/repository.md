@@ -1,8 +1,10 @@
 # Repository applications
 
-Repository applications use a static two-layer repository contract.
+OSD Apps repositories are static content. A separate repository service or PowerShell module is not required.
 
-## Online repository layout
+OSDApps defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
+
+## Repository layout
 
 ```text
 Repository/
@@ -15,35 +17,53 @@ Repository/
                 └── Package.zip
 ```
 
-The rule is simple:
+Supported repository architectures:
 
-- `catalog.json` tells OSDAppClient which package manifest represents each application/architecture.
-- Every `manifest.json` describes exactly one sibling `Package.zip`.
+```text
+x64
+arm64
+any
+```
 
-Example catalog entry:
+## Root catalog
+
+`catalog.json` is an index. It points to the current package manifest for each application and architecture.
+
+Example:
 
 ```json
 {
-  "Id": "NotepadPlusPlus",
-  "Packages": [
+  "SchemaVersion": 1,
+  "GeneratedAt": "2026-10-06T00:00:00Z",
+  "Applications": [
     {
-      "Architecture": "x64",
-      "Manifest": "Apps/NotepadPlusPlus/8.9.8.1/x64/manifest.json"
+      "Id": "ExampleApp",
+      "Packages": [
+        {
+          "Architecture": "x64",
+          "Manifest": "Apps/ExampleApp/1.0.0/x64/manifest.json"
+        }
+      ]
     }
   ]
 }
 ```
 
-Example package manifest:
+## Package manifest
+
+Each deployable package keeps its metadata directly beside `Package.zip`.
 
 ```json
 {
   "SchemaVersion": 1,
-  "Id": "NotepadPlusPlus",
-  "DisplayName": "Notepad++",
-  "Version": "8.9.8.1",
+  "Id": "ExampleApp",
+  "DisplayName": "Example App",
+  "Version": "1.0.0",
   "Architecture": "x64",
-  "SuccessCodes": [0, 3010],
+  "SuccessCodes": [
+    0,
+    3010
+  ],
   "Archive": {
     "FileName": "Package.zip",
     "Sha256": "<SHA256>"
@@ -51,25 +71,113 @@ Example package manifest:
 }
 ```
 
-No package path is required inside the manifest because `Package.zip` is in the same directory.
+The package URL is derived from the manifest location. A separate `SourcePath` property is not used.
 
-Supported architectures are `x64`, `arm64`, and `any`. OSDAppClient prefers an exact architecture match and falls back to `any`.
+## Package archive contract
 
-## Package contract
+Authoring source:
 
-`Package.zip` must contain a top-level `Package` folder, with `Install.ps1` directly inside it. The package author is responsible for a fully unattended install.
-
-## WinPE flow
-
-```powershell
-Set-OSDAppCatalog 'https://example.blob.core.windows.net/osdapps/catalog.json'
-
-Get-OSDAppCatalog
-Get-OSDApp
-
-Add-OSDApp NotepadPlusPlus
+```text
+ExampleApp/
+├── Install.ps1
+└── <payload>
 ```
 
-`Add-OSDApp` resolves the package manifest, synchronizes only the requested app, validates SHA-256, caches it, and stages it for SetupComplete.
+Published archive:
 
-`Sync-OSDAppRepository` remains available for explicit cache preloading or maintenance.
+```text
+Package.zip
+└── Package/
+    ├── Install.ps1
+    └── <payload>
+```
+
+`Install.ps1` must be unattended and suitable for execution during SetupComplete. The runner starts it with the extracted `Package` directory as its working directory.
+
+## Creating a repository
+
+The complete structure may be created manually. OSDApps also includes convenience helpers.
+
+Create an empty repository:
+
+```powershell
+New-OSDAppRepository -Path C:\OSDApps\Repository
+```
+
+Build a package:
+
+```powershell
+New-OSDAppPackage `
+    -Id ExampleApp `
+    -Version 1.0.0 `
+    -SourcePath C:\OSDApps\Packages\ExampleApp `
+    -OutputPath C:\OSDApps\Build\ExampleApp
+```
+
+Publish it into the repository:
+
+```powershell
+Add-OSDAppPackage `
+    -Id ExampleApp `
+    -DisplayName 'Example App' `
+    -Version 1.0.0 `
+    -Architecture x64 `
+    -PackagePath C:\OSDApps\Build\ExampleApp\Package.zip `
+    -RepositoryPath C:\OSDApps\Repository
+```
+
+The helper:
+
+1. validates the fixed `Package/Install.ps1` archive layout;
+2. creates `Apps/<Id>/<Version>/<Architecture>`;
+3. copies `Package.zip`;
+4. calculates SHA-256;
+5. writes `manifest.json`;
+6. adds or replaces the architecture reference in `catalog.json`.
+
+## Validation
+
+Validate an individual archive:
+
+```powershell
+Test-OSDAppPackage C:\OSDApps\Build\ExampleApp\Package.zip
+```
+
+Validate the complete repository:
+
+```powershell
+Test-OSDAppRepository C:\OSDApps\Repository
+```
+
+Repository validation checks:
+
+- referenced package manifest exists;
+- `Package.zip` exists;
+- SHA-256 matches;
+- archive contains `Package/Install.ps1`;
+- architecture is `x64`, `arm64`, or `any`;
+- package manifest Id matches the catalog application Id.
+
+## Publishing
+
+The resulting repository is ordinary static content. Publish the contents of `Repository` to an HTTP/HTTPS location while preserving paths.
+
+For example:
+
+```text
+https://example.blob.core.windows.net/osdapps/catalog.json
+https://example.blob.core.windows.net/osdapps/Apps/ExampleApp/1.0.0/x64/manifest.json
+https://example.blob.core.windows.net/osdapps/Apps/ExampleApp/1.0.0/x64/Package.zip
+```
+
+Configure a deployment session with:
+
+```powershell
+Set-OSDAppConfiguration -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json'
+```
+
+## Examples
+
+A starter repository and package source template are included under [Examples](../Examples/README.md).
+
+The examples are intentionally simple: the repository contract is designed to remain understandable and maintainable without proprietary tooling.
