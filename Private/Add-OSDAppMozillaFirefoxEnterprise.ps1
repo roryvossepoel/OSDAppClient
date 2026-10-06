@@ -32,7 +32,7 @@ function Add-OSDAppMozillaFirefoxEnterpriseInternal {
     }
     else {
         New-Item -ItemType Directory -Path $destinationRoot -Force | Out-Null
-        $deviceManifest = [pscustomobject]@{ SchemaVersion='1.0'; StagedAt=(Get-Date).ToUniversalTime().ToString('o'); Packages=@() }
+        $deviceManifest = [pscustomobject]@{ SchemaVersion='1.0'; StagedAt=(Get-Date).ToUniversalTime().ToString('o'); Apps=@() }
     }
 
     $builtInApps = @()
