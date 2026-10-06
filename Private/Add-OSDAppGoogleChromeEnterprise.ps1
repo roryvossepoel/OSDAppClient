@@ -59,9 +59,9 @@ function Add-OSDAppGoogleChromeEnterpriseInternal {
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'StageTarget' -Message 'Google Chrome Enterprise deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'ChromeStageComplete' -Message 'Google Chrome Enterprise deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'StageTarget' -Message 'Google Chrome Enterprise deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'ChromeStageComplete' -Message 'Google Chrome Enterprise deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$Architecture; InstallTimeoutMinutes=$InstallTimeoutMinutes }
 
     [pscustomobject]@{ PSTypeName='OSDApps.StagedApp'; Name='GoogleChromeEnterprise'; CachePath=$CachePath; WindowsPath=$WindowsPath; StagedPath=$destinationBuiltIn; Source='BuiltIn'; CacheAvailable=$cacheHasPayload }
 }
