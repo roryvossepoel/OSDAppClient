@@ -31,7 +31,7 @@ function Sync-OSDAppGoogleChromeEnterprise {
     if (-not $PSCmdlet.ShouldProcess($root, "Synchronize Google Chrome Enterprise built-in cache ($Architecture)")) { return }
 
     Assert-OSDAppCacheFreeSpace -CachePath $cachePath -MinimumFreeSpaceGB $MinimumFreeSpaceGB -Operation "Google Chrome Enterprise $Architecture cache synchronization" -LogPath $clientLogPath | Out-Null
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'BuiltInSyncStart' -Message 'Synchronizing Google Chrome Enterprise built-in cache.' -Data @{ Architecture=$Architecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'BuiltInSyncStart' -Message 'Synchronizing Google Chrome Enterprise built-in cache.' -Data @{ Architecture=$Architecture }
 
     $remoteMetadata = Get-OSDAppRemoteFileMetadata -Uri $PackageUri
     $previousCacheInfo = $null
@@ -74,7 +74,7 @@ function Sync-OSDAppGoogleChromeEnterprise {
         SyncedAt            = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppClientLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'BuiltInSyncComplete' -Message 'Google Chrome Enterprise built-in cache synchronized.' -Data @{ Architecture=$Architecture; Updated=$updated; Path=$root }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'GoogleChromeEnterprise' -Event 'BuiltInSyncComplete' -Message 'Google Chrome Enterprise built-in cache synchronized.' -Data @{ Architecture=$Architecture; Updated=$updated; Path=$root }
 
     [pscustomobject]@{
         PSTypeName='OSDAppClient.BuiltInCache'
