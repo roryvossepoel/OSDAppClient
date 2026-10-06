@@ -291,7 +291,8 @@ function Sync-PreInstallVendorMsi {
 try {
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw "Device manifest not found: $manifestPath" }
     $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $builtInApps=if($manifest.PSObject.Properties.Name -contains 'BuiltInApps'){@($manifest.BuiltInApps)}else{@()}
+    $apps=if($manifest.PSObject.Properties.Name -contains 'Apps'){@($manifest.Apps)}else{@()}
+    $builtInApps=@($apps | Where-Object { [string]$_.Source -eq 'BuiltIn' })
     if($builtInApps.Count -eq 0){Write-PreInstallLog -Event 'RefreshSkipped' -Message 'No built-in applications are staged. Nothing to refresh.'; exit 0}
 
     $cacheVolume=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.FileSystemLabel -eq $CacheVolumeLabel -and $_.DriveLetter } | Select-Object -First 1
