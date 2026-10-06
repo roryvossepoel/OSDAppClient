@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.2
+
+### Fixed
+
+- Removed an accidental duplicated tail from both Firefox Enterprise public cmdlet files that caused a PowerShell parser error during module import.
+- No Firefox acquisition, cache, staging, or installation behavior changed.
+
 ## 0.21.1
 
 ### Changed
