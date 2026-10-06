@@ -34,7 +34,7 @@ SetupComplete.cmd
 ### PreInstall
 
 PreInstall:
-- detects an optional USB volume labeled `OSDCloud`;
+- detects the optional USB cache volume using the configured `CacheVolumeLabel` (default `OSDCloud`);
 - detects network availability;
 - uses/updates the USB cache when present;
 - acquires built-ins directly to the local runtime when no USB cache is present;
@@ -55,9 +55,32 @@ Runner:
 - stops on unrecoverable installation failure;
 - schedules cleanup after full success.
 
+## Runtime configuration
+
+Runtime behavior is controlled through the general module configuration:
+
+```powershell
+Set-OSDAppConfiguration `
+    -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
+    -CleanupMode OnSuccess `
+    -CacheVolumeLabel 'OSDCloud' `
+    -LogPath '%ProgramData%\OSDApps\Logs\Install.log'
+```
+
+The effective values are written into `DeviceManifest.json` when applications are staged, so SetupComplete does not depend on the PowerShell module being present in full Windows.
+
+`CleanupMode` supports:
+
+```text
+OnSuccess  remove %SystemRoot%\Temp\OSDApps after a successful run
+Never      retain the staged runtime, payloads, and Work directory
+```
+
+On failure, source is retained automatically.
+
 ## Cleanup policy
 
-Default behavior:
+With `CleanupMode OnSuccess`:
 
 ```text
 successful run
@@ -68,13 +91,11 @@ successful run
 → cleanup helper removes itself
 ```
 
-This allows the runner to remove its own source directory safely after PowerShell releases the script.
-
-On failure, source is retained automatically so the staged manifest, payload, and work directory remain available for troubleshooting.
+With `CleanupMode Never`, cleanup is skipped and `CleanupSkipped` is logged.
 
 ## Logging
 
-Persistent runtime logs are written to:
+Persistent runtime logs are written to the configured `LogPath`. The default is:
 
 ```text
 %ProgramData%\OSDApps\Logs\Install.log
