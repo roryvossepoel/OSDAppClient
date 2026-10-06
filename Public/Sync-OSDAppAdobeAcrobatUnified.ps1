@@ -82,7 +82,7 @@ function Sync-OSDAppAdobeAcrobatUnified {
     }
 
     [pscustomobject]@{
-        PSTypeName='OSDAppClient.BuiltInCache'
+        PSTypeName='OSDApps.BuiltInCache'
         Id='AdobeAcrobatUnified'
         Version='Current'
         Architecture=$Architecture
