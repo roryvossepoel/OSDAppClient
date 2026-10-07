@@ -3,7 +3,6 @@ name: Publish PowerShell Gallery
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install validation dependencies
         shell: pwsh
@@ -35,7 +34,6 @@ jobs:
           ./build/Build-Module.ps1 -OutputPath ./dist | Format-List
 
       - name: Verify release version
-        if: github.event_name == 'release'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
