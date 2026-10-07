@@ -37,6 +37,7 @@
         PSData = @{
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WindowsDeployment','OOBE','SetupComplete','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
+            LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
             ReleaseNotes = 'https://github.com/roryvossepoel/OSDApps/blob/main/CHANGELOG.md'
             RequireLicenseAcceptance = $false
         }
