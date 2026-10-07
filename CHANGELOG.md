@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added the MIT license and PowerShell Gallery license metadata.
 - Added Pester coverage for module import/exports, configuration, DeviceManifest queue behavior, repository authoring/validation, and selective cache-catalog merging.
 - Added PSScriptAnalyzer configuration and local validation/build scripts.
 - Added GitHub Actions CI for manifest validation, analysis, Pester tests, example validation, distributable builds, and build artifacts.
