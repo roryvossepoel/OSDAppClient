@@ -11,7 +11,22 @@ if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
     throw 'PSScriptAnalyzer is required.'
 }
 
-$analysis = @(Invoke-ScriptAnalyzer -Path $root -Recurse -Settings (Join-Path $root 'PSScriptAnalyzerSettings.psd1'))
+$settingsPath = Join-Path $root 'PSScriptAnalyzerSettings.psd1'
+$analysisTargets = @(
+    (Join-Path $root 'OSDApps.psm1'),
+    (Join-Path $root 'Public'),
+    (Join-Path $root 'Private'),
+    (Join-Path $root 'Runtime'),
+    (Join-Path $root 'build')
+)
+
+$analysis = @(
+    foreach ($target in $analysisTargets) {
+        if (Test-Path -LiteralPath $target) {
+            Invoke-ScriptAnalyzer -Path $target -Recurse -Settings $settingsPath
+        }
+    }
+)
 
 if ($analysis.Count -gt 0) {
     $analysis |
