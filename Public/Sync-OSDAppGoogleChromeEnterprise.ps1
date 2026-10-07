@@ -66,6 +66,9 @@ function Sync-OSDAppGoogleChromeEnterprise {
         Cached              = $true
         Version             = 'Current'
         Architecture        = $Architecture
+        SourcePolicy        = 'Evergreen'
+        SyncMethod          = 'HttpMetadata'
+        Updated             = $updated
         PackageUri          = $PackageUri
         RemoteETag          = $remoteMetadata.ETag
         RemoteLastModified  = $remoteMetadata.LastModified
