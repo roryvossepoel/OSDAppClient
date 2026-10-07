@@ -275,6 +275,30 @@ If an application does not meet these criteria, package it as a normal repositor
 
 See [Built-in applications](docs/built-in-apps.md#requesting-a-new-built-in-application) for the full policy.
 
+## Built-in or self-maintained repository
+
+Built-ins are convenience integrations, not mandatory deployment paths.
+
+A supported application can still be delivered as a normal repository package when an organization prefers to control the package and version itself.
+
+A good example is Microsoft 365 Apps:
+
+```text
+Built-in
+→ ODT checks/synchronizes Office in full Windows
+→ Microsoft remains the freshness source
+→ cache can update automatically
+
+Repository
+→ organization controls the Office package/version
+→ repository synchronizes in WinPE
+→ full Windows only installs the staged package
+```
+
+This is one of the core OSDApps design choices: choose **vendor-native evergreen maintenance** or **organization-owned deterministic packaging** per application.
+
+See [Built-in applications](docs/built-in-apps.md#choosing-built-in-office-or-repository-office) and [Repository applications](docs/repository.md#built-in-or-repository).
+
 ## Repository metadata model
 
 Online repository metadata is deliberately simple:
