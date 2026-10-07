@@ -4,8 +4,7 @@
 
 ![Source ownership and sync moments](images/source-ownership-sync.svg)
 
-
-OSD Apps separates application acquisition, staging, refresh, installation, and cleanup.
+OSDApps separates application ownership, acquisition, staging, freshness checks, installation, and cleanup.
 
 ## End-to-end flow
 
@@ -13,61 +12,99 @@ OSD Apps separates application acquisition, staging, refresh, installation, and 
 flowchart TB
     A[OSDCloud v2 in WinPE]
     B[Repository sync/cache in WinPE]
-    C[Stage app intent and available payload]
+    C[Stage ordered Apps queue and available payload]
     D[Windows Temp runtime]
     E[First boot / full Windows]
     F{OSDCloud USB cache present?}
     G[Use / refresh USB cache]
-    H[Acquire directly to local runtime]
-    I[OSD App Runner]
-    J[Cleanup runtime source]
-    K[OOBE / Autopilot]
+    H[Acquire built-ins directly to local runtime]
+    I[OSDApps Runner]
+    J{CleanupMode}
+    K[Remove runtime source]
+    L[Retain runtime source]
+    M[OOBE / Autopilot]
 
     A --> B --> C --> D --> E --> F
     F -->|Yes| G --> I
     F -->|No| H --> I
-    I --> J --> K
+    I --> J
+    J -->|OnSuccess| K --> M
+    J -->|Never| L --> M
 ```
 
-## Repository lifecycle
+## Two source models
+
+### Repository applications
+
+Repository applications are organization-managed packages.
 
 ```text
-Azure Blob / repository
+repository
 → catalog.json
-→ resolve Apps/<AppId>/<Version>/<Architecture>/manifest.json
-→ Add-OSDApp synchronizes requested app in WinPE
+→ Apps/<AppId>/<Version>/<Architecture>/manifest.json
+→ resolve compatible package in WinPE
+→ download/copy Package.zip
 → validate SHA-256
-→ use/update the OSDCloud USB cache
+→ update optional OSDCloud cache
 → stage Package.zip to Windows Temp
-→ runner validates SHA-256 again
+→ Runner validates SHA-256 again
 → extract
-→ run Install.ps1
+→ run Package/Install.ps1
 ```
 
-Repository acquisition stays in WinPE because it does not depend on a vendor installer.
+Repository freshness is determined by the self-maintained repository metadata and SHA-256.
 
-## Built-in lifecycle
+### Built-in applications
+
+Built-ins are vendor-native integrations maintained by OSDApps.
 
 ```text
-Add built-in deployment intent in WinPE
-→ stage existing cache when available
-→ first boot into full Windows
+WinPE
+→ stage built-in deployment intent
+→ stage existing cache as fallback when available
+
+Full Windows / PreInstall
 → detect optional OSDCloud USB cache
-→ USB present: use/update cache
-→ USB absent: acquire directly to Windows Temp
-→ ensure local payload is complete
+→ check vendor freshness
+→ refresh/download only when required
+→ ensure complete local payload
+→ Runner installs
+```
+
+Built-ins refresh in full Windows so every vendor integration can use one consistent acquisition, fallback, logging, and troubleshooting model.
+
+Microsoft 365 Apps uses the Office Deployment Tool for synchronization. Teams, Adobe Acrobat Unified, Google Chrome Enterprise, and Mozilla Firefox Enterprise use vendor-native sources with lightweight freshness checks where applicable.
+
+## Why Office refreshes in full Windows
+
+The Office Deployment Tool used by the Microsoft 365 Apps built-in is not treated as a WinPE acquisition mechanism. OSDApps deliberately runs the ODT synchronization step in full Windows, where the vendor-supported deployment runtime is available.
+
+If an organization prefers to control the Office package and version entirely in WinPE, Microsoft 365 Apps can instead be delivered as a normal repository application.
+
+## Optional OSDCloud USB cache
+
+A connected volume with the configured cache label (default `OSDCloud`) is detected automatically.
+
+```text
+USB + online
+→ use complete cache as fallback
+→ check/refresh current content
+→ stage locally
+→ install
+
+USB + offline
+→ use complete cached content
+→ stage locally
+→ install
+
+No USB + online
+→ acquire built-ins directly to Windows Temp
 → install
 ```
 
-Microsoft 365 Apps and Teams intentionally share this lifecycle.
+No USB + offline requires a usable payload to have been staged already. Otherwise PreInstall stops before the Runner starts.
 
-## Why built-ins refresh in full Windows
-
-The Office Deployment Tool cannot run in the x64 WinPE environment used during OSD Apps testing because the current ODT bootstrapper requires x86 Windows runtime / side-by-side components that are not available there.
-
-Microsoft Teams synchronization can technically run in WinPE. OSD Apps still performs Teams refresh in the same full-Windows pre-install phase so built-in acquisition, update, fallback, logging, and troubleshooting follow one consistent model.
-
-If Microsoft 365 Apps or Teams must be managed entirely from WinPE, package them as normal repository applications instead of using the built-in flow.
+A cache hit changes acquisition performance, not installation semantics. The Runner always installs from local staged content.
 
 ## Runtime locations
 
@@ -77,13 +114,19 @@ Temporary runtime:
 %SystemRoot%\Temp\OSDApps
 ```
 
-Persistent logs:
+Default persistent runtime log:
 
 ```text
-%ProgramData%\OSDApps\Logs
+%ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
-The runtime directory can contain:
+Module/cache operations use:
+
+```text
+<OSDCloud>:\OSDApps\Logs\Client.log
+```
+
+Typical runtime content:
 
 ```text
 DeviceManifest.json
@@ -94,91 +137,49 @@ BuiltIn\
 Work\
 ```
 
-After a successful installation the runtime directory is removed automatically. On failure, the runtime source is retained for troubleshooting.
-
-
-## Optional USB cache
-
-The built-in deployment path does not require USB media. Cache usage is automatic: when a connected volume with label `OSDCloud` is detected, it becomes the built-in cache source and destination. The volume can be completely blank; OSD Apps creates the `OSDApps` cache structure when needed. If no such volume exists, built-in content is downloaded directly to `%SystemRoot%\Temp\OSDApps` during the full-Windows pre-install phase.
-
-This gives three supported built-in scenarios:
-
-```text
-OSDCloud USB + online  → use cache, refresh/update it, then install locally
-OSDCloud USB + offline → use cached payload if complete
-No USB + online        → acquire directly to local runtime and install
-```
-
-No USB + offline requires a previously staged local payload; otherwise PreInstall fails before the runner starts.
-
+With `CleanupMode OnSuccess`, the runtime source is removed after a successful run. With `CleanupMode Never`, it is retained. On failure, source is retained automatically for troubleshooting.
 
 ## Source resolution rules
 
-Built-in acquisition follows one consistent resolver:
+Built-in acquisition follows one resolver:
 
 ```text
-1. Detect OSDCloud USB cache
-2. If present, use complete cached content as the preferred source/fallback
-3. If online, refresh or populate the selected source
-4. Ensure a complete local payload exists in Windows Temp
-5. Run the installer only after local staging is complete
+1. Detect optional OSDCloud cache
+2. Stage complete cached content as fallback when available
+3. Check vendor freshness when online
+4. Refresh or acquire only when required
+5. Ensure complete payload under Windows Temp
+6. Start the Runner
 ```
 
-A cache hit is therefore an optimization, not a different installation mode.
-
-If online acquisition fails but a complete staged or USB-cached payload is available, installation continues with that fallback. If no usable payload exists anywhere, PreInstall exits with an error and the runner is not started.
-
-## Phase ownership
-
-```text
-Repository applications
-→ synchronized/cached in WinPE
-
-Built-in Microsoft 365 Apps / Teams
-→ synchronized/updated in full Windows during SetupComplete
-```
-
-This separation keeps repository acquisition independent from vendor installers while allowing built-ins to use the full Windows runtime they require.
-
-
-## Validated blank-cache flow
-
-The following built-in scenario has been validated end to end:
-
-```text
-OSDCloud USB present
-OSDApps cache absent
-        ↓
-WinPE Add cmdlets stage deployment intent only
-        ↓
-First boot / SetupComplete
-        ↓
-OSDCloud cache volume detected
-        ↓
-Microsoft 365 Apps cache populated from Microsoft CDN
-Microsoft Teams cache populated from Microsoft endpoints
-        ↓
-Current payload staged to %SystemRoot%\Temp\OSDApps
-        ↓
-Runner installs both applications successfully
-        ↓
-Runtime cleanup scheduled
-```
-
-The validated run started with no usable Office or Teams cache. During PreInstall, Office resolved from no previous version to the current build and Teams reported a fresh package update. Both built-in installations completed with exit code `0`.
-
+A refresh failure is non-fatal when a complete staged fallback exists. It is fatal when no usable payload is available.
 
 ## Metadata model
 
 ```text
-catalog.json                                      online application/package index
-Apps/<AppId>/<Version>/<Architecture>/manifest.json  package metadata beside Package.zip
-CacheCatalog.json                                 local flattened cache snapshot
-DeviceManifest.json                               per-device ordered Apps queue
+catalog.json                                         online repository index
+Apps/<AppId>/<Version>/<Architecture>/manifest.json package metadata
+CacheCatalog.json                                    local repository-cache snapshot
+CacheInfo.json                                       built-in cache metadata
+DeviceManifest.json                                  per-device ordered Apps queue
 ```
-
-The online repository is intentionally layered. OSDApps resolves app manifests into the flattened package objects used by cache and runtime staging.
 
 ## Device manifest
 
-`DeviceManifest.json` uses one ordered `Apps` array for all staged applications. Repository and built-in entries are kept in the exact order in which their `Add-*` commands were called. `Source` identifies the execution path (`Repository` or `BuiltIn`). PreInstall filters the built-in entries for acquisition, while the runner executes the complete array from top to bottom.
+`DeviceManifest.json` contains one ordered `Apps` array for repository and built-in applications.
+
+`Source` identifies the execution path:
+
+```text
+Repository
+BuiltIn
+```
+
+Every `Add-*` operation appends or moves the complete application entry to the end of the queue. PreInstall filters the built-in entries for acquisition; the Runner executes the complete `Apps[]` array from top to bottom.
+
+See also:
+
+- [Built-in applications](built-in-apps.md)
+- [Repository applications](repository.md)
+- [Runtime and cleanup](runtime.md)
+- [Validation matrix](testing.md)
