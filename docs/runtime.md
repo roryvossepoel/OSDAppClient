@@ -67,7 +67,7 @@ Set-OSDAppConfiguration `
     -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
     -CleanupMode OnSuccess `
     -CacheVolumeLabel 'OSDCloud' `
-    -LogPath '%ProgramData%\OSDApps\Logs\Install.log'
+    -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log'
 ```
 
 The effective values are written into `DeviceManifest.json` when applications are staged, so SetupComplete does not depend on the PowerShell module being present in full Windows.
@@ -101,16 +101,16 @@ With `CleanupMode Never`, cleanup is skipped and `CleanupSkipped` is logged.
 Persistent runtime logs are written to the configured `LogPath`. The default is:
 
 ```text
-%ProgramData%\OSDApps\Logs\Install.log
+%ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
 Logs are CMTrace-compatible and remain after source cleanup.
 
 The log is rotated automatically:
-- active `Install.log`
-- `Install.log.1`
-- `Install.log.2`
-- `Install.log.3`
+- active `Runtime.log`
+- `Runtime.log.1`
+- `Runtime.log.2`
+- `Runtime.log.3`
 
 Important events include:
 
