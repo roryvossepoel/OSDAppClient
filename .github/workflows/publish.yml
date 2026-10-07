@@ -1,0 +1,62 @@
+name: Publish PowerShell Gallery
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish OSDApps
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install validation dependencies
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ./build/Test-Module.ps1
+
+      - name: Build module
+        shell: pwsh
+        run: |
+          ./build/Build-Module.ps1 -OutputPath ./dist | Format-List
+
+      - name: Verify release version
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = '${{ github.event.release.tag_name }}' -replace '^v',''
+          $manifest = Test-ModuleManifest ./OSDApps.psd1
+          if ($manifest.Version.ToString() -ne $tag) {
+              throw "Release tag version '$tag' does not match module version '$($manifest.Version).'"
+          }
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
+              throw 'GitHub secret PSGALLERY_API_KEY is not configured.'
+          }
+
+          Publish-Module `
+              -Path ./dist/OSDApps `
+              -NuGetApiKey $env:PSGALLERY_API_KEY `
+              -Repository PSGallery `
+              -Force
