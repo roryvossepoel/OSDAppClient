@@ -22,6 +22,7 @@ $items = @(
     'Runtime'
     'README.md'
     'CHANGELOG.md'
+    'LICENSE'
 )
 
 foreach ($item in $items) {
