@@ -1,0 +1,30 @@
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = 'Stop'
+$root = Split-Path -Path $PSScriptRoot -Parent
+
+if (-not (Get-Module -ListAvailable -Name Pester | Where-Object Version -ge ([version]'5.5.0'))) {
+    throw 'Pester 5.5.0 or later is required.'
+}
+if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+    throw 'PSScriptAnalyzer is required.'
+}
+
+$analysis = @(Invoke-ScriptAnalyzer -Path $root -Recurse -Settings (Join-Path $root 'PSScriptAnalyzerSettings.psd1'))
+if ($analysis.Count -gt 0) {
+    $analysis | Format-Table -AutoSize | Out-String | Write-Host
+    throw "PSScriptAnalyzer reported $($analysis.Count) warning/error finding(s)."
+}
+
+$config = New-PesterConfiguration
+$config.Run.Path = Join-Path $root 'Tests'
+$config.Run.PassThru = $true
+$config.Output.Verbosity = 'Detailed'
+$result = Invoke-Pester -Configuration $config
+
+if ($result.FailedCount -gt 0) {
+    throw "Pester reported $($result.FailedCount) failed test(s)."
+}
+
+& (Join-Path $PSScriptRoot 'Build-Module.ps1') | Out-Host
