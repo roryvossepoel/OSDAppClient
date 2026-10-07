@@ -98,7 +98,7 @@ function Test-OSDAppRepository {
             $successCodes = @($manifest.SuccessCodes)
             $successCodesValid = (
                 $successCodes.Count -gt 0 -and
-                @($successCodes | Where-Object { $_ -as [int] -eq $null }).Count -eq 0
+                @($successCodes | Where-Object { ($_ -as [int]) -eq $null }).Count -eq 0
             )
 
             [pscustomobject]@{
