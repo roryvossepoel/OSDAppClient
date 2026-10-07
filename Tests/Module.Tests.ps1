@@ -1,11 +1,10 @@
-$moduleRoot = Split-Path -Path $PSScriptRoot -Parent
-$manifestPath = Join-Path $moduleRoot 'OSDApps.psd1'
-
 Describe 'OSDApps module' {
     BeforeAll {
+        $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
+        $script:manifestPath = Join-Path $script:moduleRoot 'OSDApps.psd1'
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
-        Import-Module $manifestPath -Force
-        $manifest = Test-ModuleManifest -Path $manifestPath
+        Import-Module $script:manifestPath -Force
+        $manifest = Test-ModuleManifest -Path $script:manifestPath
     }
 
     It 'has a valid module manifest' {
@@ -18,7 +17,7 @@ Describe 'OSDApps module' {
     }
 
     It 'exports exactly the functions declared in the manifest' {
-        $declared = @((Import-PowerShellDataFile -Path $manifestPath).FunctionsToExport | Sort-Object)
+        $declared = @((Import-PowerShellDataFile -Path $script:manifestPath).FunctionsToExport | Sort-Object)
         $exported = @(Get-Command -Module OSDApps -CommandType Function | Select-Object -ExpandProperty Name | Sort-Object)
         Compare-Object -ReferenceObject $declared -DifferenceObject $exported | Should -BeNullOrEmpty
     }
