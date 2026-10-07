@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
-$logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Install.log')
+$logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Runtime.log')
 $logDirectory = Split-Path -Path $logPath -Parent
 $preInstallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
