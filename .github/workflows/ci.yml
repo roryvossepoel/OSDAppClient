@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate module
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Validate manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Test-ModuleManifest -Path ./OSDApps.psd1 -ErrorAction Stop | Format-List Name,Version,Author,Description
+
+      - name: Run analyzer and Pester
+        shell: pwsh
+        run: |
+          ./build/Test-Module.ps1
+
+      - name: Validate example repository
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module ./OSDApps.psd1 -Force
+          $catalog = Get-Content ./Examples/Repository/catalog.json -Raw | ConvertFrom-Json
+          if ($catalog.SchemaVersion -ne 1) {
+              throw 'Examples/Repository/catalog.json has an unexpected SchemaVersion.'
+          }
+
+      - name: Build distributable module
+        shell: pwsh
+        run: |
+          ./build/Build-Module.ps1 -OutputPath ./dist | Format-List
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OSDApps
+          path: dist/OSDApps
+          if-no-files-found: error
