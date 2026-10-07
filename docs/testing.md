@@ -35,7 +35,7 @@ A built-in test is considered successful when:
 4. A complete payload exists under `%SystemRoot%\Temp\OSDApps` before installation.
 5. The Runner completes each application with an accepted exit code.
 6. `InstallComplete` is logged.
-7. Runtime cleanup is scheduled after success.
+7. The configured cleanup policy is honored after success (`OnSuccess` schedules cleanup; `Never` retains the runtime).
 
 Runtime evidence is written to:
 
