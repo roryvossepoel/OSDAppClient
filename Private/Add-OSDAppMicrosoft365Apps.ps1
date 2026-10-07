@@ -109,12 +109,8 @@ function Add-OSDAppMicrosoft365AppsInternal {
         $deviceManifest = [pscustomobject]@{ SchemaVersion='1.0'; StagedAt=(Get-Date).ToUniversalTime().ToString('o'); Apps=@() }
     }
 
-    $builtInApps = @()
-    if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') {
-        $builtInApps = @($deviceManifest.BuiltInApps | Where-Object { $_.Id -ne 'Microsoft365Apps' })
-    }
-
-    $builtInApps += [pscustomobject]@{
+    $manifestApp = [pscustomobject]@{
+        Source = 'BuiltIn'
         Id = 'Microsoft365Apps'
         DisplayName = 'Microsoft 365 Apps'
         Type = 'OfficeDeploymentTool'
@@ -133,13 +129,6 @@ function Add-OSDAppMicrosoft365AppsInternal {
         CachePreferred = [bool]$CachePath
     }
 
-    if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') {
-        $deviceManifest.BuiltInApps = $builtInApps
-    } else {
-        $deviceManifest | Add-Member -NotePropertyName BuiltInApps -NotePropertyValue $builtInApps
-    }
-    $manifestApp = @($builtInApps | Where-Object { $_.Id -eq 'Microsoft365Apps' } | Select-Object -First 1)[0]
-    $manifestApp | Add-Member -NotePropertyName Source -NotePropertyValue 'BuiltIn' -Force
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
