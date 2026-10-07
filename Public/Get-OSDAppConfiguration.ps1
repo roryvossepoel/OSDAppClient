@@ -7,7 +7,7 @@ function Get-OSDAppConfiguration {
             CatalogUri       = $null
             CleanupMode      = 'OnSuccess'
             CacheVolumeLabel = 'OSDCloud'
-            LogPath          = '%ProgramData%\OSDApps\Logs\Install.log'
+            LogPath          = '%ProgramData%\OSDApps\Logs\Runtime.log'
         }
     }
 
