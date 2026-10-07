@@ -293,6 +293,49 @@ Office\Data\<version>
 
 and records that value in `CacheInfo.json`. Comparing the version before and after the ODT run allows the log to report whether the cached Office build actually changed.
 
+### Choosing built-in Office or repository Office
+
+The Microsoft 365 Apps built-in deliberately favors freshness over the shortest possible deployment time.
+
+During full Windows, OSDApps lets the Office Deployment Tool synchronize the configured Office source before installation:
+
+```text
+full Windows
+→ ODT /download
+→ reuse existing Office cache where possible
+→ update changed Office content when required
+→ stage current Office content locally
+→ install
+```
+
+This has an important advantage: ODT is the authoritative Microsoft mechanism for acquiring Office content, so the same step that checks freshness can immediately update the cache when a newer build is available.
+
+The trade-off is that even when the cached build is unchanged, the ODT synchronization step still takes some time.
+
+If deployment speed is more important than checking Microsoft for a current Office build during SetupComplete, Microsoft 365 Apps can instead be packaged as a normal repository application.
+
+In that model:
+
+```text
+self-maintained repository
+→ organization decides which Office build is current
+→ repository sync/update happens in WinPE
+→ Package.zip is staged to the OS
+→ full Windows installs the staged package
+→ no built-in Office ODT freshness check
+```
+
+This is an intentional OSDApps design choice:
+
+| Approach | Freshness owner | Sync moment | Full-Windows overhead | Best fit |
+| --- | --- | --- | --- | --- |
+| Built-in Microsoft 365 Apps | Microsoft / ODT | Full Windows | ODT synchronization before install | Evergreen Office with minimal package maintenance |
+| Repository-packaged Microsoft 365 Apps | Repository owner | WinPE | No built-in ODT refresh step | Maximum deployment-time predictability and organization-controlled versioning |
+
+Neither approach is inherently better. Built-ins optimize for vendor-native evergreen maintenance; repository applications optimize for organization-owned packaging, version control, and deterministic deployment behavior.
+
+This same principle applies more broadly in OSDApps: a supported built-in is a convenience path, not a requirement. Any application can still be delivered through the self-maintained repository when that better matches the deployment strategy.
+
 ### Microsoft Teams bootstrapper
 
 The Teams MSIX uses the normal metadata comparison and is skipped when the cached MSIX is still current.
