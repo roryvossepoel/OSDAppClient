@@ -4,7 +4,7 @@ OSDApps uses GitHub Actions for validation and PowerShell Gallery publishing.
 
 ## Continuous integration
 
-Every push to `main`, pull request, or manual CI run validates:
+Every push to `main`, pull request, or manually started CI run validates:
 
 ```text
 module manifest
@@ -65,8 +65,6 @@ checkout
 
 If validation fails, the package is not published.
 
-The workflow can also be started manually with `workflow_dispatch`. Manual publishing still runs all tests and builds the module first, but there is no release-tag version check because no release event exists.
-
 ## Local validation
 
 The same validation used by CI can be run locally:
@@ -100,4 +98,4 @@ That directory is the exact module directory supplied to `Publish-Module`.
 
 The CI workflow never publishes a package.
 
-Only the dedicated `Publish PowerShell Gallery` workflow has a publishing step, and the API key is only exposed to that step through the GitHub Actions secret.
+Only publishing a GitHub Release can trigger the dedicated `Publish PowerShell Gallery` workflow. The API key is only exposed to the publish step through the GitHub Actions secret.
