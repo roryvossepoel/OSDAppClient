@@ -125,6 +125,7 @@ BuiltInRefreshStart
 BuiltInRefreshComplete
 BuiltInRefreshFailed
 RefreshComplete
+PreInstallComplete
 InstallStart
 PackageIntegrityValidated
 PackageInstallStart
@@ -133,6 +134,8 @@ BuiltInInstallStart
 BuiltInInstallWaiting
 BuiltInInstallTimeout
 BuiltInInstallComplete
+ApplicationInstallComplete
+ApplicationInstallFailed
 InstallFailed
 InstallComplete
 CleanupScheduled
@@ -187,3 +190,43 @@ vendor MSI
 ```
 
 The generic MSI runner uses a 10-minute default timeout, writes 60-second `BuiltInInstallWaiting` heartbeat events, accepts exit codes `0` and `3010`, and retains the runtime source if installation fails.
+
+
+## Timing and failure diagnostics
+
+OSDApps writes explicit duration values so performance reporting does not need to infer every phase from timestamps.
+
+Key duration fields include:
+
+```text
+PreInstallComplete       DurationSeconds
+BuiltInRefreshComplete   DurationSeconds
+ApplicationInstallComplete DurationSeconds
+InstallComplete          DurationSeconds
+```
+
+`ApplicationInstallComplete` is written for both repository and built-in applications and measures the complete processing time for that queue item, including validation/extraction where applicable.
+
+Failures are also categorized for reporting and troubleshooting.
+
+PreInstall categories include:
+
+```text
+NetworkUnavailable
+Timeout
+CacheOrSourceMissing
+RemoteAcquisition
+PreInstallError
+```
+
+Runner categories include:
+
+```text
+HashMismatch
+SourceMissing
+Timeout
+InstallerFailed
+RuntimeError
+```
+
+The original error text remains in the log alongside the category.
