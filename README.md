@@ -55,7 +55,7 @@ Set-OSDAppConfiguration `
     -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
     -CleanupMode OnSuccess `
     -CacheVolumeLabel 'OSDCloud' `
-    -LogPath '%ProgramData%\OSDApps\Logs\Install.log'
+    -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log'
 
 Get-OSDAppConfiguration
 Get-OSDAppCatalog
@@ -103,7 +103,7 @@ Set-OSDAppConfiguration `
     -CatalogUri 'https://example.blob.core.windows.net/osdapps/catalog.json' `
     -CleanupMode OnSuccess `
     -CacheVolumeLabel 'OSDCloud' `
-    -LogPath '%ProgramData%\OSDApps\Logs\Install.log'
+    -LogPath '%ProgramData%\OSDApps\Logs\Runtime.log'
 ```
 
 Current values can be inspected with:
@@ -206,7 +206,7 @@ Temporary deployment source:
 Persistent logs:
 
 ```text
-%ProgramData%\OSDApps\Logs\Install.log
+%ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
 With `CleanupMode OnSuccess`, the temporary runtime/source directory is removed after a successful run. With `CleanupMode Never`, the staged runtime and work files are retained. Logs are written to the configured `LogPath`.
