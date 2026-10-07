@@ -40,7 +40,7 @@ A built-in test is considered successful when:
 Runtime evidence is written to:
 
 ```text
-%ProgramData%\OSDApps\Logs\Install.log
+%ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
 WinPE/cache operations are logged to:
