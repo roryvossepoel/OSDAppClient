@@ -98,7 +98,9 @@ function Sync-OSDAppMicrosoft365Apps {
     $previousVersion = $null
     $existingOfficeData = Join-Path $root 'Office\Data'
     if (Test-Path -LiteralPath $existingOfficeData -PathType Container) {
-        $existingVersions = @(Get-ChildItem -LiteralPath $existingOfficeData -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+ -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -PassThru
+        $existingVersions = @(
+            Get-ChildItem -LiteralPath $existingOfficeData -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+ -FilePath $setupPath -ArgumentList @('/download', $configPath) -WorkingDirectory $root -PassThru
     try {
         while (-not $process.HasExited) {
             $downloadedBytes = 0L
@@ -141,11 +143,18 @@ function Sync-OSDAppMicrosoft365Apps {
         SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ PreviousVersion=$previousVersion; Version = $resolvedVersion; Updated=($previousVersion -ne $resolvedVersion); Path = $root; Channel = $Channel; Architecture = $Architecture; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ PreviousVersion=$previousVersion; Version=$resolvedVersion; Updated=($previousVersion -ne $resolvedVersion); Path=$root; Channel=$Channel; Architecture=$Architecture; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
 
     [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
-} } | ForEach-Object { try { [pscustomobject]@{ Name = $_.Name; Version = [version]$_.Name } } catch { } } | Sort-Object Version -Descending)
-        if ($existingVersions.Count -gt 0) { $previousVersion = $existingVersions[0].Name }
+} } |
+                ForEach-Object {
+                    try { [pscustomobject]@{ Name = $_.Name; Version = [version]$_.Name } } catch { }
+                } |
+                Sort-Object Version -Descending
+        )
+        if ($existingVersions.Count -gt 0) {
+            $previousVersion = $existingVersions[0].Name
+        }
     }
 
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath; PreviousVersion = $previousVersion }
