@@ -1,10 +1,9 @@
-$moduleRoot = Split-Path -Path $PSScriptRoot -Parent
-$manifestPath = Join-Path $moduleRoot 'OSDApps.psd1'
-
 Describe 'Repository authoring and validation' {
     BeforeAll {
+        $script:moduleRoot = Split-Path -Path $PSScriptRoot -Parent
+        $script:manifestPath = Join-Path $script:moduleRoot 'OSDApps.psd1'
         Remove-Module OSDApps -Force -ErrorAction SilentlyContinue
-        Import-Module $manifestPath -Force
+        Import-Module $script:manifestPath -Force
     }
 
     BeforeEach {
