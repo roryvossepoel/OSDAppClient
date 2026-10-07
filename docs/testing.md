@@ -70,3 +70,18 @@ Set-OSDAppConfiguration -CleanupMode Never
 ```
 
 so the staged runtime, payloads, and `Work` directory remain available after success.
+
+
+## Validated 0.29.1 cold/warm benchmark
+
+A full cold-cache and warm-cache comparison has been validated using the same hardware, OSDCloud USB stick, application set and installation order.
+
+| Phase | Cold cache | Warm cache |
+| --- | ---: | ---: |
+| PreInstall / refresh | 125.2 s | 40.6 s |
+| Runner / installations | 330.7 s | 327.4 s |
+| Total measured Windows phase | 455.9 s | 368.0 s |
+
+The warm-cache run completed the measured Windows phase 87.9 seconds faster. Runner duration differed by only 3.3 seconds, confirming that cache state primarily affects acquisition and refresh rather than installation.
+
+See [Performance](performance.md) for the full benchmark and per-application timings.
