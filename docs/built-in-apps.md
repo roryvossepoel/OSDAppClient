@@ -387,15 +387,13 @@ When no `OSDCloud` volume is connected, PreInstall downloads the current built-i
 
 When an `OSDCloud` volume is connected, it is detected automatically. Existing cache content is used when available and the cache is refreshed/updated during SetupComplete.
 
-A completely blank `OSDCloud` volume is supported. OSD Apps creates the cache structure and populates it during the full-Windows pre-install phase.
+A completely blank `OSDCloud` volume is supported. OSDApps creates the cache structure and populates it during the full-Windows pre-install phase.
 
 ## Fallback behavior
 
-A refresh failure must not block deployment when a usable staged or USB-cached fallback exists. If there is no usable local/USB source and online acquisition also fails, PreInstall returns a fatal error and the runner is not started.
+A refresh or acquisition failure does not block deployment when a complete staged fallback is available. If no usable local or USB-cached payload exists and online acquisition also fails, PreInstall returns a fatal error and the Runner is not started.
 
-If an `OSDCloud` USB is not present, that is not an error: PreInstall acquires built-in content directly to the local Windows runtime.
-
-When a refresh/acquisition problem occurs, PreInstall uses a complete local or USB-cached payload as fallback when one is available. If no usable source exists and online acquisition also fails, PreInstall returns a fatal error and the runner is not started.
+The absence of an `OSDCloud` USB is not an error: when online, PreInstall acquires built-in content directly to the local Windows runtime.
 
 Office refresh has a 20-minute timeout by default.
 
@@ -433,38 +431,20 @@ When OSDCloud cache media is detected, the Add cmdlet also emits a warning to ke
 The same decisions are written to the CMTrace-compatible logs.
 
 
-## Validated cache bootstrap
+## Validated deployment behavior
 
-A blank-cache deployment has been validated successfully with only a connected USB volume labeled `OSDCloud`.
+OSDApps has been validated with both blank-cache and warm-cache deployments using the same Add commands and installation queue.
 
-Before reboot, both Add cmdlets reported that the OSDCloud cache volume was available but no usable built-in cache existed. During SetupComplete:
+Validated behavior includes:
 
-- Microsoft 365 Apps was synchronized from no previous cached version to a current Office build;
-- Microsoft Teams downloaded and created a new cached MSIX;
-- both payloads were staged to the local Windows runtime;
-- Microsoft 365 Apps installation completed with exit code `0`;
-- Microsoft Teams provisioning completed with exit code `0`;
-- the runner completed successfully and scheduled runtime cleanup.
+- blank `OSDCloud` media being populated automatically during full-Windows PreInstall;
+- existing built-in cache content being detected and staged as fallback;
+- unchanged Teams, Chrome, and Adobe payloads being reused after lightweight freshness checks;
+- Microsoft 365 Apps being synchronized by ODT and reporting whether the cached Office build changed;
+- successful installation from local staged content;
+- cold-cache versus warm-cache timing with stable Runner installation times.
 
-No pre-created `OSDApps` directory or built-in payload was required.
-
-
-## Validated existing-cache refresh
-
-The existing-cache + online path has also been validated successfully:
-
-```text
-complete Office and Teams cache present on OSDCloud USB
-→ WinPE detects CacheAvailable=True for both built-ins
-→ cached payload is staged as fallback
-→ SetupComplete synchronizes Office against the existing cache
-→ Office remains on the same current build
-→ Teams metadata check reports no package update
-→ both applications install successfully
-```
-
-This confirms that the same Add commands support both cache bootstrap and cache reuse without changing deployment syntax.
-
+See [Validation matrix](testing.md) and [Performance](performance.md) for the current end-to-end evidence.
 
 ## Requesting a new built-in application
 
@@ -484,7 +464,7 @@ A built-in candidate should:
 
 ### Download-source rule
 
-OSD Apps must be able to acquire the installer directly from the vendor in a predictable way.
+OSDApps must be able to acquire the installer directly from the vendor in a predictable way.
 
 A vendor using a CDN is not automatically a problem. The requirement is that the vendor exposes a stable, supported download URL or endpoint. A built-in will not be added when the installer must come from a third-party mirror, community package source, OSDApps itself, or when acquisition depends on techniques such as:
 
