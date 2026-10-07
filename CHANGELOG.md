@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.29.1
+
+### Changed
+
+- Renamed the default standalone SetupComplete runtime log from `Install.log` to `Runtime.log`.
+- `Client.log` remains the module-side log for staging, synchronization, cache and repository operations.
+- Updated runtime fallback logging and documentation to use `%ProgramData%\OSDApps\Logs\Runtime.log`.
+
 ## 0.29.0
 
 ### Added
