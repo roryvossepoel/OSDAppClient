@@ -10,7 +10,9 @@ function Set-OSDAppConfiguration {
         [string]$CacheVolumeLabel,
 
         [ValidateNotNullOrEmpty()]
-        [string]$LogPath
+        [string]$LogPath,
+
+        [switch]$PassThru
     )
 
     $current = Get-OSDAppConfiguration
@@ -41,5 +43,7 @@ function Set-OSDAppConfiguration {
         LogPath          = $current.LogPath
     }
 
-    Get-OSDAppConfiguration
+    if ($PassThru) {
+        Get-OSDAppConfiguration
+    }
 }
