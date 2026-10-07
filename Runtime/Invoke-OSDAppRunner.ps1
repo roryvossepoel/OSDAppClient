@@ -415,7 +415,7 @@ catch {
         try {
             $fallbackDir = Join-Path $env:ProgramData 'OSDApps\Logs'
             New-Item -ItemType Directory -Path $fallbackDir -Force | Out-Null
-            $logPath = Join-Path $fallbackDir 'Install.log'
+            $logPath = Join-Path $fallbackDir 'Runtime.log'
         }
         catch { }
     }
