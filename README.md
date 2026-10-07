@@ -484,6 +484,22 @@ Test-OSDAppRepository
 
 Low-level cache validation, content staging, repository synchronization internals, and SetupComplete integration are private implementation details.
 
+## Development and CI
+
+OSDApps includes automated validation with Pester and PSScriptAnalyzer.
+
+Run the same validation locally with:
+
+```powershell
+./build/Test-Module.ps1
+```
+
+Every push to `main` and every pull request runs the GitHub Actions CI workflow. Successful builds produce a distributable `OSDApps` workflow artifact.
+
+PowerShell Gallery publishing is handled by a separate release workflow and is never performed by the normal CI workflow.
+
+See [Releasing](docs/releasing.md) for the complete validation, build and PSGallery release flow.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
@@ -493,6 +509,7 @@ Low-level cache validation, content staging, repository synchronization internal
 - [Performance](docs/performance.md)
 - [FAQ and troubleshooting](docs/faq.md)
 - [Validation matrix](docs/testing.md)
+- [Releasing](docs/releasing.md)
 - [Changelog](CHANGELOG.md)
 
 ## Repository authoring
