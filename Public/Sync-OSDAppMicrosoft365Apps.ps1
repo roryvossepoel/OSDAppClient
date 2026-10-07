@@ -126,6 +126,9 @@ function Sync-OSDAppMicrosoft365Apps {
         Cached = $true
         Version = $resolvedVersion
         Architecture = $Architecture
+        SourcePolicy = 'Evergreen'
+        SyncMethod = 'OfficeDeploymentTool'
+        Updated = $true
         Channel = $Channel
         ProductId = $ProductId
         Language = @($Language)
@@ -137,7 +140,7 @@ function Sync-OSDAppMicrosoft365Apps {
         SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'BuiltInSyncComplete' -Message 'Microsoft 365 Apps built-in cache synchronized.' -Data @{ Version = $resolvedVersion; Path = $root; Channel = $Channel; Architecture = $Architecture; SourcePolicy='Evergreen'; SyncMethod='OfficeDeploymentTool' }
 
     [pscustomobject]@{ PSTypeName='OSDApps.BuiltInCache'; Id='Microsoft365Apps'; Version=$resolvedVersion; Architecture=$Architecture; Channel=$Channel; CachePath=$root; Cached=$true }
 }
