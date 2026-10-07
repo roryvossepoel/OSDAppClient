@@ -161,6 +161,36 @@ Repository validation checks:
 - architecture is `x64`, `arm64`, or `any`;
 - package manifest Id matches the catalog application Id.
 
+## Built-in or repository?
+
+Repository applications are not limited to niche or custom software. They can also be used for applications that OSDApps supports as built-ins when an organization prefers to own the package lifecycle itself.
+
+For example, Microsoft 365 Apps can be deployed either way:
+
+```text
+Built-in Office
+→ Office Deployment Tool checks/synchronizes Office in full Windows
+→ cache can update automatically from Microsoft
+→ install current synchronized content
+```
+
+or:
+
+```text
+Repository Office
+→ organization packages and versions Office
+→ repository sync happens in WinPE
+→ staged package is installed in full Windows
+→ no built-in Office freshness step
+```
+
+This gives organizations a simple performance/control choice:
+
+- use a **built-in** when vendor-native evergreen maintenance is preferred;
+- use the **repository** when package/version ownership and a more deterministic full-Windows phase are preferred.
+
+The repository is therefore not a fallback path. It is a first-class deployment model with different ownership and synchronization semantics.
+
 ## Publishing
 
 The resulting repository is ordinary static content. Publish the contents of `Repository` to an HTTP/HTTPS location while preserving paths.
