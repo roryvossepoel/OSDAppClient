@@ -108,6 +108,7 @@ function Start-RunnerCleanup {
 }
 
 $logPath = $null
+$runnerStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 try {
     if (-not (Test-Path -LiteralPath $manifestPath)) {
@@ -361,20 +362,44 @@ try {
     }
 
     foreach ($app in $apps) {
-        switch ([string]$app.Source) {
-            'Repository' {
-                Invoke-RepositoryPackage -package $app
+        $applicationStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        try {
+            switch ([string]$app.Source) {
+                'Repository' {
+                    Invoke-RepositoryPackage -package $app
+                }
+                'BuiltIn' {
+                    Invoke-BuiltInApp -app $app
+                }
+                default {
+                    throw "Unsupported application source '$($app.Source)' for '$($app.Id)'."
+                }
             }
-            'BuiltIn' {
-                Invoke-BuiltInApp -app $app
+
+            $applicationStopwatch.Stop()
+            Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallComplete' -Message 'Application processing completed.' -Data @{
+                Id = $app.Id
+                Source = $app.Source
+                DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)
             }
-            default {
-                throw "Unsupported application source '$($app.Source)' for '$($app.Id)'."
+        }
+        catch {
+            if ($applicationStopwatch.IsRunning) { $applicationStopwatch.Stop() }
+            Write-RunnerLog -LogPath $logPath -Event 'ApplicationInstallFailed' -Level 'Error' -Message $_.Exception.Message -Data @{
+                Id = $app.Id
+                Source = $app.Source
+                DurationSeconds = [math]::Round($applicationStopwatch.Elapsed.TotalSeconds, 1)
             }
+            throw
         }
     }
 
-    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{ ApplicationCount = @($apps).Count; CleanupMode = $cleanupMode }
+    $runnerStopwatch.Stop()
+    Write-RunnerLog -LogPath $logPath -Event 'InstallComplete' -Message 'OSD App Runner completed successfully.' -Data @{
+        ApplicationCount = @($apps).Count
+        CleanupMode = $cleanupMode
+        DurationSeconds = [math]::Round($runnerStopwatch.Elapsed.TotalSeconds, 1)
+    }
 
     if ($cleanupMode -eq 'Never') {
         Write-RunnerLog -LogPath $logPath -Event 'CleanupSkipped' -Message 'Runtime source cleanup was skipped by configuration.' -Data @{ Path = $StagedPath; CleanupMode = $cleanupMode }
@@ -396,7 +421,28 @@ catch {
     }
 
     if ($logPath) {
-        Write-RunnerLog -LogPath $logPath -Event 'InstallFailed' -Level 'Error' -Message $_.Exception.Message
+        if ($runnerStopwatch.IsRunning) { $runnerStopwatch.Stop() }
+        $failureMessage = $_.Exception.Message
+        $failureType = if ($failureMessage -match 'SHA-256') {
+            'HashMismatch'
+        }
+        elseif ($failureMessage -match 'not found|does not contain') {
+            'SourceMissing'
+        }
+        elseif ($failureMessage -match 'timeout|exceeded') {
+            'Timeout'
+        }
+        elseif ($failureMessage -match 'exit code') {
+            'InstallerFailed'
+        }
+        else {
+            'RuntimeError'
+        }
+
+        Write-RunnerLog -LogPath $logPath -Event 'InstallFailed' -Level 'Error' -Message $failureMessage -Data @{
+            FailureType = $failureType
+            DurationSeconds = [math]::Round($runnerStopwatch.Elapsed.TotalSeconds, 1)
+        }
     }
 
     exit 1
