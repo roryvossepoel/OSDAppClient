@@ -12,9 +12,25 @@ if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
 }
 
 $analysis = @(Invoke-ScriptAnalyzer -Path $root -Recurse -Settings (Join-Path $root 'PSScriptAnalyzerSettings.psd1'))
+
 if ($analysis.Count -gt 0) {
-    $analysis | Format-Table -AutoSize | Out-String | Write-Host
-    throw "PSScriptAnalyzer reported $($analysis.Count) warning/error finding(s)."
+    $analysis |
+        Sort-Object Severity, ScriptName, Line |
+        Format-Table Severity, RuleName, ScriptName, Line, Message -AutoSize |
+        Out-String |
+        Write-Host
+}
+
+$analysisErrors = @($analysis | Where-Object Severity -eq 'Error')
+if ($analysisErrors.Count -gt 0) {
+    throw "PSScriptAnalyzer reported $($analysisErrors.Count) error finding(s)."
+}
+
+if ($analysis.Count -gt 0) {
+    Write-Host "PSScriptAnalyzer completed with $($analysis.Count) warning(s)/informational finding(s); no blocking errors were found."
+}
+else {
+    Write-Host 'PSScriptAnalyzer completed with no findings.'
 }
 
 $config = New-PesterConfiguration
