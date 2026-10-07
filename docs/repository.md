@@ -159,7 +159,12 @@ Repository validation checks:
 - SHA-256 matches;
 - archive contains `Package/Install.ps1`;
 - architecture is `x64`, `arm64`, or `any`;
-- package manifest Id matches the catalog application Id.
+- package manifest Id matches the catalog application Id;
+- success codes are present and numeric;
+- the archive definition uses `Package.zip` and contains a valid SHA-256;
+- duplicate application/architecture references are detected;
+- orphaned package manifests that are not referenced by `catalog.json` are reported;
+- package size and repository free space are included in the validation output.
 
 ## Built-in or repository?
 
