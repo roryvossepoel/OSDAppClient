@@ -10,7 +10,7 @@ SetupComplete does not import the OSDApps module.
 
 ## Why does Microsoft 365 Apps not refresh in WinPE?
 
-The Office Deployment Tool bootstrapper cannot run in the x64 WinPE environment used during OSD Apps testing because required x86 Windows runtime / side-by-side components are not available there.
+The Office Deployment Tool bootstrapper cannot run in the x64 WinPE environment used during OSDApps testing because required x86 Windows runtime / side-by-side components are not available there.
 
 Built-in Office refresh therefore runs in full Windows.
 
@@ -28,7 +28,7 @@ Repository acquisition does not depend on a vendor bootstrapper and is designed 
 
 ## What happens if the USB is removed too early?
 
-If cache functionality is being used, removing the `OSDCloud` USB early prevents the full-Windows built-in refresh from checking and updating that cache. OSD Apps itself does not require USB media; without an `OSDCloud` USB cache, content can be acquired directly to the local Windows runtime when online.
+If cache functionality is being used, removing the `OSDCloud` USB early prevents the full-Windows built-in refresh from checking and updating that cache. OSDApps itself does not require USB media; without an `OSDCloud` USB cache, content can be acquired directly to the local Windows runtime when online.
 
 Keep the USB connected until OOBE is displayed.
 
@@ -58,7 +58,7 @@ Installed Windows:
 
 ## Why did my runtime source disappear?
 
-That is the default behavior after a successful run.
+The default `CleanupMode` is `OnSuccess`.
 
 Temporary source is stored under:
 
@@ -66,9 +66,9 @@ Temporary source is stored under:
 %SystemRoot%\Temp\OSDApps
 ```
 
-and is removed after successful installation.
+With `CleanupMode OnSuccess`, it is removed after a successful run. Use `CleanupMode Never` to retain it for troubleshooting or performance analysis.
 
-On failure, source is retained automatically for troubleshooting.
+On failure, source is retained automatically.
 
 ## Does a failed installation remove the source?
 
@@ -79,9 +79,9 @@ Runtime source is retained automatically on failure so the staged payload, manif
 
 ## Do built-in apps require an OSDCloud USB stick?
 
-No. `Add-OSDAppMicrosoft365Apps`, `Add-OSDAppTeams`, and `Add-OSDAppAdobeAcrobatUnified` can stage deployment intent without USB media. During SetupComplete, PreInstall downloads the required content directly to the local Windows runtime when online.
+No. Built-in Add cmdlets can stage deployment intent without USB media. During SetupComplete, PreInstall downloads the required content directly to the local Windows runtime when online.
 
-If a USB volume labeled `OSDCloud` is connected, OSD Apps automatically uses it as the cache source and destination and updates it during the built-in refresh phase.
+If a USB volume labeled `OSDCloud` is connected, OSDApps automatically uses it as the cache source and destination and updates it during the built-in refresh phase.
 
 ## What does a blank OSDCloud USB stick need?
 
@@ -105,7 +105,7 @@ The same decisions are logged for later troubleshooting.
 
 Yes. This flow has been validated end to end.
 
-For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps` directory does not need to exist beforehand. During SetupComplete, OSD Apps creates the required structure, populates the Microsoft 365 Apps and Teams caches, stages the payload locally, installs both applications, and cleans up the temporary runtime after success.
+For built-in caching, only the volume label `OSDCloud` is required. The `OSDApps` directory does not need to exist beforehand. During SetupComplete, OSDApps creates the required structure, populates the selected built-in caches, stages payloads locally, installs the application queue, and applies the configured cleanup policy after success.
 
 
 ## What is the difference between catalog.json, CacheCatalog.json, and DeviceManifest.json?
