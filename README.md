@@ -1,6 +1,6 @@
 # OSDApps
 
-OSDApps is a PowerShell module for application deployment with OSDCloud v2.
+OSDApps is a PowerShell module for application deployment with OSDCloud v2, combining self-maintained repository packages, vendor-native built-ins, optional USB caching, and pre-OOBE installation through SetupComplete.
 
 It adds a simple application layer to Windows deployment:
 
