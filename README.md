@@ -195,6 +195,24 @@ This confirms that pre-populating `<OSDCloud>:\OSDApps` is not required for buil
 
 An existing-cache + online refresh run has also been validated: both built-in caches were detected in WinPE, Office synchronized without a version change, Teams reported no package update, and both applications installed successfully from the local staged runtime.
 
+## Validated performance benchmark
+
+OSDApps 0.29.1 has been validated with the same hardware, USB cache and application queue in both cold-cache and warm-cache runs.
+
+![OSDApps cold vs warm cache benchmark](docs/images/cold-warm-benchmark.svg)
+
+| Phase | Cold cache | Warm cache | Difference |
+| --- | ---: | ---: | ---: |
+| PreInstall / refresh | 125.2 s | 40.6 s | -84.6 s |
+| Runner / installations | 330.7 s | 327.4 s | -3.3 s |
+| **Total measured Windows phase** | **455.9 s** | **368.0 s** | **-87.9 s** |
+
+The warm cache reduced the measured Windows phase by about **1 minute 28 seconds**. Almost all of the gain came from PreInstall / refresh; Runner installation time remained effectively unchanged.
+
+This is the expected cache behavior: reduce acquisition and freshness work while keeping the application installation queue stable.
+
+See [Performance](docs/performance.md) for the full benchmark, per-application timings, download observations and reproduction steps.
+
 ## Runtime locations
 
 Temporary deployment source:
@@ -472,6 +490,7 @@ Low-level cache validation, content staging, repository synchronization internal
 - [Built-in applications](docs/built-in-apps.md)
 - [Repository applications](docs/repository.md)
 - [Runtime and cleanup](docs/runtime.md)
+- [Performance](docs/performance.md)
 - [FAQ and troubleshooting](docs/faq.md)
 - [Validation matrix](docs/testing.md)
 - [Changelog](CHANGELOG.md)
