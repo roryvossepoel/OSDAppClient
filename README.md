@@ -389,6 +389,33 @@ Teams
 
 `DeviceManifest.json` contains a single ordered `Apps` array. The runner installs those entries from top to bottom. Re-adding an application moves that full app entry to the end of `Apps` instead of creating a duplicate.
 
+## Cache inventory
+
+The effective OSDCloud cache can be inspected without changing it:
+
+```powershell
+Get-OSDAppCache
+```
+
+The command reports repository and built-in cache entries with fields such as:
+
+```text
+Id
+Source
+Version
+Architecture
+Channel
+Language
+SourcePolicy
+SyncMethod
+LastSynced
+SizeMB
+Valid
+CachePath
+```
+
+This is intended for troubleshooting, validation, and reporting. Repository packages are validated against the SHA-256 stored in `CacheCatalog.json`; built-in entries are checked for the payload files required by their acquisition model.
+
 ## Runtime behavior
 
 The standalone runtime does not require the OSDApps module to be installed in Windows.
@@ -412,6 +439,7 @@ Set-OSDAppConfiguration
 Get-OSDAppConfiguration
 Get-OSDAppCatalog
 Get-OSDApp
+Get-OSDAppCache
 
 Sync-OSDAppRepository
 Sync-OSDAppMicrosoft365Apps
