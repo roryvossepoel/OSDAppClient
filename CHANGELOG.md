@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.28.1
+
+### Changed
+
+- `Set-OSDAppConfiguration` is now silent by default, matching normal PowerShell `Set-*` behavior.
+- Added `-PassThru` to return the effective configuration when desired.
+- Use `Get-OSDAppConfiguration` to display the active configuration explicitly.
+
 ## 0.28.0
 
 ### Changed
