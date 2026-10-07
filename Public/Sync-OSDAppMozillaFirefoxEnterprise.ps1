@@ -83,6 +83,9 @@ function Sync-OSDAppMozillaFirefoxEnterprise {
         Channel             = $Channel
         Architecture        = $Architecture
         Language            = $Language
+        SourcePolicy        = 'Evergreen'
+        SyncMethod          = 'HttpMetadata'
+        Updated             = $updated
         PackageUri          = $PackageUri
         RemoteETag          = $remoteMetadata.ETag
         RemoteLastModified  = $remoteMetadata.LastModified
