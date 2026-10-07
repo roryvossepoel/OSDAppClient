@@ -53,7 +53,7 @@ WinPE / client:
 Installed Windows:
 
 ```text
-%ProgramData%\OSDApps\Logs\Install.log
+%ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
 ## Why did my runtime source disappear?
