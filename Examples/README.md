@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains starting points for building an OSD Apps repository.
+This directory contains starting points for building an OSDApps repository.
 
 ## Repository template
 
