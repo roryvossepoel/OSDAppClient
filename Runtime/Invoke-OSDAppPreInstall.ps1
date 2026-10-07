@@ -9,6 +9,7 @@ Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
 $manifestPath = Join-Path $StagedPath 'DeviceManifest.json'
 $logPath = [Environment]::ExpandEnvironmentVariables('%ProgramData%\OSDApps\Logs\Install.log')
 $logDirectory = Split-Path -Path $logPath -Parent
+$preInstallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 function Write-PreInstallLog {
     param([string]$Event,[ValidateSet('Info','Warning','Error')][string]$Level='Info',[string]$Message,[hashtable]$Data)
@@ -259,6 +260,9 @@ function Sync-PreInstallVendorMsi {
             Cached              = [bool]$usbRoot
             Version             = 'Current'
             Architecture        = $App.Architecture
+            SourcePolicy        = 'Evergreen'
+            SyncMethod          = 'HttpMetadata'
+            Updated             = $updated
             PackageUri          = $PackageUri
             RemoteETag          = $remote.ETag
             RemoteLastModified  = $remote.LastModified
@@ -276,7 +280,7 @@ function Sync-PreInstallVendorMsi {
             Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
         }
 
-        Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message "$DisplayName content is ready for installation." -Data @{ Id=$id; PackageUpdated=$updated; CacheSynchronized=[bool]$usbRoot }
+        Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message "$DisplayName content is ready for installation." -Data @{ Id=$id; PackageUpdated=$updated; CacheSynchronized=[bool]$usbRoot; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata'; DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1) }
     }
     catch {
         if (Test-LocalMsiSource -Root $localRoot) {
@@ -311,6 +315,7 @@ try {
     $networkAvailable=[System.Net.NetworkInformation.NetworkInterface]::GetIsNetworkAvailable()
 
     foreach($app in $builtInApps){
+        $builtInStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         switch($app.Id){
             'Microsoft365Apps' {
                 $localRoot=Join-Path $StagedPath 'BuiltIn\Microsoft365Apps'
@@ -349,7 +354,7 @@ try {
                     if($process.ExitCode -ne 0){throw "Office Deployment Tool exited with code $($process.ExitCode)."}
                     $version=Get-OfficeCacheVersion -OfficeRoot $acquireRoot
                     if(-not $version){throw 'Office acquisition completed but Office\Data does not contain a resolvable version.'}
-                    $cacheInfo=[ordered]@{Id='Microsoft365Apps';Cached=[bool]$usbRoot;Version=$version;Architecture=$app.Architecture;Channel=$app.Channel;ProductId=$app.ProductId;Language=@($app.Language);SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}
+                    $cacheInfo=[ordered]@{Id='Microsoft365Apps';Cached=[bool]$usbRoot;Version=$version;Architecture=$app.Architecture;Channel=$app.Channel;ProductId=$app.ProductId;Language=@($app.Language);SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';Updated=($previous -ne $version);SyncedAt=(Get-Date).ToUniversalTime().ToString('o')}
                     $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'; $cacheInfo | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){
                         Copy-Item -LiteralPath $setupPath -Destination (Join-Path $localRoot 'setup.exe') -Force
@@ -358,7 +363,7 @@ try {
                         Copy-DirectoryReplace -Source (Join-Path $acquireRoot 'Office') -Destination (Join-Path $localRoot 'Office')
                     }
                     $versionChanged = ($previous -ne $version)
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft 365 Apps content is ready for installation.' -Data @{Id='Microsoft365Apps';Version=$version;CacheSynchronized=[bool]$usbRoot;VersionChanged=$versionChanged;SourcePolicy='Evergreen';SyncMethod='OfficeDeploymentTool';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
                     if(Test-LocalOfficeSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Microsoft365Apps';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
@@ -391,9 +396,9 @@ try {
                     $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'Teams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
                     $updated=$false
                     if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'Teams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-TeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-TeamsPackageVersion -Path $msixPath}}
-                    [ordered]@{Id='Teams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+                    [ordered]@{Id='Teams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='Teams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='Teams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
                     if(Test-LocalTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Teams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
@@ -455,6 +460,9 @@ try {
                         Cached=[bool]$usbRoot
                         Version='Current'
                         Architecture=$architecture
+                        SourcePolicy='Evergreen'
+                        SyncMethod='HttpMetadata'
+                        Updated=$updated
                         PackageUri=$packageUri
                         RemoteETag=$remote.ETag
                         RemoteLastModified=$remote.LastModified
@@ -468,7 +476,7 @@ try {
                         Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force
                     }
 
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Adobe Acrobat Unified content is ready for installation.' -Data @{Id='AdobeAcrobatUnified';PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Adobe Acrobat Unified content is ready for installation.' -Data @{Id='AdobeAcrobatUnified';PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 }
                 catch {
                     if(Test-LocalAdobeAcrobatUnifiedSource -Root $localRoot){
@@ -513,9 +521,29 @@ try {
         }
     }
 
-    Write-PreInstallLog -Event 'RefreshComplete' -Message 'Built-in acquisition and refresh completed. Installation will continue.' -Data @{CacheUsed=[bool]$usbRoot}
+    $preInstallStopwatch.Stop()
+    Write-PreInstallLog -Event 'RefreshComplete' -Message 'Built-in acquisition and refresh completed. Installation will continue.' -Data @{CacheUsed=[bool]$usbRoot;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
+    Write-PreInstallLog -Event 'PreInstallComplete' -Message 'PreInstall completed successfully.' -Data @{BuiltInAppCount=@($builtInApps).Count;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     exit 0
 } catch {
-    Write-PreInstallLog -Event 'RefreshFailed' -Level 'Error' -Message $_.Exception.Message
+    if ($preInstallStopwatch.IsRunning) { $preInstallStopwatch.Stop() }
+    $failureMessage = $_.Exception.Message
+    $failureType = if ($failureMessage -match 'no network|not reachable') {
+        'NetworkUnavailable'
+    }
+    elseif ($failureMessage -match 'timeout|exceeded') {
+        'Timeout'
+    }
+    elseif ($failureMessage -match 'no staged|no .*cached|missing') {
+        'CacheOrSourceMissing'
+    }
+    elseif ($failureMessage -match 'metadata|HTTP|response|download') {
+        'RemoteAcquisition'
+    }
+    else {
+        'PreInstallError'
+    }
+
+    Write-PreInstallLog -Event 'RefreshFailed' -Level 'Error' -Message $failureMessage -Data @{FailureType=$failureType;DurationSeconds=[math]::Round($preInstallStopwatch.Elapsed.TotalSeconds,1)}
     exit 1
 }
