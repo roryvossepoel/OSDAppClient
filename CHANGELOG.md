@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.29.0
+
+### Added
+
+- Added `Get-OSDAppCache` to inspect repository and built-in cache entries, including source, version, architecture, last sync time, size, validity, source policy and sync method.
+- Added explicit `PreInstallComplete` and runner duration logging.
+- Added generic per-application `ApplicationInstallComplete` timing events across repository and built-in applications.
+- Added failure categories for PreInstall and Runner failures.
+- Extended repository validation with duplicate references, orphaned manifests, required success codes, archive definition validation, package size and repository free-space information.
+
+### Changed
+
+- Built-in cache metadata now uses consistent `SourcePolicy`, `SyncMethod` and `Updated` fields.
+- Microsoft 365 Apps cache synchronization now records previous/current version state and whether the cached Office build changed.
+- Built-in refresh completion events include per-application refresh duration.
+- Runner success and failure events include total runtime duration.
+
 ## 0.28.1
 
 ### Changed
