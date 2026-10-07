@@ -13,6 +13,9 @@
 
 ### Changed
 
+- Removed the remaining internal `BuiltInApps` staging path from built-in helpers; built-ins now write directly to the single ordered `Apps[]` manifest model.
+- Polished and simplified the README and maintained documentation, removed redundant legacy documentation/templates, and aligned cleanup/source terminology.
+- Updated GitHub Actions to `actions/checkout@v5`, made PSGallery publishing release-only, and included the MIT license in the distributable module.
 - Added a validated cold-cache versus warm-cache performance benchmark and visual, including PreInstall, Runner and per-application timing results.
 - Renamed the default standalone SetupComplete runtime log from `Install.log` to `Runtime.log`.
 - `Client.log` remains the module-side log for staging, synchronization, cache and repository operations.
