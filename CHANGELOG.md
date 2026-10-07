@@ -2,6 +2,14 @@
 
 ## 0.29.1
 
+### Added
+
+- Added Pester coverage for module import/exports, configuration, DeviceManifest queue behavior, repository authoring/validation, and selective cache-catalog merging.
+- Added PSScriptAnalyzer configuration and local validation/build scripts.
+- Added GitHub Actions CI for manifest validation, analysis, Pester tests, example validation, distributable builds, and build artifacts.
+- Added a dedicated PowerShell Gallery publish workflow that validates, builds, checks release-tag/version alignment, and publishes only through the configured GitHub secret.
+- Added PowerShell Gallery metadata and release-process documentation.
+
 ### Changed
 
 - Added a validated cold-cache versus warm-cache performance benchmark and visual, including PreInstall, Runner and per-application timing results.
