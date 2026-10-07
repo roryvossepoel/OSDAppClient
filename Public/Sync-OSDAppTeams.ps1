@@ -82,12 +82,12 @@ function Sync-OSDAppTeams {
 
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Updating cache metadata...' -PercentComplete 95
     [ordered]@{
-        Id='Teams'; Cached=$true; Version=$resolvedVersion; Architecture=$resolvedArchitecture; BootstrapperUri=$BootstrapperUri;
+        Id='Teams'; Cached=$true; Version=$resolvedVersion; Architecture=$resolvedArchitecture; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata'; Updated=$updated; BootstrapperUri=$BootstrapperUri;
         RemoteETag=$remoteMetadata.ETag; RemoteLastModified=$remoteMetadata.LastModified; RemoteContentLength=$remoteMetadata.ContentLength;
         RemoteFinalUri=$remoteMetadata.FinalUri; SyncedAt=(Get-Date).ToUniversalTime().ToString('o')
     } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version=$resolvedVersion; Architecture=$resolvedArchitecture; Updated=$updated; Path=$root }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'BuiltInSyncComplete' -Message 'Microsoft Teams built-in cache synchronized.' -Data @{ Version=$resolvedVersion; Architecture=$resolvedArchitecture; Updated=$updated; Path=$root; SourcePolicy='Evergreen'; SyncMethod='HttpMetadata' }
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Status 'Completed.' -PercentComplete 100
     Start-Sleep -Milliseconds 350
     Write-Progress -Id 10 -Activity 'Synchronizing Microsoft Teams cache' -Completed
