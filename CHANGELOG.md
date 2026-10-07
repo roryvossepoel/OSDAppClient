@@ -13,7 +13,6 @@
 ### Changed
 
 - Built-in cache metadata now uses consistent `SourcePolicy`, `SyncMethod` and `Updated` fields.
-- Microsoft 365 Apps cache synchronization now records previous/current version state and whether the cached Office build changed.
 - Built-in refresh completion events include per-application refresh duration.
 - Runner success and failure events include total runtime duration.
 
