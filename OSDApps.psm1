@@ -14,6 +14,7 @@ Export-ModuleMember -Function @(
     'Get-OSDAppConfiguration',
     'Get-OSDAppCatalog',
     'Get-OSDApp',
+    'Get-OSDAppCache',
     'Sync-OSDAppRepository',
     'Sync-OSDAppMicrosoft365Apps',
     'Sync-OSDAppTeams',
