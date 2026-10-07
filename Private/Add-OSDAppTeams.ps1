@@ -54,12 +54,8 @@ function Add-OSDAppTeamsInternal {
         $deviceManifest = [pscustomobject]@{ SchemaVersion='1.0'; StagedAt=(Get-Date).ToUniversalTime().ToString('o'); Apps=@() }
     }
 
-    $builtInApps = @()
-    if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') {
-        $builtInApps = @($deviceManifest.BuiltInApps | Where-Object { $_.Id -ne 'Teams' })
-    }
-
-    $builtInApps += [pscustomobject]@{
+    $manifestApp = [pscustomobject]@{
+        Source = 'BuiltIn'
         Id = 'Teams'
         DisplayName = 'Microsoft Teams'
         Type = 'TeamsBootstrapper'
@@ -72,13 +68,6 @@ function Add-OSDAppTeamsInternal {
         CachePreferred = [bool]$CachePath
     }
 
-    if ($deviceManifest.PSObject.Properties.Name -contains 'BuiltInApps') {
-        $deviceManifest.BuiltInApps = $builtInApps
-    } else {
-        $deviceManifest | Add-Member -NotePropertyName BuiltInApps -NotePropertyValue $builtInApps
-    }
-    $manifestApp = @($builtInApps | Where-Object { $_.Id -eq 'Teams' } | Select-Object -First 1)[0]
-    $manifestApp | Add-Member -NotePropertyName Source -NotePropertyValue 'BuiltIn' -Force
     $deviceManifest = Set-OSDAppManifestApp -Manifest $deviceManifest -App $manifestApp
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
