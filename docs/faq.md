@@ -139,3 +139,33 @@ Built-in application payloads are never bundled with, mirrored by, or redistribu
 An `OSDCloud` USB may cache that vendor content locally for reuse, offline deployment, bandwidth reduction, and faster installation, but OSDApps itself does not act as a software distribution source.
 
 This restriction applies to built-ins only. Repository applications are controlled by the repository owner, who is responsible for package provenance, hosting, licensing, and redistribution rights.
+
+
+## Can I pre-cache an OSDCloud USB stick?
+
+Yes. The public `Sync-OSDApp*` commands can be used outside a deployment to pre-populate or maintain an OSDCloud cache.
+
+Repository applications:
+
+```powershell
+Sync-OSDAppRepository
+```
+
+Built-in applications:
+
+```powershell
+Sync-OSDAppMicrosoft365Apps
+Sync-OSDAppTeams
+Sync-OSDAppAdobeAcrobatUnified
+Sync-OSDAppGoogleChromeEnterprise
+Sync-OSDAppMozillaFirefoxEnterprise
+```
+
+This is useful when preparing deployment media in advance, refreshing frequently used application payloads before a deployment window, or validating vendor acquisition independently from the OSD flow.
+
+The normal deployment commands do not require this pre-cache step:
+
+- repository applications are synchronized automatically when requested through `Add-OSDApp`;
+- built-in applications refresh automatically during full-Windows PreInstall.
+
+Pre-caching is therefore an optimization and maintenance workflow, not a deployment requirement.
