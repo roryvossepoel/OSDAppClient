@@ -529,3 +529,8 @@ These helpers create the required folders and JSON, build the fixed `Package.zip
 The repository itself remains static content and can be hosted on any HTTP/HTTPS endpoint that preserves the documented paths. No separate OSDAppRepo module is required.
 
 See [Repository applications](docs/repository.md) and [Examples](Examples/README.md).
+
+
+## License
+
+OSDApps is licensed under the [MIT License](LICENSE).
