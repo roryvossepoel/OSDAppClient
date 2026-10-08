@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.29.1'
+    ModuleVersion     = '0.29.2'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -39,7 +39,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.29.1: runtime diagnostics, cache inventory, repository validation, cold/warm benchmark, automated tests/CI, release workflow, and MIT licensing. See CHANGELOG.md for details.'
+            ReleaseNotes = '0.29.2: repository applications stage without USB cache using an offline Windows disk fallback; missing cache inventory is non-fatal.'
             RequireLicenseAcceptance = $false
         }
     }

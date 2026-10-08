@@ -4,7 +4,14 @@ function Get-OSDAppCache {
         [string[]]$Name
     )
 
-    $cachePath = Get-OSDAppCachePath
+    # Cache inspection is optional when no OSDCloud media is attached.
+    try {
+        $cachePath = Get-OSDAppCachePath
+    }
+    catch {
+        Write-Verbose 'No OSDCloud cache volume is available.'
+        return
+    }
     $results = [System.Collections.Generic.List[object]]::new()
 
     $cacheCatalogPath = Join-Path $cachePath 'CacheCatalog.json'
