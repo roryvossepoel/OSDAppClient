@@ -1,0 +1,111 @@
+{
+  "SchemaVersion": 1,
+  "Project": "OSDApps",
+  "Applications": [
+    {
+      "Id": "Microsoft365Apps",
+      "DisplayName": "Microsoft 365 Apps",
+      "Source": "BuiltIn",
+      "Vendor": "Microsoft",
+      "Acquisition": "OfficeDeploymentTool",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppMicrosoft365Apps",
+      "SyncCommand": "Sync-OSDAppMicrosoft365Apps",
+      "Architectures": [
+        "64",
+        "32"
+      ],
+      "DefaultArchitecture": "64",
+      "Channels": [
+        "Current",
+        "MonthlyEnterprise",
+        "SemiAnnual",
+        "CurrentPreview",
+        "SemiAnnualPreview",
+        "BetaChannel"
+      ],
+      "DefaultChannel": "Current",
+      "ProductIds": [
+        "O365ProPlusRetail",
+        "O365BusinessRetail"
+      ],
+      "CachePath": "BuiltIn/Microsoft365Apps",
+      "RepositoryAlternative": true
+    },
+    {
+      "Id": "Teams",
+      "DisplayName": "Microsoft Teams",
+      "Source": "BuiltIn",
+      "Vendor": "Microsoft",
+      "Acquisition": "TeamsBootstrapper",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppTeams",
+      "SyncCommand": "Sync-OSDAppTeams",
+      "Architectures": [
+        "x86",
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "Auto",
+      "CachePath": "BuiltIn/Teams",
+      "RepositoryAlternative": true
+    },
+    {
+      "Id": "AdobeAcrobatUnified",
+      "DisplayName": "Adobe Acrobat Unified",
+      "Source": "BuiltIn",
+      "Vendor": "Adobe",
+      "Acquisition": "VendorZip",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppAdobeAcrobatUnified",
+      "SyncCommand": "Sync-OSDAppAdobeAcrobatUnified",
+      "Architectures": [
+        "x64",
+        "x86"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/AdobeAcrobatUnified/<architecture>",
+      "RepositoryAlternative": true
+    },
+    {
+      "Id": "GoogleChromeEnterprise",
+      "DisplayName": "Google Chrome Enterprise",
+      "Source": "BuiltIn",
+      "Vendor": "Google",
+      "Acquisition": "VendorMsi",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppGoogleChromeEnterprise",
+      "SyncCommand": "Sync-OSDAppGoogleChromeEnterprise",
+      "Architectures": [
+        "x64",
+        "x86"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/GoogleChromeEnterprise/<architecture>",
+      "RepositoryAlternative": true
+    },
+    {
+      "Id": "MozillaFirefoxEnterprise",
+      "DisplayName": "Mozilla Firefox Enterprise",
+      "Source": "BuiltIn",
+      "Vendor": "Mozilla",
+      "Acquisition": "VendorMsi",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppMozillaFirefoxEnterprise",
+      "SyncCommand": "Sync-OSDAppMozillaFirefoxEnterprise",
+      "Architectures": [
+        "x64",
+        "x86"
+      ],
+      "DefaultArchitecture": "x64",
+      "Channels": [
+        "Rapid",
+        "ESR"
+      ],
+      "DefaultChannel": "Rapid",
+      "DefaultLanguage": "en-US",
+      "CachePath": "BuiltIn/MozillaFirefoxEnterprise/<channel>/<architecture>/<language>",
+      "RepositoryAlternative": true
+    }
+  ]
+}
