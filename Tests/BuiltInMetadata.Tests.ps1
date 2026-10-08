@@ -32,6 +32,7 @@ Describe 'Built-in metadata' {
             $app.SyncCommand | Should -Not -BeNullOrEmpty
             @($app.Architectures).Count | Should -BeGreaterThan 0
             $app.CachePath | Should -Not -BeNullOrEmpty
+            $app.IconUrl | Should -Match '^https://'
         }
     }
 
