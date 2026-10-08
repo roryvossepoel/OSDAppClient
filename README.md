@@ -12,6 +12,29 @@ It adds a simple application layer to Windows deployment:
 
 ![OSDApps end-to-end architecture](docs/images/osdapps-architecture.svg)
 
+## Install from PowerShell Gallery
+
+For **WinPE and Windows PowerShell 5.1**, use PowerShellGet:
+
+```powershell
+Install-Module OSDApps -SkipPublisherCheck
+Import-Module OSDApps
+```
+
+To install a specific version:
+
+```powershell
+Install-Module OSDApps -RequiredVersion 0.29.1 -SkipPublisherCheck
+```
+
+`Install-PSResource` is the newer PSResourceGet equivalent, but PSResourceGet is not normally available by default in Windows PowerShell 5.1 / WinPE. For OSDCloud and WinPE scenarios, `Install-Module` is therefore the recommended installation method.
+
+On systems where Microsoft.PowerShell.PSResourceGet is available, the equivalent command is:
+
+```powershell
+Install-PSResource OSDApps
+```
+
 ## Deployment model
 
 OSDApps supports two application sources.
