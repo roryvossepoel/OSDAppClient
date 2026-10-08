@@ -3,7 +3,7 @@ function Add-OSDAppTeamsInternal {
     param(
         [string]$CachePath,
         [Parameter(Mandatory)][string]$WindowsPath,
-        [ValidateSet('Auto','x86','x64','arm64')][string]$Architecture = 'Auto',
+        [ValidateSet('x86','x64','arm64')][string]$Architecture = 'x64',
         [bool]$InstallMeetingAddin = $false,
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
         [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
@@ -15,11 +15,6 @@ function Add-OSDAppTeamsInternal {
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
     $resolvedArchitecture = $Architecture
-    if ($resolvedArchitecture -eq 'Auto') {
-        if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { $resolvedArchitecture = 'arm64' }
-        elseif ($env:PROCESSOR_ARCHITECTURE -eq 'x86') { $resolvedArchitecture = 'x86' }
-        else { $resolvedArchitecture = 'x64' }
-    }
 
     $msixUri = switch ($resolvedArchitecture) {
         'x86' { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060' }
