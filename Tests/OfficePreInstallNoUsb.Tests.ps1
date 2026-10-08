@@ -48,6 +48,6 @@ Describe 'Microsoft 365 Apps PreInstall configuration handling' {
     It 'uses the guarded helper in the Office PreInstall acquisition route' {
         $runtime = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
         $runtime | Should -Match 'Copy-OfficeConfigurationToCache -LocalConfig \$localConfig -AcquireConfig \$acquireConfig'
-        $runtime | Should -CNotMatch 'Copy-Item -LiteralPath \$localConfig -Destination \$acquireConfig'
+        [regex]::IsMatch($runtime, 'Copy-Item -LiteralPath \$localConfig -Destination \$acquireConfig') | Should -BeFalse
     }
 }
