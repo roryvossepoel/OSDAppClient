@@ -148,6 +148,8 @@ Repository
 
 See [Built-in applications](docs/built-in-apps.md).
 
+Machine-readable built-in metadata is published in [`metadata/builtins.json`](metadata/builtins.json). This provides a stable public source for tooling such as repository browsers and dashboards without having to parse PowerShell source files.
+
 ## Repository applications
 
 An OSDApps repository is static content owned and maintained by the organization. No repository service or separate module is required.
