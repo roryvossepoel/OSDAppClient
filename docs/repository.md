@@ -7,6 +7,8 @@ OSD Apps repositories are static content. A separate repository service or Power
 
 OSDApps defines the repository contract, provides examples, and includes optional authoring helpers to create and validate the required folders and JSON.
 
+Application names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDApps applications and are not distributed or maintained by this project.
+
 ## Repository layout
 
 ```text
