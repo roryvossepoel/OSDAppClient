@@ -19,7 +19,7 @@ Describe 'Office XML generation' {
     It 'generates Office, Visio and Project with Dutch language and updates disabled' {
         InModuleScope OSDApps {
             $path = Join-Path $TestDrive 'multiple.xml'
-            New-OSDAppOfficeConfiguration -Path $path -IncludeVisio -IncludeProject -Language nl-nl -Channel MonthlyEnterprise -Architecture 32 -UpdatesEnabled:$false -ExcludeApp Access
+            New-OSDAppOfficeConfiguration -Path $path -IncludeVisio -IncludeProject -Language nl-nl -Channel MonthlyEnterprise -Architecture x86 -UpdatesEnabled:$false -ExcludeApp Access
             [xml]$xml = Get-Content -LiteralPath $path -Raw
             $xml.Configuration.Add.OfficeClientEdition | Should -Be '32'
             $xml.Configuration.Add.Channel | Should -Be 'MonthlyEnterprise'
