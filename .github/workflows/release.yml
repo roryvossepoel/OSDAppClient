@@ -1,23 +1,23 @@
-name: Release OSDApps
+name: Create GitHub Release
 
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Release version, for example 0.29.1. Leave empty to use ModuleVersion.'
+      expected_version:
+        description: 'Expected release version, for example 0.29.1. Leave empty to use ModuleVersion.'
         required: false
         type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: github-release
+  cancel-in-progress: false
+
 jobs:
   release:
-    name: Create GitHub release
     runs-on: windows-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
 
     steps:
       - name: Checkout
@@ -25,55 +25,90 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Resolve and validate version
-        id: version
+      - name: Verify release source
         shell: pwsh
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if ($env:SOURCE_REF -ne 'main') {
+              throw "GitHub releases must be created from the main branch. Current ref: '$env:SOURCE_REF'."
+          }
+
+          $remoteMain = (git rev-parse origin/main).Trim()
+          if ($remoteMain -ne $env:SOURCE_SHA) {
+              throw "Release source '$env:SOURCE_SHA' is not the current origin/main commit '$remoteMain'."
+          }
+
+          Write-Host "Release source matches origin/main: $env:SOURCE_SHA"
+
+      - name: Resolve and validate version
+        id: release
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
         run: |
           $ErrorActionPreference = 'Stop'
 
           $manifest = Test-ModuleManifest ./OSDApps.psd1 -ErrorAction Stop
           $moduleVersion = $manifest.Version.ToString()
-          $requestedVersion = '${{ inputs.version }}'.Trim()
+          $expectedVersion = [string]$env:EXPECTED_VERSION
 
-          if ([string]::IsNullOrWhiteSpace($requestedVersion)) {
-              $requestedVersion = $moduleVersion
+          if ([string]::IsNullOrWhiteSpace($expectedVersion)) {
+              $expectedVersion = $moduleVersion
           }
 
-          $requestedVersion = $requestedVersion -replace '^v',''
+          $expectedVersion = $expectedVersion.Trim() -replace '^v',''
 
-          if ($requestedVersion -ne $moduleVersion) {
-              throw "Requested release version '$requestedVersion' does not match ModuleVersion '$moduleVersion'."
+          if ($expectedVersion -ne $moduleVersion) {
+              throw "Expected version '$expectedVersion' does not match ModuleVersion '$moduleVersion'."
           }
 
-          $tag = "v$requestedVersion"
+          $tag = "v$expectedVersion"
 
-          "version=$requestedVersion" >> $env:GITHUB_OUTPUT
+          "release_version=$expectedVersion" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
-          Write-Host "Release version: $requestedVersion"
-          Write-Host "Release tag:     $tag"
+          Write-Host "Resolved release: $tag"
 
-      - name: Verify tag does not already exist
+      - name: Check existing tag and release
+        id: existing
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
           $ErrorActionPreference = 'Stop'
-          gh release view $env:RELEASE_TAG --repo '${{ github.repository }}' 2>$null
-          if ($LASTEXITCODE -eq 0) {
-              throw "Release '$env:RELEASE_TAG' already exists."
+
+          git fetch --tags --force
+          $tagExists = -not [string]::IsNullOrWhiteSpace((git tag --list $env:TAG))
+          "tag_exists=$($tagExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+          if ($tagExists) {
+              $tagCommit = (git rev-list -n 1 $env:TAG).Trim()
+              if ($tagCommit -ne $env:GITHUB_SHA) {
+                  throw "Tag '$env:TAG' already exists at commit '$tagCommit' instead of current release commit '$env:GITHUB_SHA'."
+              }
+
+              Write-Host "Tag '$env:TAG' already exists at the expected commit."
+          }
+          else {
+              Write-Host "Tag '$env:TAG' does not exist yet."
           }
 
-          git ls-remote --exit-code --tags origin "refs/tags/$env:RELEASE_TAG" *> $null
+          $releaseExists = $false
+          gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json tagName *> $null
           if ($LASTEXITCODE -eq 0) {
-              throw "Tag '$env:RELEASE_TAG' already exists."
+              $releaseExists = $true
+              Write-Host "GitHub release '$env:TAG' already exists. Treating this workflow run as an idempotent success."
           }
 
-          # git/gh return non-zero when the tag/release does not exist; that is the expected state here.
-          exit 0
+          "release_exists=$($releaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Install validation dependencies
+        if: steps.existing.outputs.release_exists != 'true'
         shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
@@ -81,27 +116,39 @@ jobs:
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 
       - name: Validate release candidate
+        if: steps.existing.outputs.release_exists != 'true'
         shell: pwsh
         run: |
           ./build/Test-Module.ps1
 
-      - name: Create tag and GitHub release
+      - name: Create GitHub release
+        if: steps.existing.outputs.release_exists != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
+          TAG_EXISTS: ${{ steps.existing.outputs.tag_exists }}
         run: |
           $ErrorActionPreference = 'Stop'
 
-          gh release create $env:RELEASE_TAG `
-              --repo '${{ github.repository }}' `
-              --target '${{ github.sha }}' `
-              --title "OSDApps v$env:RELEASE_VERSION" `
-              --generate-notes
+          $arguments = @(
+              'release', 'create', $env:TAG,
+              '--repo', $env:GITHUB_REPOSITORY,
+              '--title', "OSDApps v$env:RELEASE_VERSION",
+              '--generate-notes'
+          )
 
-  publish:
-    name: Publish release to PowerShell Gallery
-    needs: release
-    uses: ./.github/workflows/publish.yml
-    secrets: inherit
+          if ($env:TAG_EXISTS -eq 'true') {
+              $arguments += '--verify-tag'
+          }
+          else {
+              $arguments += @('--target', $env:GITHUB_SHA)
+          }
+
+          & gh @arguments
+          if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release creation failed with exit code $LASTEXITCODE."
+          }
+
+          Write-Host "Created GitHub release $env:TAG."
