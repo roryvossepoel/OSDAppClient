@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.30.0
+
+### Added
+
+- Added optional Visio Professional and Project Professional products via `-IncludeVisio` and `-IncludeProject`.
+- Added Office `-UpdatesEnabled`, default true, to Add and Sync commands.
+- Centralized Office XML generation and retained custom `-ConfigurationXml` support.
+
+### Changed
+
+- Standardized architectures as `x86` / `x64` / `arm64` where offered; all built-ins default to `x64`.
+- Office XML translates x86/x64 into required ODT OfficeClientEdition 32/64.
+- Removed Teams Auto architecture selection and old numeric Office architecture parameters.
+- Updated built-in metadata and documentation.
+
+### Validation
+
+- Added Office configuration and architecture regression tests. Full SetupComplete installation remains to be tested.
+
 ## 0.29.3
 
 ### Fixed
