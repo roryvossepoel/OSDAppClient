@@ -9,6 +9,8 @@ OSDApps defines the repository contract, provides examples, and includes optiona
 
 Application names used in examples, such as `OmnissaHorizonClient` and `NotepadPlusPlus`, represent packages from an organization's own repository. They are not built-in OSDApps applications and are not distributed or maintained by this project.
 
+Repository synchronization is a **WinPE operation**. OSDApps resolves the requested repository package, refreshes or reuses the optional OSDCloud USB cache, validates the package, and stages it into the offline Windows installation before the first boot. SetupComplete then installs the staged local package; repository content is not refreshed again in full Windows.
+
 ## Repository layout
 
 ```text
@@ -98,6 +100,24 @@ Package.zip
 ```
 
 `Install.ps1` must be unattended and suitable for execution during SetupComplete. The runner starts it with the extracted `Package` directory as its working directory.
+
+## Deployment lifecycle
+
+```text
+WinPE
+→ resolve catalog.json
+→ resolve requested app manifest
+→ synchronize/reuse OSDCloud USB cache
+→ validate SHA-256
+→ stage Package.zip to offline Windows
+
+First boot / SetupComplete
+→ validate staged package again
+→ extract Package.zip
+→ run Package/Install.ps1
+```
+
+This makes repository applications deterministic at first boot: the package that was selected and cached in WinPE is the package that SetupComplete installs.
 
 ## Creating a repository
 
