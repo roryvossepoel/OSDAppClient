@@ -21,7 +21,21 @@ function Add-OSDApp {
             if($app -ieq 'MozillaFirefoxEnterprise'){throw "'MozillaFirefoxEnterprise' is a built-in application. Use Add-OSDAppMozillaFirefoxEnterprise instead."}
         }
 
-        $cachePath=Get-OSDAppCachePath
+# USB cache is optional. When absent, stage repository archives in
+        # a temporary cache on the offline Windows disk instead.
+        $cachePath = $null
+        try {
+            $cachePath = Get-OSDAppCachePath
+        }
+        catch {
+            Write-Verbose 'OSDCloud cache not available; using the offline Windows disk.'
+        }
+
+        $resolvedWindowsPath = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
+        if (-not $cachePath) {
+            $cachePath = Join-Path $resolvedWindowsPath 'Windows\Temp\OSDApps\RepositoryCache'
+            Write-Verbose ("Local repository cache: {0}" -f $cachePath)
+        }
 
         $sourceUri = (Get-OSDAppConfiguration).CatalogUri
         if (-not $sourceUri) {
@@ -42,7 +56,6 @@ function Add-OSDApp {
             }
         }
 
-        $resolvedWindowsPath=Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
         $stagedRelativePath='Windows\Temp\OSDApps'
 
         if($PSCmdlet.ShouldProcess(($apps -join ', '),"Stage repository applications for SetupComplete on $resolvedWindowsPath")){
