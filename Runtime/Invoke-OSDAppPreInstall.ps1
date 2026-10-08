@@ -169,6 +169,24 @@ function Copy-DirectoryReplace {
     Move-Item -LiteralPath $temp -Destination $Destination -Force
 }
 
+# Avoid PowerShell's self-copy error when the OSDCloud USB cache is absent.
+# In that case the acquisition directory is already the local staged directory.
+function Copy-OfficeConfigurationToCache {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$LocalConfig,
+        [Parameter(Mandatory)][string]$AcquireConfig
+    )
+
+    $sourcePath = [System.IO.Path]::GetFullPath($LocalConfig)
+    $destinationPath = [System.IO.Path]::GetFullPath($AcquireConfig)
+    if ([string]::Equals($sourcePath, $destinationPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return
+    }
+
+    Copy-Item -LiteralPath $LocalConfig -Destination $AcquireConfig -Force -ErrorAction Stop
+}
+
 function Test-LocalOfficeSource {
     param([string]$Root)
     return ((Test-Path -LiteralPath (Join-Path $Root 'setup.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'configuration.xml') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'Office\Data') -PathType Container))
@@ -340,7 +358,7 @@ try {
 
                 try {
                     $acquireConfig=Join-Path $acquireRoot 'configuration.xml'
-                    Copy-Item -LiteralPath $localConfig -Destination $acquireConfig -Force
+                    Copy-OfficeConfigurationToCache -LocalConfig $localConfig -AcquireConfig $acquireConfig
                     $setupPath=Join-Path $acquireRoot 'setup.exe'
                     $odtUri=if($app.OfficeDeploymentToolUri){[string]$app.OfficeDeploymentToolUri}else{'https://officecdn.microsoft.com/pr/wsus/setup.exe'}
                     if(-not (Test-Path -LiteralPath $setupPath -PathType Leaf)){Save-PreInstallDownload -Uri $odtUri -DestinationPath $setupPath -Id 'Microsoft365Apps' -Description 'Office Deployment Tool' -TimeoutMinutes 5}
