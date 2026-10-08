@@ -30,7 +30,8 @@
         "O365BusinessRetail"
       ],
       "CachePath": "BuiltIn/Microsoft365Apps",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://cdn.simpleicons.org/microsoftoffice"
     },
     {
       "Id": "Teams",
@@ -48,7 +49,8 @@
       ],
       "DefaultArchitecture": "Auto",
       "CachePath": "BuiltIn/Teams",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://cdn.simpleicons.org/microsoftteams"
     },
     {
       "Id": "AdobeAcrobatUnified",
@@ -65,7 +67,8 @@
       ],
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/AdobeAcrobatUnified/<architecture>",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://cdn.simpleicons.org/adobeacrobatreader"
     },
     {
       "Id": "GoogleChromeEnterprise",
@@ -82,7 +85,8 @@
       ],
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/GoogleChromeEnterprise/<architecture>",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://cdn.simpleicons.org/googlechrome"
     },
     {
       "Id": "MozillaFirefoxEnterprise",
@@ -105,7 +109,8 @@
       "DefaultChannel": "Rapid",
       "DefaultLanguage": "en-US",
       "CachePath": "BuiltIn/MozillaFirefoxEnterprise/<channel>/<architecture>/<language>",
-      "RepositoryAlternative": true
+      "RepositoryAlternative": true,
+      "IconUrl": "https://cdn.simpleicons.org/firefoxbrowser"
     }
   ]
 }
