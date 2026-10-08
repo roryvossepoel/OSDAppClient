@@ -30,7 +30,7 @@ Import-Module OSDApps
 To install a specific version:
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.29.1 -SkipPublisherCheck
+Install-Module OSDApps -SkipPublisherCheck
 ```
 
 `Install-PSResource` is the newer PSResourceGet equivalent, but PSResourceGet is not normally available by default in Windows PowerShell 5.1 / WinPE. For OSDCloud and WinPE scenarios, `Install-Module` is therefore the recommended installation method.
