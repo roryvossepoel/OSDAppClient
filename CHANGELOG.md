@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.29.3
+
+### Fixed
+
+- Fixed Microsoft 365 Apps PreInstall failure when no OSDCloud USB cache is attached: the local `configuration.xml` was copied onto itself, triggering a terminating PowerShell error before any applications could install.
+- PreInstall now skips copying the Office configuration when the source and destination resolve to the same file, while still copying between distinct USB and local paths.
+- Prevents this specific failure from prematurely terminating `SetupComplete.cmd` before the OSDApps application runner starts.
+
+### Validation
+
+- Added regression tests for identical and distinct Office configuration paths, including actual file content checks.
+- Automated regression coverage includes both identical and distinct Office configuration paths. A full six-application end-to-end deployment without USB caching remains to be confirmed.
+
 ## 0.29.2
 
 ### Fixed
