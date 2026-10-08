@@ -1,0 +1,107 @@
+name: Release OSDApps
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, for example 0.29.1. Leave empty to use ModuleVersion.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub release
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve and validate version
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $manifest = Test-ModuleManifest ./OSDApps.psd1 -ErrorAction Stop
+          $moduleVersion = $manifest.Version.ToString()
+          $requestedVersion = '${{ inputs.version }}'.Trim()
+
+          if ([string]::IsNullOrWhiteSpace($requestedVersion)) {
+              $requestedVersion = $moduleVersion
+          }
+
+          $requestedVersion = $requestedVersion -replace '^v',''
+
+          if ($requestedVersion -ne $moduleVersion) {
+              throw "Requested release version '$requestedVersion' does not match ModuleVersion '$moduleVersion'."
+          }
+
+          $tag = "v$requestedVersion"
+
+          "version=$requestedVersion" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Release version: $requestedVersion"
+          Write-Host "Release tag:     $tag"
+
+      - name: Verify tag does not already exist
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release view $env:RELEASE_TAG --repo '${{ github.repository }}' 2>$null
+          if ($LASTEXITCODE -eq 0) {
+              throw "Release '$env:RELEASE_TAG' already exists."
+          }
+
+          git ls-remote --exit-code --tags origin "refs/tags/$env:RELEASE_TAG" *> $null
+          if ($LASTEXITCODE -eq 0) {
+              throw "Tag '$env:RELEASE_TAG' already exists."
+          }
+
+          # git/gh return non-zero when the tag/release does not exist; that is the expected state here.
+          exit 0
+
+      - name: Install validation dependencies
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Validate release candidate
+        shell: pwsh
+        run: |
+          ./build/Test-Module.ps1
+
+      - name: Create tag and GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          gh release create $env:RELEASE_TAG `
+              --repo '${{ github.repository }}' `
+              --target '${{ github.sha }}' `
+              --title "OSDApps v$env:RELEASE_VERSION" `
+              --generate-notes
+
+  publish:
+    name: Publish release to PowerShell Gallery
+    needs: release
+    uses: ./.github/workflows/publish.yml
+    secrets: inherit
