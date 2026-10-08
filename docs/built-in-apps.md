@@ -51,7 +51,7 @@ Each built-in has its own cmdlet and parameter set.
 ```powershell
 Sync-OSDAppMicrosoft365Apps `
     -Channel Current `
-    -Architecture 64 `
+    -Architecture x64 `
     -ProductId O365ProPlusRetail `
     -Language nl-nl,en-us `
     -SharedComputerLicensing $true
@@ -80,9 +80,11 @@ O365BusinessRetail
 Supported architectures:
 
 ```text
-64
-32
+x64 (default)
+x86
 ```
+
+ODT configuration XML still uses OfficeClientEdition=64/32.
 
 The Office cache contains the Office Deployment Tool, `configuration.xml`, and `Office\Data`.
 
@@ -116,9 +118,8 @@ Sync-OSDAppTeams -Architecture x64
 Supported architectures:
 
 ```text
-Auto
+x64 (default)
 x86
-x64
 arm64
 ```
 
