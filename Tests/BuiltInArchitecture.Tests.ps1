@@ -12,12 +12,12 @@ Describe 'Built-in application architecture contracts' {
                 $command = Get-Command $name
                 $command.Parameters['Architecture'].Attributes |
                     Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } | Out-Null
-                $command.Definition | Should -Match "\\$Architecture\s*=\s*'x64'"
+                $command.Definition | Should -Match '\$Architecture\s*=\s*''x64'''
             }
         }
     }
 
-    It 'exposes only the advertised architectues' {
+    It 'exposes only the advertised architectures' {
         foreach ($app in $metadata.Applications) {
             foreach ($name in @($app.AddCommand,$app.SyncCommand)) {
                 $command = Get-Command $name
