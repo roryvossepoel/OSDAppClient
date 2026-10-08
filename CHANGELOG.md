@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added machine-readable `metadata/builtins.json` for external tooling and repository viewers, with Pester validation against exported built-in commands.
 - Added the MIT license and PowerShell Gallery license metadata.
 - Added Pester coverage for module import/exports, configuration, DeviceManifest queue behavior, repository authoring/validation, and selective cache-catalog merging.
 - Added PSScriptAnalyzer configuration and local validation/build scripts.
