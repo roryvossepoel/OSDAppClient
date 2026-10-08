@@ -11,7 +11,7 @@
 ### Validation
 
 - Added regression tests for identical and distinct Office configuration paths, including actual file content checks.
-- Pester/CI validation is required before release; a full six-application end-to-end deployment without USB caching remains to be confirmed.
+- Automated regression coverage includes both identical and distinct Office configuration paths. A full six-application end-to-end deployment without USB caching remains to be confirmed.
 
 ## 0.29.2
 
