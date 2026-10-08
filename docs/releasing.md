@@ -50,20 +50,34 @@ Git tag        v0.29.1
 ModuleVersion  0.29.1
 ```
 
-## PowerShell Gallery publish flow
+## Recommended release flow
 
-Publishing a GitHub Release triggers:
+Use the **Release OSDApps** workflow from GitHub Actions.
+
+Enter a version such as `0.29.1`, or leave the version field empty to use the current `ModuleVersion`.
+
+The workflow performs the complete release chain:
 
 ```text
-checkout
-→ install Pester + PSScriptAnalyzer
-→ run all validation
+resolve ModuleVersion
+→ validate requested version
+→ ensure tag/release does not already exist
+→ run PSScriptAnalyzer + Pester
+→ create tag v<version>
+→ create GitHub Release
 → build dist/OSDApps
-→ compare release tag to ModuleVersion
-→ Publish-Module to PSGallery
+→ publish to PowerShell Gallery
 ```
 
-If validation fails, the package is not published.
+The GitHub Release is created from the exact commit on which the workflow was started.
+
+If any validation step fails, the release or Gallery package is not published.
+
+## Direct release trigger
+
+The **Publish PowerShell Gallery** workflow also listens for manually created GitHub Releases. This remains useful when a release is created directly through the GitHub Releases UI.
+
+The normal and recommended path is the **Release OSDApps** workflow because it handles the tag, GitHub Release, validation, and Gallery publication as one controlled operation.
 
 ## Local validation
 
@@ -98,4 +112,4 @@ That directory is the exact module directory supplied to `Publish-Module`.
 
 The CI workflow never publishes a package.
 
-Only publishing a GitHub Release can trigger the dedicated `Publish PowerShell Gallery` workflow. The API key is only exposed to the publish step through the GitHub Actions secret.
+The PowerShell Gallery API key is only exposed to the publish job through the GitHub Actions secret. Normal CI never has access to the Gallery publishing step.
