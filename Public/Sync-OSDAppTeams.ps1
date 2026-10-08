@@ -1,8 +1,8 @@
 function Sync-OSDAppTeams {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [ValidateSet('Auto','x86','x64','arm64')]
-        [string]$Architecture = 'Auto',
+        [ValidateSet('x86','x64','arm64')]
+        [string]$Architecture = 'x64',
         [double]$MinimumFreeSpaceGB = 2,
         [string]$BootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'
     )
@@ -20,11 +20,6 @@ function Sync-OSDAppTeams {
     New-Item -ItemType Directory -Path $root -Force | Out-Null
 
     $resolvedArchitecture = $Architecture
-    if ($resolvedArchitecture -eq 'Auto') {
-        if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { $resolvedArchitecture = 'arm64' }
-        elseif ($env:PROCESSOR_ARCHITECTURE -eq 'x86') { $resolvedArchitecture = 'x86' }
-        else { $resolvedArchitecture = 'x64' }
-    }
 
     $msixUri = switch ($resolvedArchitecture) {
         'x86' { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060' }
