@@ -14,6 +14,9 @@ function Sync-OSDAppMicrosoft365Apps {
         [bool]$AcceptEula = $true,
         [bool]$SharedComputerLicensing = $false,
         [bool]$DeviceBasedLicensing = $false,
+        [bool]$UpdatesEnabled = $true,
+        [switch]$IncludeVisio,
+        [switch]$IncludeProject,
 
         [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
         [string[]]$ExcludeApp,
@@ -56,43 +59,11 @@ function Sync-OSDAppMicrosoft365Apps {
         Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
     }
     else {
-        $settings = New-Object System.Xml.XmlWriterSettings
-        $settings.Indent = $true
-        $settings.Encoding = New-Object System.Text.UTF8Encoding($false)
-        $writer = [System.Xml.XmlWriter]::Create($configPath, $settings)
-        try {
-            $writer.WriteStartDocument()
-            $writer.WriteStartElement('Configuration')
-            $writer.WriteStartElement('Add')
-            $writer.WriteAttributeString('OfficeClientEdition', $Architecture)
-            $writer.WriteAttributeString('Channel', $Channel)
-            $writer.WriteStartElement('Product')
-            $writer.WriteAttributeString('ID', $ProductId)
-            foreach ($culture in $Language) {
-                if ([string]::IsNullOrWhiteSpace($culture)) { continue }
-                $writer.WriteStartElement('Language'); $writer.WriteAttributeString('ID', $culture); $writer.WriteEndElement()
-            }
-            foreach ($app in @($ExcludeApp)) {
-                if ([string]::IsNullOrWhiteSpace($app)) { continue }
-                $writer.WriteStartElement('ExcludeApp'); $writer.WriteAttributeString('ID', $app); $writer.WriteEndElement()
-            }
-            $writer.WriteEndElement()
-            $writer.WriteEndElement()
-            $writer.WriteStartElement('Display')
-            $writer.WriteAttributeString('Level', 'None')
-            $writer.WriteAttributeString('AcceptEULA', $(if ($AcceptEula) { 'TRUE' } else { 'FALSE' }))
-            $writer.WriteEndElement()
-            if ($SharedComputerLicensing) {
-                $writer.WriteStartElement('Property'); $writer.WriteAttributeString('Name', 'SharedComputerLicensing'); $writer.WriteAttributeString('Value', '1'); $writer.WriteEndElement()
-            }
-            if ($DeviceBasedLicensing) {
-                $writer.WriteStartElement('Property'); $writer.WriteAttributeString('Name', 'DeviceBasedLicensing'); $writer.WriteAttributeString('Value', '1'); $writer.WriteEndElement()
-            }
-            $writer.WriteStartElement('Updates'); $writer.WriteAttributeString('Enabled', 'TRUE'); $writer.WriteEndElement()
-            $writer.WriteEndElement()
-            $writer.WriteEndDocument()
-        }
-        finally { $writer.Dispose() }
+        New-OSDAppOfficeConfiguration -Path $configPath `
+            -Channel $Channel -Architecture $Architecture -ProductId $ProductId `
+            -Language $Language -AcceptEula $AcceptEula -UpdatesEnabled $UpdatesEnabled `
+            -SharedComputerLicensing $SharedComputerLicensing -DeviceBasedLicensing $DeviceBasedLicensing `
+            -ExcludeApp $ExcludeApp -IncludeVisio:$IncludeVisio -IncludeProject:$IncludeProject
     }
 
     Write-OSDAppLog -LogPath $clientLogPath -Component 'Microsoft365Apps' -Event 'OfficeCacheDownloadStart' -Message 'Running Office Deployment Tool in download mode.' -Data @{ Configuration = $configPath }
@@ -135,6 +106,9 @@ function Sync-OSDAppMicrosoft365Apps {
         AcceptEula = $AcceptEula
         SharedComputerLicensing = $SharedComputerLicensing
         DeviceBasedLicensing = $DeviceBasedLicensing
+        UpdatesEnabled = $UpdatesEnabled
+        IncludeVisio = [bool]$IncludeVisio
+        IncludeProject = [bool]$IncludeProject
         ExcludeApp = @($ExcludeApp)
         ConfigurationSource = if ($ConfigurationXml) { 'CustomXml' } else { 'Generated' }
         SyncedAt = (Get-Date).ToUniversalTime().ToString('o')
