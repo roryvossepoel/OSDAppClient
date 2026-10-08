@@ -20,6 +20,7 @@ $items = @(
     'Public'
     'Private'
     'Runtime'
+    'metadata'
     'README.md'
     'CHANGELOG.md'
     'LICENSE'
