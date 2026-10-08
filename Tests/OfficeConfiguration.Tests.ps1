@@ -28,7 +28,7 @@ Describe 'Office XML generation' {
             @($xml.Configuration.Add.Product | ForEach-Object { $_.Language.ID }) | Should -Be @('nl-nl','nl-nl','nl-nl')
             $xml.Configuration.Updates.Enabled | Should -Be 'FALSE'
             $xml.Configuration.Add.Product[0].ExcludeApp.ID | Should -Be 'Access'
-            @($xml.Configuration.Add.Product[1].ExcludeApp).Count | Should -Be 0
+            $null -eq $xml.Configuration.Add.Product[1].ExcludeApp | Should -BeTrue
         }
     }
 
