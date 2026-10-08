@@ -1,21 +1,47 @@
 name: Publish PowerShell Gallery
 
 on:
-  release:
-    types: [published]
-  workflow_call:
+  workflow_dispatch:
+    inputs:
+      expected_version:
+        description: 'Exact Gallery version to publish, for example 0.29.1. The matching v<version> Git tag must already exist.'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: powershell-gallery-publish
+  cancel-in-progress: false
+
 jobs:
   publish:
-    name: Publish OSDApps
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout immutable release tag
         uses: actions/checkout@v5
+        with:
+          ref: v${{ inputs.expected_version }}
+          fetch-depth: 0
+
+      - name: Verify release tag
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $expectedVersion = $env:EXPECTED_VERSION.Trim() -replace '^v',''
+          $expectedTag = "v$expectedVersion"
+          $exactTag = (git describe --tags --exact-match HEAD 2>$null).Trim()
+
+          if ($LASTEXITCODE -ne 0 -or $exactTag -ne $expectedTag) {
+              throw "PSGallery publication must run from immutable tag '$expectedTag'. Checked out HEAD is not that exact tag."
+          }
+
+          Write-Host "Publishing source is pinned to tag $exactTag at commit $env:GITHUB_SHA."
 
       - name: Install validation dependencies
         shell: pwsh
@@ -24,44 +50,54 @@ jobs:
           Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
 
-      - name: Run tests
+      - name: Validate tagged source
         shell: pwsh
         run: |
           ./build/Test-Module.ps1
 
-      - name: Build module
+      - name: Build Gallery package
         shell: pwsh
         run: |
           ./build/Build-Module.ps1 -OutputPath ./dist | Format-List
 
-      - name: Verify release version
+      - name: Validate Gallery package version
+        id: release
         shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $manifest = Test-ModuleManifest ./OSDApps.psd1
-          $moduleVersion = $manifest.Version.ToString()
 
-          if ('${{ github.event_name }}' -eq 'release') {
-              $releaseVersion = '${{ github.event.release.tag_name }}' -replace '^v',''
-              if ($moduleVersion -ne $releaseVersion) {
-                  throw "Release tag version '$releaseVersion' does not match module version '$moduleVersion'."
-              }
+          $expectedVersion = $env:EXPECTED_VERSION.Trim() -replace '^v',''
+          $manifestPath = Join-Path $PWD 'dist\OSDApps\OSDApps.psd1'
+          $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
+          $galleryVersion = $manifest.Version.ToString()
+
+          if ($expectedVersion -ne $galleryVersion) {
+              throw "Expected version '$expectedVersion' does not match built module version '$galleryVersion'."
           }
 
-          Write-Host "Publishing OSDApps $moduleVersion"
+          "gallery_version=$galleryVersion" >> $env:GITHUB_OUTPUT
+          Write-Host "Release package validation passed for OSDApps $galleryVersion."
 
       - name: Publish to PowerShell Gallery
         shell: pwsh
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+          GALLERY_VERSION: ${{ steps.release.outputs.gallery_version }}
         run: |
           $ErrorActionPreference = 'Stop'
+
           if ([string]::IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
-              throw 'GitHub secret PSGALLERY_API_KEY is not configured.'
+              throw 'PSGALLERY_API_KEY is not available.'
           }
 
+          Write-Host "Publishing OSDApps $env:GALLERY_VERSION from immutable release tag to PSGallery..."
+
           Publish-Module `
-              -Path ./dist/OSDApps `
-              -NuGetApiKey $env:PSGALLERY_API_KEY `
+              -Path (Join-Path $PWD 'dist\OSDApps') `
               -Repository PSGallery `
+              -NuGetApiKey $env:PSGALLERY_API_KEY `
               -Force
+
+          Write-Host "Publish-Module completed for OSDApps $env:GALLERY_VERSION."
