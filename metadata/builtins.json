@@ -31,7 +31,7 @@
       ],
       "CachePath": "BuiltIn/Microsoft365Apps",
       "RepositoryAlternative": true,
-      "IconUrl": "https://cdn.simpleicons.org/microsoftoffice"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/microsoft365.svg"
     },
     {
       "Id": "Teams",
@@ -50,7 +50,7 @@
       "DefaultArchitecture": "Auto",
       "CachePath": "BuiltIn/Teams",
       "RepositoryAlternative": true,
-      "IconUrl": "https://cdn.simpleicons.org/microsoftteams"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/teams.svg"
     },
     {
       "Id": "AdobeAcrobatUnified",
@@ -68,7 +68,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/AdobeAcrobatUnified/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://cdn.simpleicons.org/adobeacrobatreader"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/acrobatunified.svg"
     },
     {
       "Id": "GoogleChromeEnterprise",
@@ -86,7 +86,7 @@
       "DefaultArchitecture": "x64",
       "CachePath": "BuiltIn/GoogleChromeEnterprise/<architecture>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://cdn.simpleicons.org/googlechrome"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/chrome.svg"
     },
     {
       "Id": "MozillaFirefoxEnterprise",
@@ -110,7 +110,7 @@
       "DefaultLanguage": "en-US",
       "CachePath": "BuiltIn/MozillaFirefoxEnterprise/<channel>/<architecture>/<language>",
       "RepositoryAlternative": true,
-      "IconUrl": "https://cdn.simpleicons.org/firefoxbrowser"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/firefox.svg"
     }
   ]
 }
