@@ -37,7 +37,7 @@ The validated queue deliberately mixed built-in and repository applications:
 | Notepad++ | Self-maintained repository example |
 | Adobe Acrobat Unified | Built-in |
 
-`OmnissaHorizonClient` and `NotepadPlusPlus` were packages from the test repository used for this benchmark. They are not built into OSDApps.
+`OmnissaHorizonClient` and `NotepadPlusPlus` were packages from the test repository used for this benchmark. They are not built into OSDApps. Their repository synchronization/cache validation occurred in WinPE; the Runner measurements shown here cover the later local validation/extraction/installation phase.
 
 The installation order was identical for both runs.
 
