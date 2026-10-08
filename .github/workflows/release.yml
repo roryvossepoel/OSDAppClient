@@ -140,11 +140,30 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
+          # Use the version-specific CHANGELOG content as GitHub Release notes.
+          # Automatic PR titles alone do not explain deployment fixes.
+          $changelog = Get-Content -LiteralPath './CHANGELOG.md' -Raw -Encoding UTF8
+          $pattern = '(?ms)^##[ ]+' + [regex]::Escape($env:RELEASE_VERSION) + '[ ]*\r?\n(?<notes>.*?)(?=^##[ ]+|\z)'
+          $match = [regex]::Match($changelog, $pattern)
+          if (-not $match.Success) {
+              throw "CHANGELOG.md is missing notes for version $env:RELEASE_VERSION."
+          }
+          $releaseNotesPath = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          $notes = $match.Groups['notes'].Value.Trim()
+          if ([string]::IsNullOrWhiteSpace($notes)) {
+              throw "Release notes for version $env:RELEASE_VERSION are empty."
+          }
+          [System.IO.File]::WriteAllText(
+              $releaseNotesPath,
+              ("# OSDApps v$($env:RELEASE_VERSION)" + [Environment]::NewLine + [Environment]::NewLine + $notes + [Environment]::NewLine),
+              [System.Text.UTF8Encoding]::new($false)
+          )
+
           $arguments = @(
               'release', 'create', $env:TAG,
               '--repo', $env:GITHUB_REPOSITORY,
               '--title', "OSDApps v$env:RELEASE_VERSION",
-              '--generate-notes'
+              '--notes-file', $releaseNotesPath
           )
 
           if ($env:TAG_EXISTS -eq 'true') {
