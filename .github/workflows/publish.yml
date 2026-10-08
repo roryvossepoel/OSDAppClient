@@ -80,24 +80,88 @@ jobs:
           "gallery_version=$galleryVersion" >> $env:GITHUB_OUTPUT
           Write-Host "Release package validation passed for OSDApps $galleryVersion."
 
-      - name: Publish to PowerShell Gallery
+      - name: Publish and verify PowerShell Gallery package
         shell: pwsh
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
           GALLERY_VERSION: ${{ steps.release.outputs.gallery_version }}
         run: |
           $ErrorActionPreference = 'Stop'
+          $version = $env:GALLERY_VERSION
+          $modulePath = Join-Path $PWD 'dist\OSDApps'
 
+          function Find-PublishedVersion {
+              try {
+                  Find-Module -Name OSDApps -RequiredVersion $version -Repository PSGallery -ErrorAction Stop
+              }
+              catch {
+                  if ($_.Exception.Message -match 'No match was found|Unable to find module|No match found') { return $null }
+                  throw "Unable to query PSGallery: $($_.Exception.Message)"
+              }
+          }
+
+          function Test-PublishedContent {
+              $downloadPath = Join-Path $env:RUNNER_TEMP 'gallery-verify'
+              if (Test-Path -LiteralPath $downloadPath) {
+                  Remove-Item -LiteralPath $downloadPath -Recurse -Force
+              }
+              Save-Module -Name OSDApps -RequiredVersion $version -Repository PSGallery -Path $downloadPath -Force -ErrorAction Stop
+              $publishedPath = Join-Path $downloadPath "OSDApps\$version"
+              if (-not (Test-Path -LiteralPath $publishedPath -PathType Container)) {
+                  throw "Published OSDApps $version was not downloaded for verification."
+              }
+
+              $localFiles = @(Get-ChildItem -LiteralPath $modulePath -Recurse -File)
+              foreach ($file in $localFiles) {
+                  $relative = $file.FullName.Substring($modulePath.Length).TrimStart('\','/')
+                  $publishedFile = Join-Path $publishedPath $relative
+                  if (-not (Test-Path -LiteralPath $publishedFile -PathType Leaf)) {
+                      throw "Published package is missing file: $relative"
+                  }
+                  $localHash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+                  $publishedHash = (Get-FileHash -LiteralPath $publishedFile -Algorithm SHA256).Hash
+                  if ($localHash -ne $publishedHash) {
+                      throw "Published package does not match the release: $relative"
+                  }
+              }
+              Write-Host "Verified $($localFiles.Count) release files against PSGallery version $version."
+          }
+
+          # A pre-existing version must not masquerade as a successful new publication.
+          if (Find-PublishedVersion) {
+              throw "OSDApps $version already exists before publication. PSGallery versions are immutable; do not retry publishing this version."
+          }
           if ([string]::IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
               throw 'PSGALLERY_API_KEY is not available.'
           }
 
-          Write-Host "Publishing OSDApps $env:GALLERY_VERSION from immutable release tag to PSGallery..."
+          $publishError = $null
+          try {
+              Publish-Module -Path $modulePath -Repository PSGallery -NuGetApiKey $env:PSGALLERY_API_KEY -Force -ErrorAction Stop
+          }
+          catch {
+              $publishError = $_
+              Write-Warning "Publish-Module returned an error: $($_.Exception.Message)"
+              # Only reconcile a duplicate-version response. Other errors remain failures.
+              if ($_.Exception.Message -notmatch '409|already exists and cannot be modified') { throw }
+          }
 
-          Publish-Module `
-              -Path (Join-Path $PWD 'dist\OSDApps') `
-              -Repository PSGallery `
-              -NuGetApiKey $env:PSGALLERY_API_KEY `
-              -Force
+          $visible = $false
+          for ($attempt = 1; $attempt -le 12; $attempt++) {
+              if (Find-PublishedVersion) { $visible = $true; break }
+              Start-Sleep -Seconds 10
+          }
+          if (-not $visible) {
+              if ($publishError) { throw $publishError }
+              throw "Publish-Module returned successfully, but OSDApps $version was not found in PSGallery after 120 seconds."
+          }
 
-          Write-Host "Publish-Module completed for OSDApps $env:GALLERY_VERSION."
+          # A 409 can occur after a successful push. Never treat it as success
+          # unless the Gallery package matches our built, immutable release.
+          Test-PublishedContent
+          if ($publishError) {
+              Write-Host "The push returned 409, but PSGallery contains the exact verified release. Publication succeeded."
+          }
+          else {
+              Write-Host "OSDApps $version published and verified successfully."
+          }
