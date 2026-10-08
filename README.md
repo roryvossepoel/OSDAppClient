@@ -25,12 +25,19 @@ Both sources are written into one ordered `Apps[]` queue in `DeviceManifest.json
 
 The order in which applications are added is the order in which they are installed.
 
+The example below deliberately mixes both source types. Microsoft 365 Apps, Teams, Chrome, and Adobe are **built-in applications**. `OmnissaHorizonClient` and `NotepadPlusPlus` are **example repository applications** that come from the organization's configured OSDApps repository; they are not built into OSDApps.
+
 ```powershell
+# Built-in
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppGoogleChromeEnterprise
+
+# Self-maintained repository examples
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
+
+# Built-in
 Add-OSDAppAdobeAcrobatUnified
 ```
 
@@ -60,11 +67,16 @@ Get-OSDAppConfiguration
 Get-OSDAppCatalog
 Get-OSDApp
 
+# Built-ins
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppGoogleChromeEnterprise
+
+# Examples resolved from your configured repository
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
+
+# Built-in
 Add-OSDAppAdobeAcrobatUnified
 ```
 
@@ -115,7 +127,9 @@ See [Built-in applications](docs/built-in-apps.md).
 
 ## Repository applications
 
-An OSDApps repository is static content. No repository service or separate module is required.
+An OSDApps repository is static content owned and maintained by the organization. No repository service or separate module is required.
+
+Names such as `OmnissaHorizonClient` and `NotepadPlusPlus` used elsewhere in this documentation are examples of applications published in such a self-maintained repository. OSDApps itself does not ship or maintain those packages.
 
 ```text
 Repository/
