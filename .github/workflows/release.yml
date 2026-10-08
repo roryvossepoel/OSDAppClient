@@ -1,6 +1,11 @@
 name: Create GitHub Release
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'OSDApps.psd1'
   workflow_dispatch:
     inputs:
       expected_version:
@@ -10,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: github-release
@@ -179,3 +185,19 @@ jobs:
           }
 
           Write-Host "Created GitHub release $env:TAG."
+
+      - name: Start verified PowerShell Gallery publication
+        if: steps.existing.outputs.release_exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # workflow_dispatch events triggered with GITHUB_TOKEN can start another workflow.
+          # This happens only after the tag/release and validation succeeded.
+          gh workflow run publish.yml --repo $env:GITHUB_REPOSITORY --ref main -f "expected_version=$env:RELEASE_VERSION"
+          if ($LASTEXITCODE -ne 0) {
+              throw "Could not dispatch PSGallery publication for OSDApps $env:RELEASE_VERSION."
+          }
+          Write-Host "Dispatched PSGallery publication for OSDApps $env:RELEASE_VERSION."
