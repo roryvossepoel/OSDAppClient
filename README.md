@@ -18,7 +18,7 @@ OSDApps supports two application sources.
 
 | Source | Ownership | Acquisition / refresh | Installation |
 | --- | --- | --- | --- |
-| **Repository** | Organization | WinPE | SetupComplete |
+| **Repository** | Organization | WinPE sync/cache + staging | SetupComplete |
 | **Built-in** | Vendor / OSDApps integration | Full Windows PreInstall | SetupComplete |
 
 Both sources are written into one ordered `Apps[]` queue in `DeviceManifest.json`.
@@ -131,6 +131,8 @@ An OSDApps repository is static content owned and maintained by the organization
 
 Names such as `OmnissaHorizonClient` and `NotepadPlusPlus` used elsewhere in this documentation are examples of applications published in such a self-maintained repository. OSDApps itself does not ship or maintain those packages.
 
+For repository applications, synchronization and cache population happen in **WinPE**. When `Add-OSDApp` is called, OSDApps resolves the requested package from the configured repository, updates/reuses the optional OSDCloud USB cache, validates the package hash, and stages the package to the offline Windows installation. SetupComplete later installs that already-staged local content; it does not re-synchronize repository applications.
+
 ```text
 Repository/
 ├── catalog.json
@@ -183,7 +185,7 @@ No USB + online
 → install
 ```
 
-Repository applications synchronize in WinPE. Built-in freshness checks happen in full Windows before installation.
+Repository applications synchronize/cache in **WinPE** and are staged to the offline OS before reboot. Built-in freshness checks happen later in full Windows during PreInstall before installation.
 
 Inspect the current cache with:
 
