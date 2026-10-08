@@ -9,6 +9,9 @@ function Add-OSDAppMicrosoft365Apps {
         [bool]$AcceptEula = $true,
         [bool]$SharedComputerLicensing = $false,
         [bool]$DeviceBasedLicensing = $false,
+        [bool]$UpdatesEnabled = $true,
+        [switch]$IncludeVisio,
+        [switch]$IncludeProject,
         [ValidateSet('Access','Excel','Groove','Lync','OneDrive','OneNote','Outlook','OutlookForWindows','PowerPoint','Publisher','Teams','Word')]
         [string[]]$ExcludeApp,
         [string]$ConfigurationXml,
@@ -32,13 +35,13 @@ function Add-OSDAppMicrosoft365Apps {
     }
 
     $stagedRelativePath = 'Windows\Temp\OSDApps'
-    $configurationParameters = @('Channel','Architecture','ProductId','Language','AcceptEula','SharedComputerLicensing','DeviceBasedLicensing','ExcludeApp','ConfigurationXml')
+    $configurationParameters = @('Channel','Architecture','ProductId','Language','AcceptEula','SharedComputerLicensing','DeviceBasedLicensing','UpdatesEnabled','IncludeVisio','IncludeProject','ExcludeApp','ConfigurationXml')
     $configurationOverridden = @($configurationParameters | Where-Object { $PSBoundParameters.ContainsKey($_) }).Count -gt 0
 
     $params = @{
         CachePath=$cachePath; WindowsPath=$resolvedWindowsPath; Channel=$Channel; Architecture=$Architecture;
         ProductId=$ProductId; Language=$Language; AcceptEula=$AcceptEula;
-        SharedComputerLicensing=$SharedComputerLicensing; DeviceBasedLicensing=$DeviceBasedLicensing;
+        SharedComputerLicensing=$SharedComputerLicensing; DeviceBasedLicensing=$DeviceBasedLicensing; UpdatesEnabled=$UpdatesEnabled; IncludeVisio=$IncludeVisio; IncludeProject=$IncludeProject;
         OfficeDeploymentToolUri=$OfficeDeploymentToolUri; UseCachedConfiguration=(-not $configurationOverridden); StagedRelativePath=$stagedRelativePath; Confirm=$false
     }
     if ($ExcludeApp) { $params.ExcludeApp = $ExcludeApp }
