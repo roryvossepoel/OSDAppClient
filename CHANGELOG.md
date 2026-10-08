@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.29.2
+
+### Fixed
+
+- Repository applications added with `Add-OSDApp` can now be downloaded and staged when the OSDCloud USB cache volume is no longer attached.
+- When no OSDCloud cache volume is found, repository packages use `Windows\\Temp\\OSDApps\\RepositoryCache` on the offline Windows partition.
+- `Get-OSDAppCache` returns an empty result instead of throwing when the optional USB cache volume is absent.
+
+### Validation
+
+- Added Pester regression tests for USB-free repository staging and optional cache inspection.
+- Existing SHA256 package validation, `DeviceManifest.json` updates, and SetupComplete staging remain in use.
+- Tests passed in GitHub Actions; successful installation of repository packages after SetupComplete must still be verified in an end-to-end deployment.
+
 ## 0.29.1
 
 ### Added
