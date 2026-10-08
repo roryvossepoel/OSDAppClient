@@ -56,9 +56,7 @@ function Add-OSDAppMicrosoft365AppsInternal {
     $configPath = Join-Path $destinationBuiltIn 'configuration.xml'
 
     if ($ConfigurationXml) {
-        if (-not (Test-Path -LiteralPath $ConfigurationXml -PathType Leaf)) {
-            throw "Office configuration XML not found: $ConfigurationXml"
-        }
+        Test-OSDAppOfficeConfigurationXml -Path $ConfigurationXml | Out-Null
         Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
     }
     elseif ($UseCachedConfiguration -and $cacheHasPayload -and (Test-Path -LiteralPath $cacheConfig -PathType Leaf)) {

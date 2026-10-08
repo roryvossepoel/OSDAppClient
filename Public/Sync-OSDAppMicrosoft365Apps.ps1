@@ -55,7 +55,7 @@ function Sync-OSDAppMicrosoft365Apps {
     Save-OSDAppDownload -Uri $OfficeDeploymentToolUri -DestinationPath $setupPath -Activity 'Downloading Office Deployment Tool' | Out-Null
 
     if ($ConfigurationXml) {
-        if (-not (Test-Path -LiteralPath $ConfigurationXml -PathType Leaf)) { throw "Office configuration XML not found: $ConfigurationXml" }
+        Test-OSDAppOfficeConfigurationXml -Path $ConfigurationXml | Out-Null
         Copy-Item -LiteralPath $ConfigurationXml -Destination $configPath -Force
     }
     else {

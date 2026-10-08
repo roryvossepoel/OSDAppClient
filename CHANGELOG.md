@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Added syntax-only validation for custom Office `-ConfigurationXml` in both Add and Sync, rejecting missing files and malformed XML while leaving ODT-specific settings to Microsoft.
+- Corrected the Office architecture documentation to use public `x86` and `x64` values.
+
 ## 0.30.0
 
 ### Added

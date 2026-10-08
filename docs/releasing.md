@@ -26,79 +26,28 @@ PSGALLERY_API_KEY
 
 The value must be a valid PowerShell Gallery API key with permission to publish the `OSDApps` package.
 
-## Release versioning
+## Release process
 
-Before publishing a GitHub Release:
+The version in `OSDApps.psd1` and the corresponding top-level section in `CHANGELOG.md` are prepared in a pull request. The release workflow reads the changelog section and uses it for the GitHub Release notes.
 
-1. update `ModuleVersion` in `OSDApps.psd1`;
-2. add the release notes to `CHANGELOG.md`;
-3. ensure CI is green;
-4. create a Git tag matching the module version.
+1. Update `ModuleVersion` and its `ReleaseNotes` field together with `CHANGELOG.md`.
+2. Run and review CI on the pull request.
+3. Merge into `main`. A change to `OSDApps.psd1` automatically starts **Create GitHub Release**.
+4. The release workflow validates the current main commit, re-runs the test suite, and creates the immutable `v<version>` tag with version-specific release notes.
+5. After successful release creation, the workflow automatically dispatches **Publish PowerShell Gallery**.
+6. The publish workflow builds from the immutable tag, runs tests, publishes, downloads the Gallery package, and compares SHA256 hashes against all packaged release files.
 
-Use a version tag such as:
+Both workflows can also be dispatched manually when appropriate. A manually dispatched publish requires an already existing matching release tag. A Gallery version is immutable: never attempt to overwrite a published version. Pre-existing versions are treated as explicit conflicts, while a post-push 409 is reconciled only when the published files match the release.
 
-```text
-v0.29.1
-```
+A normal `main` push without an `OSDApps.psd1` change does not trigger a new release. Documentation-only or unreleased fixes remain pending until a later version bump.
 
-The publish workflow removes the optional leading `v` and requires the remaining tag version to exactly match `ModuleVersion`.
+## Release documentation checklist
 
-For example:
-
-```text
-Git tag        v0.29.1
-ModuleVersion  0.29.1
-```
-
-## Recommended release flow
-
-OSDApps uses two separate manual workflows, matching the WindowsDeviceLink release model.
-
-### 1. Create GitHub Release
-
-Run **Create GitHub Release** from GitHub Actions.
-
-Enter a version such as:
-
-```text
-0.29.1
-```
-
-or leave the field empty to use the current `ModuleVersion`.
-
-This workflow:
-
-```text
-verifies main
-→ validates ModuleVersion
-→ checks existing tag/release
-→ runs PSScriptAnalyzer + Pester
-→ creates tag v<version>
-→ creates GitHub Release
-```
-
-It does **not** publish to PowerShell Gallery.
-
-### 2. Publish PowerShell Gallery
-
-After the GitHub Release exists, run **Publish PowerShell Gallery** separately and enter the exact version, for example:
-
-```text
-0.29.1
-```
-
-This workflow:
-
-```text
-checks out immutable tag v<version>
-→ verifies exact tag
-→ runs validation again
-→ builds dist/OSDApps
-→ validates built module version
-→ publishes to PowerShell Gallery
-```
-
-Keeping these actions separate makes the Gallery push an explicit decision and ensures PSGallery is always published from the immutable Git release tag.
+- Update version, changelog, and manifest release notes before tagging
+- Confirm release notes describe behavior changes and compatibility restrictions
+- Confirm Pester and GitHub CI pass
+- Verify GitHub Release notes and PowerShell Gallery publication
+- Keep examples and public metadata aligned with the exported parameters
 
 ## Local validation
 
