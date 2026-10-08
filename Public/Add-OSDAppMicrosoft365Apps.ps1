@@ -3,7 +3,7 @@ function Add-OSDAppMicrosoft365Apps {
     param(
         [ValidateSet('Current','MonthlyEnterprise','SemiAnnual','CurrentPreview','SemiAnnualPreview','BetaChannel')]
         [string]$Channel = 'Current',
-        [ValidateSet('64','32')][string]$Architecture = '64',
+        [ValidateSet('x64','x86')][string]$Architecture = 'x64',
         [ValidateSet('O365ProPlusRetail','O365BusinessRetail')][string]$ProductId = 'O365ProPlusRetail',
         [string[]]$Language = @('en-us'),
         [bool]$AcceptEula = $true,
