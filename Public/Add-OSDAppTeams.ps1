@@ -1,7 +1,7 @@
 function Add-OSDAppTeams {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [ValidateSet('Auto','x86','x64','arm64')][string]$Architecture = 'Auto',
+        [ValidateSet('x86','x64','arm64')][string]$Architecture = 'x64',
         [bool]$InstallMeetingAddin = $false,
         [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
         [string]$WindowsPath
