@@ -12,6 +12,16 @@ GoogleChromeEnterprise
 MozillaFirefoxEnterprise
 ```
 
+## Machine-readable metadata
+
+The current built-in application catalog is also published as:
+
+[`metadata/builtins.json`](../metadata/builtins.json)
+
+This JSON is intended for external tooling and includes the application Id, display name, vendor, supported architectures/channels, Add/Sync commands, acquisition model, cache path and synchronization phase.
+
+CI validates the file against the module's exported built-in Add commands so a new built-in cannot be added without updating the metadata.
+
 ## Vendor-only source policy
 
 Built-in applications are always sourced directly from their software vendor.
