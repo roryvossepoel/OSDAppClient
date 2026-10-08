@@ -26,16 +26,18 @@ The warm-cache run is about 19% faster across the measured PreInstall + Runner p
 
 ## Application set
 
-The validated queue was:
+The validated queue deliberately mixed built-in and repository applications:
 
-```text
-Microsoft 365 Apps
-Microsoft Teams
-Google Chrome Enterprise
-Omnissa Horizon Client
-Notepad++
-Adobe Acrobat Unified
-```
+| Application | Source |
+| --- | --- |
+| Microsoft 365 Apps | Built-in |
+| Microsoft Teams | Built-in |
+| Google Chrome Enterprise | Built-in |
+| Omnissa Horizon Client | Self-maintained repository example |
+| Notepad++ | Self-maintained repository example |
+| Adobe Acrobat Unified | Built-in |
+
+`OmnissaHorizonClient` and `NotepadPlusPlus` were packages from the test repository used for this benchmark. They are not built into OSDApps.
 
 The installation order was identical for both runs.
 
@@ -126,11 +128,16 @@ Set-OSDAppConfiguration `
     -CatalogUri "https://example.blob.core.windows.net/osdapps/catalog.json" `
     -CleanupMode Never
 
+# Built-ins
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppGoogleChromeEnterprise
+
+# Example applications from the configured repository
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
+
+# Built-in
 Add-OSDAppAdobeAcrobatUnified
 ```
 
