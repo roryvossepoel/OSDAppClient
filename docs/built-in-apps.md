@@ -86,6 +86,27 @@ Supported architectures:
 
 The Office cache contains the Office Deployment Tool, `configuration.xml`, and `Office\Data`.
 
+The built-in Office configuration uses a shared XML generator for `Add-OSDAppMicrosoft365Apps` and `Sync-OSDAppMicrosoft365Apps`. The common parameters are `Architecture` (32/64), `Channel`, `ProductId`, `Language`, `UpdatesEnabled`, `AcceptEula`, `SharedComputerLicensing`, `DeviceBasedLicensing`, and `ExcludeApp`. Optional `IncludeVisio` and `IncludeProject` switches include `VisioProRetail` and `ProjectProRetail` as separate Office Deployment Tool products. Each product gets the requested languages; exclusions apply only to Microsoft 365 Apps. The respective licenses must be assigned separately.
+
+```powershell
+# Default: Enterprise x64, Current channel, en-us, updates on
+Add-OSDAppMicrosoft365Apps
+
+# Typical Dutch Office with monthly enterprise updates and Visio/Project
+Add-OSDAppMicrosoft365Apps -Channel MonthlyEnterprise -Language nl-nl -IncludeVisio -IncludeProject
+
+# Shared workstation with licensed individual users
+Add-OSDAppMicrosoft365Apps -SharedComputerLicensing $true
+
+# Specialized device-based licensing, requiring an eligible device license
+Add-OSDAppMicrosoft365Apps -DeviceBasedLicensing $true
+
+# Disable Office updates (Windows update management must be handled elsewhere)
+Add-OSDAppMicrosoft365Apps -UpdatesEnabled $false
+```
+
+For advanced or unusual configurations, export XML from Microsoft's Office Customization Tool and pass `-ConfigurationXml <path>`. The supplied XML is preserved instead of being regenerated. Do not simultaneously supply conflicting generated configuration switches; the custom XML takes precedence.
+
 ### Microsoft Teams
 
 ```powershell
