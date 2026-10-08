@@ -402,7 +402,7 @@ try {
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 try {
-                    $architecture=if($app.Architecture){[string]$app.Architecture}elseif($env:PROCESSOR_ARCHITECTURE -eq 'ARM64'){'arm64'}else{'x64'}
+                    $architecture=if($app.Architecture){[string]$app.Architecture}else{'x64'}
                     $msixUri=if($app.MsixUri){[string]$app.MsixUri}else{switch($architecture){'x86'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196060'}'x64'{'https://go.microsoft.com/fwlink/?linkid=2196106'}'arm64'{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207'}}}
                     $bootstrapperUri=if($app.BootstrapperUri){[string]$app.BootstrapperUri}else{'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204'}
                     $cacheInfoPath=Join-Path $acquireRoot 'CacheInfo.json'; $cacheInfo=$null
