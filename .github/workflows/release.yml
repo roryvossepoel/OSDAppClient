@@ -100,12 +100,20 @@ jobs:
 
           $releaseExists = $false
           gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json tagName *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $releaseExitCode = $LASTEXITCODE
+
+          if ($releaseExitCode -eq 0) {
               $releaseExists = $true
               Write-Host "GitHub release '$env:TAG' already exists. Treating this workflow run as an idempotent success."
           }
+          else {
+              Write-Host "GitHub release '$env:TAG' does not exist yet."
+          }
 
           "release_exists=$($releaseExists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+          # A missing release is the expected state before creating a new release.
+          exit 0
 
       - name: Install validation dependencies
         if: steps.existing.outputs.release_exists != 'true'
