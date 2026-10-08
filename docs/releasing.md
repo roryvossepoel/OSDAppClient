@@ -52,32 +52,53 @@ ModuleVersion  0.29.1
 
 ## Recommended release flow
 
-Use the **Release OSDApps** workflow from GitHub Actions.
+OSDApps uses two separate manual workflows, matching the WindowsDeviceLink release model.
 
-Enter a version such as `0.29.1`, or leave the version field empty to use the current `ModuleVersion`.
+### 1. Create GitHub Release
 
-The workflow performs the complete release chain:
+Run **Create GitHub Release** from GitHub Actions.
+
+Enter a version such as:
 
 ```text
-resolve ModuleVersion
-→ validate requested version
-→ ensure tag/release does not already exist
-→ run PSScriptAnalyzer + Pester
-→ create tag v<version>
-→ create GitHub Release
-→ build dist/OSDApps
-→ publish to PowerShell Gallery
+0.29.1
 ```
 
-The GitHub Release is created from the exact commit on which the workflow was started.
+or leave the field empty to use the current `ModuleVersion`.
 
-If any validation step fails, the release or Gallery package is not published.
+This workflow:
 
-## Direct release trigger
+```text
+verifies main
+→ validates ModuleVersion
+→ checks existing tag/release
+→ runs PSScriptAnalyzer + Pester
+→ creates tag v<version>
+→ creates GitHub Release
+```
 
-The **Publish PowerShell Gallery** workflow also listens for manually created GitHub Releases. This remains useful when a release is created directly through the GitHub Releases UI.
+It does **not** publish to PowerShell Gallery.
 
-The normal and recommended path is the **Release OSDApps** workflow because it handles the tag, GitHub Release, validation, and Gallery publication as one controlled operation.
+### 2. Publish PowerShell Gallery
+
+After the GitHub Release exists, run **Publish PowerShell Gallery** separately and enter the exact version, for example:
+
+```text
+0.29.1
+```
+
+This workflow:
+
+```text
+checks out immutable tag v<version>
+→ verifies exact tag
+→ runs validation again
+→ builds dist/OSDApps
+→ validates built module version
+→ publishes to PowerShell Gallery
+```
+
+Keeping these actions separate makes the Gallery push an explicit decision and ensures PSGallery is always published from the immutable Git release tag.
 
 ## Local validation
 
