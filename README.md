@@ -27,10 +27,11 @@ Install-Module OSDApps -SkipPublisherCheck
 Import-Module OSDApps
 ```
 
-To install a specific version:
+To install a specific, reproducible release (for example, the field-tested 0.30.0):
 
 ```powershell
-Install-Module OSDApps -SkipPublisherCheck
+Install-Module OSDApps -RequiredVersion 0.30.0 -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.30.0 -Force
 ```
 
 `Install-PSResource` is the newer PSResourceGet equivalent, but PSResourceGet is not normally available by default in Windows PowerShell 5.1 / WinPE. For OSDCloud and WinPE scenarios, `Install-Module` is therefore the recommended installation method.
@@ -57,17 +58,15 @@ The order in which applications are added is the order in which they are install
 The example below deliberately mixes both source types. Microsoft 365 Apps, Teams, Chrome, and Adobe are **built-in applications**. `OmnissaHorizonClient` and `NotepadPlusPlus` are **example repository applications** that come from the organization's configured OSDApps repository; they are not built into OSDApps.
 
 ```powershell
-# Built-in
+# Built-ins
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppGoogleChromeEnterprise
+Add-OSDAppAdobeAcrobatUnified
 
 # Self-maintained repository examples
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
-
-# Built-in
-Add-OSDAppAdobeAcrobatUnified
 ```
 
 produces:
@@ -76,9 +75,9 @@ produces:
 Microsoft 365 Apps
 → Microsoft Teams
 → Google Chrome Enterprise
+→ Adobe Acrobat Unified
 → Omnissa Horizon Client
 → Notepad++
-→ Adobe Acrobat Unified
 ```
 
 ## Quick start
@@ -100,13 +99,11 @@ Get-OSDApp
 Add-OSDAppMicrosoft365Apps
 Add-OSDAppTeams
 Add-OSDAppGoogleChromeEnterprise
+Add-OSDAppAdobeAcrobatUnified
 
 # Examples resolved from your configured repository
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
-
-# Built-in
-Add-OSDAppAdobeAcrobatUnified
 ```
 
 No OSDApps module installation is required in the deployed Windows installation. The required standalone runtime is staged automatically.
@@ -224,21 +221,30 @@ Inspect the current cache with:
 Get-OSDAppCache
 ```
 
-## Validated performance
+## Validated deployment scenarios and performance
 
-Cold-cache and warm-cache deployments were validated on the same hardware, USB stick and application set with OSDApps 0.29.1.
+Four fresh OSDCloud v2 deployments with **OSDApps 0.30.0** were completed on 9 October 2026 using the same six-app queue (four built-ins and two example repository packages).
 
-![OSDApps cold vs warm cache benchmark](docs/images/cold-warm-benchmark.svg)
+| Scenario | PreInstall | Runner | Measured Windows phase | Install results |
+| --- | ---: | ---: | ---: | --- |
+| No USB cache | 217.3 s | 329.3 s | **9:07** | 6/6 |
+| Cold USB cache | 114.2 s | 328.4 s | **7:23** | 6/6 |
+| Warm USB cache | 41.7 s | 330.4 s | **6:12** | 6/6 |
+| Warm USB, changed Office XML | 104.1 s | 346.0 s | **7:30** | 6/6 |
 
-| Phase | Cold | Warm |
-| --- | ---: | ---: |
-| PreInstall / refresh | 125.2 s | 40.6 s |
-| Runner / installations | 330.7 s | 327.4 s |
-| **Total measured Windows phase** | **455.9 s** | **368.0 s** |
+All four runs completed PreInstall and Runner successfully: **24/24 application queue executions reported success**. The changed-Office scenario included Dutch Microsoft 365 Apps, Visio and Project; Word, Excel, Visio and Project executables were also confirmed present after installation.
 
-The warm cache reduced the measured Windows phase by **87.9 seconds**. Almost all of the improvement came from acquisition and refresh; installation time remained effectively unchanged.
+These times cover **PreInstall + Runner only**. They do not include WinPE staging or Windows image deployment. A warm USB cache saved **70.5 seconds** compared with the cold USB run, principally in PreInstall. One run per scenario is not a statistical benchmark. Effective Office update channel and licensing activation remain unchecked.
 
-See [Performance](docs/performance.md).
+Read the [0.30.0 validation matrix](docs/testing.md) and [detailed performance measurements](docs/performance.md) for setup, evidence, caveats and remaining test coverage.
+
+### Earlier 0.29.1 benchmark
+
+The historical cold/warm benchmark using the same hardware and USB stick reported **455.9 s** (cold) and **368.0 s** (warm).
+
+![OSDApps 0.29.1 cold vs warm cache benchmark](docs/images/cold-warm-benchmark.svg)
+
+The graphic and original details remain available in [Performance](docs/performance.md); do not combine the 0.29.1 historical measurements with the 0.30.0 field test as if they were the same controlled benchmark.
 
 ## Development
 
