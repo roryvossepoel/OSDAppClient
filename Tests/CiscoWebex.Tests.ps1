@@ -158,6 +158,43 @@ Describe 'Cisco Webex built-in MSI integration' {
         }
     }
 
+    It 'syncs and reuses Cisco MSI cache entries without re-downloading an unchanged ETag' {
+        InModuleScope OSDApps {
+            $usb = Join-Path $TestDrive 'SyncUsb'
+            New-Item -ItemType Directory -Path $usb -Force | Out-Null
+
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppCachePath { Join-Path $TestDrive 'SyncUsb' }
+            Mock Assert-OSDAppCacheFreeSpace { }
+            Mock Get-OSDAppRemoteFileMetadata {
+                [pscustomobject]@{
+                    ETag = '"webex-test-etag"'
+                    LastModified = '2026-10-09T00:00:00Z'
+                    ContentLength = 1024
+                    FinalUri = 'https://binaries.webex.com/test/Webex_en.msi'
+                }
+            }
+            Mock Save-OSDAppDownload {
+                Set-Content -LiteralPath $DestinationPath -Value 'Cisco Webex MSI fixture' -Encoding Ascii
+            }
+
+            $cold = Sync-OSDAppCiscoWebex -Architecture x64
+            $warm = Sync-OSDAppCiscoWebex -Architecture x64
+            $arm = Sync-OSDAppCiscoWebex -Architecture arm64
+
+            $cold.Updated | Should -BeTrue
+            $warm.Updated | Should -BeFalse
+            $arm.Updated | Should -BeTrue
+            $cold.CachePath | Should -Be (Join-Path $usb 'BuiltIn\CiscoWebex\x64')
+            $arm.CachePath | Should -Be (Join-Path $usb 'BuiltIn\CiscoWebex\arm64')
+            Should -Invoke Save-OSDAppDownload -Exactly -Times 2
+
+            $entries = @(Get-OSDAppCache -Name 'CiscoWebex')
+            $entries.Count | Should -Be 2
+            @($entries | Where-Object Valid).Count | Should -Be 2
+        }
+    }
+
     It 'includes CiscoWebex in standalone offline PreInstall and the generic MSI Runner' {
         $preInstall = Get-Content -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppPreInstall.ps1') -Raw
         $runner = Get-Content -LiteralPath (Join-Path $script:moduleRoot 'Runtime\Invoke-OSDAppRunner.ps1') -Raw
