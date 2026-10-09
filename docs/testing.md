@@ -62,7 +62,7 @@ The unchanged build number in test 4 does **not** mean the Office configuration 
 
 ## Validated built-ins and remaining variants
 
-The 0.30.0 end-to-end tests above cover Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified **x64**, and Google Chrome Enterprise **x64**. Earlier validation also covered Mozilla Firefox Enterprise Rapid x64 (see historical performance tests and documentation).
+The 0.30.0 end-to-end tests above cover Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified **x64**, and Google Chrome Enterprise **x64**. The earlier validation matrix also listed Mozilla Firefox Enterprise Rapid x64 as validated; it was **not** part of these four 0.30.0 runs.
 
 Still requiring separate end-to-end checks:
 
