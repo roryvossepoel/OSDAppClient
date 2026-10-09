@@ -76,7 +76,9 @@ The five completed real-world deployment scenarios above used **0.30.0** and the
 
 Cisco Webex was added with x64 and ARM64 non-localized MSI sources, an architecture-specific optional USB cache, validated MSI parameters and the shared `VendorMsi` SetupComplete runner. File-backed unit tests verify that WinPE cache staging and `DeviceManifest.json` resolve to the identical local MSI path.
 
-**Not yet field-validated:** actual Cisco MSI retrieval and HTTP freshness metadata, offline installation and Webex application behavior on a deployed Windows device. The earlier six-app deployment results do not include Cisco Webex.
+**Direct MSI test validated — 10 October 2026, Windows x64 development device.** The official non-localized Cisco x64 `Webex_en.msi` was downloaded successfully (259.9 MiB); Authenticode reported `Valid`, signed by Cisco Systems, Inc. Silent `msiexec /i ... /qn /norestart ALLUSERS=1 ACCEPT_EULA=TRUE AUTOSTART_WITH_WINDOWS=false` completed with exit code `0`; MSI registration showed **Webex 46.9.0.35800**. The full MSI log confirms the three installation properties, per-machine assignment, existing WebView2 Runtime and `MainEngineThread is returning 0` (server and client). Two internal Cisco custom actions (`WixRemoveFoldersEx` and `KillSpark`) logged a local `1603` but were explicitly translated to success by the package; there were no `Return value 3` fatal MSI actions.
+
+**Still requires OSDApps field validation:** the end-to-end PreInstall download and HTTP freshness check, new USB cache registration/reuse, offline fallback, SetupComplete installation and behavior on a freshly deployed Windows device. ARM64 MSI download and installation remain unverified. The earlier six-app deployment results do not include Cisco Webex.
 
 ## Validated built-ins and remaining variants
 
