@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.30.1'
+    ModuleVersion     = '0.31.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -14,14 +14,14 @@
         'Get-OSDAppCache',
         'Sync-OSDAppRepository',
         'Sync-OSDAppMicrosoft365Apps',
-        'Sync-OSDAppTeams',
+        'Sync-OSDAppMicrosoftTeams',
         'Sync-OSDAppAdobeAcrobatUnified',
         'Sync-OSDAppGoogleChromeEnterprise',
         'Sync-OSDAppMozillaFirefoxEnterprise',
         'Clear-OSDAppCache',
         'Add-OSDApp',
         'Add-OSDAppMicrosoft365Apps',
-        'Add-OSDAppTeams',
+        'Add-OSDAppMicrosoftTeams',
         'Add-OSDAppAdobeAcrobatUnified',
         'Add-OSDAppGoogleChromeEnterprise',
         'Add-OSDAppMozillaFirefoxEnterprise',
@@ -39,7 +39,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.30.1: Fix Adobe Unified USB-cache staging to its architecture-specific manifest path and verify copied payload; validate custom Office XML syntax; add file-copy regression tests.'
+            ReleaseNotes = '0.31.0: Rename built-in Teams to MicrosoftTeams across cmdlets, cache, metadata, manifests and standalone runtime. Breaking change: no legacy aliases or automatic cache migration.'
             RequireLicenseAcceptance = $false
         }
     }
