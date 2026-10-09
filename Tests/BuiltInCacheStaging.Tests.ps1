@@ -121,6 +121,9 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             @($manifest.Apps).Count | Should -Be 2
             $officeApp = @($manifest.Apps | Where-Object Id -eq 'Microsoft365Apps')[0]
             $microsoftTeamsApp = @($manifest.Apps | Where-Object Id -eq 'MicrosoftTeams')[0]
+            $microsoftTeamsApp.Type | Should -Be 'MicrosoftTeamsBootstrapper'
+            $microsoftTeamsApp.Setup | Should -Be 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
+            $microsoftTeamsApp.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\teams.msix'
             foreach ($path in @($officeApp.Setup,$officeApp.Configuration,$microsoftTeamsApp.Setup,$microsoftTeamsApp.OfflinePackage)) {
                 (Test-Path -LiteralPath (Join-Path $stage $path) -PathType Leaf) | Should -BeTrue
             }
