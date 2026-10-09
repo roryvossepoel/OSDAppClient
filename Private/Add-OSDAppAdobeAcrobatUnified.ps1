@@ -31,7 +31,14 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
     New-Item -ItemType Directory -Path $destinationBuiltIn -Force | Out-Null
 
     if ($cacheHasPayload) {
-        Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force
+        Copy-Item -Path (Join-Path $cacheRoot '*') -Destination $destinationBuiltIn -Recurse -Force -ErrorAction Stop
+        $stagedArchive = Join-Path $destinationBuiltIn 'Package.zip'
+        if (-not (Test-Path -LiteralPath $stagedArchive -PathType Leaf)) {
+            throw "Adobe Acrobat Unified cache staging failed; expected archive: $stagedArchive"
+        }
+        if ((Get-Item -LiteralPath $stagedArchive).Length -ne (Get-Item -LiteralPath (Join-Path $cacheRoot 'Package.zip')).Length) {
+            throw "Adobe Acrobat Unified cache staging failed; archive size differs: $stagedArchive"
+        }
     }
 
     if (Test-Path -LiteralPath $deviceManifestPath -PathType Leaf) {
