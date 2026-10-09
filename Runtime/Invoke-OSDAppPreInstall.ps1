@@ -39,7 +39,7 @@ function Get-OfficeCacheVersion {
     return $null
 }
 
-function Get-TeamsPackageVersion {
+function Get-MicrosoftTeamsPackageVersion {
     param([Parameter(Mandatory)][string]$Path)
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
     $archive=[System.IO.Compression.ZipFile]::OpenRead($Path)
@@ -192,7 +192,7 @@ function Test-LocalOfficeSource {
     return ((Test-Path -LiteralPath (Join-Path $Root 'setup.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'configuration.xml') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'Office\Data') -PathType Container))
 }
 
-function Test-LocalTeamsSource {
+function Test-LocalMicrosoftTeamsSource {
     param([string]$Root)
     return ((Test-Path -LiteralPath (Join-Path $Root 'teamsbootstrapper.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Root 'teams.msix') -PathType Leaf))
 }
@@ -387,18 +387,18 @@ try {
                     throw "Microsoft 365 Apps acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
-            'Teams' {
-                $localRoot=Join-Path $StagedPath 'BuiltIn\Teams'; New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
-                $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\Teams'}else{$localRoot}; New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
-                if($usbRoot -and -not (Test-LocalTeamsSource -Root $localRoot) -and (Test-LocalTeamsSource -Root $acquireRoot)){
+            'MicrosoftTeams' {
+                $localRoot=Join-Path $StagedPath 'BuiltIn\MicrosoftTeams'; New-Item -ItemType Directory -Path $localRoot -Force | Out-Null
+                $acquireRoot=if($usbRoot){Join-Path $usbRoot 'BuiltIn\MicrosoftTeams'}else{$localRoot}; New-Item -ItemType Directory -Path $acquireRoot -Force | Out-Null
+                if($usbRoot -and -not (Test-LocalMicrosoftTeamsSource -Root $localRoot) -and (Test-LocalMicrosoftTeamsSource -Root $acquireRoot)){
                     Copy-Item -LiteralPath (Join-Path $acquireRoot 'teamsbootstrapper.exe') -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force
                     Copy-Item -LiteralPath (Join-Path $acquireRoot 'teams.msix') -Destination (Join-Path $localRoot 'teams.msix') -Force
                     if(Test-Path -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -PathType Leaf){Copy-Item -LiteralPath (Join-Path $acquireRoot 'CacheInfo.json') -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
-                    Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft Teams USB cache was staged locally.' -Data @{Id='Teams'}
+                    Write-PreInstallLog -Event 'BuiltInCacheRestaged' -Message 'Existing Microsoft Teams USB cache was staged locally.' -Data @{Id='MicrosoftTeams'}
                 }
 
                 if(-not $networkAvailable){
-                    if(Test-LocalTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='Teams'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshSkipped' -Level 'Warning' -Message 'No network is available. Existing staged Teams payload will be used.' -Data @{Id='MicrosoftTeams'};continue}
                     throw 'Microsoft Teams has no staged or USB-cached payload and no network connection is available to acquire one.'
                 }
                 try {
@@ -410,15 +410,15 @@ try {
                     $msixPath=Join-Path $acquireRoot 'teams.msix'; $bootstrapperPath=Join-Path $acquireRoot 'teamsbootstrapper.exe'
                     $remote=Get-RemoteMetadata -Uri $msixUri; $matches=$false
                     if((Test-Path -LiteralPath $msixPath -PathType Leaf) -and $cacheInfo){if($remote.ETag -and $cacheInfo.RemoteETag){$matches=$remote.ETag -eq [string]$cacheInfo.RemoteETag}elseif($remote.LastModified -and $cacheInfo.RemoteLastModified -and $remote.ContentLength -and $cacheInfo.RemoteContentLength){$matches=($remote.LastModified -eq [string]$cacheInfo.RemoteLastModified -and [int64]$remote.ContentLength -eq [int64]$cacheInfo.RemoteContentLength)}}
-                    $tempRoot=Join-Path $StagedPath 'Work\Refresh\Teams'; New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
-                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'Teams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
+                    $tempRoot=Join-Path $StagedPath 'Work\Refresh\MicrosoftTeams'; New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+                    $tempBootstrapper=Join-Path $tempRoot 'teamsbootstrapper.exe'; Save-PreInstallDownload -Uri $bootstrapperUri -DestinationPath $tempBootstrapper -Id 'MicrosoftTeams' -Description 'Microsoft Teams bootstrapper' -TimeoutMinutes 5; Copy-Item -LiteralPath $tempBootstrapper -Destination $bootstrapperPath -Force
                     $updated=$false
-                    if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'Teams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-TeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-TeamsPackageVersion -Path $msixPath}}
-                    [ordered]@{Id='Teams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
+                    if(-not $matches){$tempMsix=Join-Path $tempRoot 'teams.msix';Save-PreInstallDownload -Uri $msixUri -DestinationPath $tempMsix -Id 'MicrosoftTeams' -Description "Microsoft Teams $architecture MSIX" -TimeoutMinutes 15;$version=Get-MicrosoftTeamsPackageVersion -Path $tempMsix;Copy-Item -LiteralPath $tempMsix -Destination $msixPath -Force;$updated=$true}else{$version=if($cacheInfo -and $cacheInfo.Version){[string]$cacheInfo.Version}else{Get-MicrosoftTeamsPackageVersion -Path $msixPath}}
+                    [ordered]@{Id='MicrosoftTeams';Cached=[bool]$usbRoot;Version=$version;Architecture=$architecture;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';Updated=$updated;BootstrapperUri=$bootstrapperUri;RemoteETag=$remote.ETag;RemoteLastModified=$remote.LastModified;RemoteContentLength=$remote.ContentLength;RemoteFinalUri=$remote.FinalUri;SyncedAt=(Get-Date).ToUniversalTime().ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cacheInfoPath -Encoding UTF8
                     if($usbRoot){Copy-Item -LiteralPath $bootstrapperPath -Destination (Join-Path $localRoot 'teamsbootstrapper.exe') -Force;Copy-Item -LiteralPath $msixPath -Destination (Join-Path $localRoot 'teams.msix') -Force;Copy-Item -LiteralPath $cacheInfoPath -Destination (Join-Path $localRoot 'CacheInfo.json') -Force}
-                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='Teams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
+                    Write-PreInstallLog -Event 'BuiltInRefreshComplete' -Message 'Microsoft Teams content is ready for installation.' -Data @{Id='MicrosoftTeams';Version=$version;PackageUpdated=$updated;CacheSynchronized=[bool]$usbRoot;SourcePolicy='Evergreen';SyncMethod='HttpMetadata';DurationSeconds=[math]::Round($builtInStopwatch.Elapsed.TotalSeconds,1)}
                 } catch {
-                    if(Test-LocalTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='Teams';Fallback='ExistingStagedPayload'};continue}
+                    if(Test-LocalMicrosoftTeamsSource -Root $localRoot){Write-PreInstallLog -Event 'BuiltInRefreshFailed' -Level 'Warning' -Message $_.Exception.Message -Data @{Id='MicrosoftTeams';Fallback='ExistingStagedPayload'};continue}
                     throw "Microsoft Teams acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
