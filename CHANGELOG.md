@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.32.0
+
+### Added
+
+- Added Cisco Webex App as a vendor-native built-in, with `Add-OSDAppCiscoWebex` and `Sync-OSDAppCiscoWebex`, supporting non-localized official Cisco MSI sources for x64 and ARM64.
+- Introduced architecture-specific USB cache and WinPE staging under `BuiltIn/CiscoWebex/<architecture>`; full-Windows PreInstall refresh, offline fallback, hash-aware file staging tests, and the existing generic `VendorMsi` Runner integration.
+- Added optional MSI configuration: autostart, organizational EULA acceptance, pre-sign-in update checks, Outlook integration, Cisco sign-in identity placeholders, theme, timeout, and validated additional MSI properties.
+- Added cache discovery, cache clearing, built-in metadata, Webex icon, user documentation and file-backed Pester regression tests.
+
+### Validation
+
+- Automated MSI property, x64/ARM64 staging and vendor manifest/cache path tests are included.
+- Cisco installer download behavior and a complete OSDCloud/Webex installation still require real-world validation. Previous 0.30.x/0.31.0 field results are unaffected.
+
 ## 0.31.0
 
 ### Breaking changes

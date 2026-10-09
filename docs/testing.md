@@ -72,6 +72,12 @@ The same run exposed an **Adobe staging path mismatch**: `BuiltInCacheRestaged` 
 
 The five completed real-world deployment scenarios above used **0.30.0** and therefore its original built-in ID `Teams`. In **0.31.0**, the canonical built-in ID, cache folder, WinPE staging, runtime manifest type and public cmdlets change to **`MicrosoftTeams`** with no automatic legacy compatibility or USB cache migration. New file-backed Pester tests validate the updated staging and runtime contracts. A fresh 0.31.0 SetupComplete deployment has not yet been field-verified; keep the original 0.30.0 test results as historical evidence rather than relabeling them.
 
+## Cisco Webex built-in — 0.32.0
+
+Cisco Webex was added with x64 and ARM64 non-localized MSI sources, an architecture-specific optional USB cache, validated MSI parameters and the shared `VendorMsi` SetupComplete runner. File-backed unit tests verify that WinPE cache staging and `DeviceManifest.json` resolve to the identical local MSI path.
+
+**Not yet field-validated:** actual Cisco MSI retrieval and HTTP freshness metadata, offline installation and Webex application behavior on a deployed Windows device. The earlier six-app deployment results do not include Cisco Webex.
+
 ## Validated built-ins and remaining variants
 
 The 0.30.0 end-to-end tests above cover Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified **x64**, and Google Chrome Enterprise **x64**. The earlier validation matrix also listed Mozilla Firefox Enterprise Rapid x64 as validated; it was **not** part of these four 0.30.0 runs.

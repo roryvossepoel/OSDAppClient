@@ -133,6 +133,7 @@ Current built-ins:
 | Adobe Acrobat Unified | Adobe Unified installer |
 | Google Chrome Enterprise | Google Enterprise MSI |
 | Mozilla Firefox Enterprise | Mozilla MSI |
+| Cisco Webex | Cisco non-localized Webex App MSI (x64/ARM64) |
 
 Built-ins are always acquired directly from the software vendor. OSDApps does not redistribute built-in application binaries.
 
@@ -150,6 +151,18 @@ Repository
 → repository sync happens in WinPE
 → full Windows only installs the staged package
 ```
+
+### Cisco Webex (new in 0.32.0)
+
+Cisco Webex App is available as a vendor-native built-in, with x64 or ARM64 MSI and optional USB caching. No separate Meetings bundle or VDI support is included.
+
+```powershell
+Add-OSDAppCiscoWebex
+# Optional: enable Control Hub-aligned post-login updates, and prefill the UPN at Webex sign-in
+Add-OSDAppCiscoWebex -PreventPreLoginUpdates $true -EmailHint '$userPrincipalName'
+```
+
+The default install is per-machine and does not auto-start with Windows. See [Cisco Webex options](docs/built-in-apps.md#cisco-webex) for MSI properties and offline-cache preparation.
 
 See [Built-in applications](docs/built-in-apps.md).
 

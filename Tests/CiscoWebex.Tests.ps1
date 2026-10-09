@@ -9,7 +9,7 @@ Describe 'Cisco Webex built-in MSI integration' {
         foreach ($name in @('Add-OSDAppCiscoWebex','Sync-OSDAppCiscoWebex')) {
             $cmd = Get-Command -Module OSDApps -Name $name
             $cmd | Should -Not -BeNullOrEmpty
-            $cmd.Definition | Should -Match "\$Architecture\s*=\s*'x64'"
+            $cmd.Definition | Should -Match ([regex]::Escape('$Architecture') + "\s*=\s*'x64'")
             $validate = @($cmd.Parameters['Architecture'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] })
             @($validate[0].ValidValues | Sort-Object) | Should -Be @('arm64','x64')
         }

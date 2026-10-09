@@ -38,7 +38,7 @@ function New-OSDAppCiscoWebexMsiProperties {
 
     $managed = @('ALLUSERS','ACCEPT_EULA','AUTOSTART_WITH_WINDOWS','PREVENT_PRELOGIN_UPDATES','ENABLEOUTLOOKINTEGRATION','DEFAULT_THEME','EMAIL')
     $seen = @{}
-    foreach ($property in @($AdditionalMsiProperties)) {
+    foreach ($property in $AdditionalMsiProperties) {
         $match = [regex]::Match([string]$property, '^([A-Za-z_][A-Za-z0-9_]*)=(.+)$')
         if ([string]::IsNullOrWhiteSpace($property) -or -not $match.Success) {
             throw "AdditionalMsiProperties must contain non-empty NAME=VALUE pairs; invalid property: '$property'."
