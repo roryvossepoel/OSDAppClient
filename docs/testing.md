@@ -9,7 +9,7 @@ This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging succ
 | Empty OSDCloud USB cache, online | **Validated — 0.30.0 test 2** | USB cache populated during SetupComplete; six queued apps installed |
 | Existing OSDCloud USB cache, online | **Validated — 0.30.0 tests 3 and 4** | Reuse/freshness checking; altered Office configuration tested separately |
 | No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
-| Existing OSDCloud USB cache, offline | **Not yet validated** | Requires complete staged/cached payloads |
+| Existing OSDCloud USB cache, offline | **Validated — 0.30.0 test 5** | Network disconnected; warm USB cache recognized; six apps installed, each exit code 0 |
 | No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
 
 ## Real-world end-to-end validation — OSDApps 0.30.0
@@ -57,8 +57,16 @@ The unchanged build number in test 4 does **not** mean the Office configuration 
 - Warm USB versus cold USB reduced the **measured Windows phase** by **70.5 s**, largely in PreInstall (114.2 s to 41.7 s).
 - Warm USB versus no USB reduced the measured Windows phase by **174.5 s**, but the no-USB and cold-USB runs had different observed Adobe download speeds. Do **not** attribute the entire difference to cache state; these are single real-world runs, not controlled or statistical benchmarks.
 - The four execution paths and six installer exit codes were confirmed; **Office activation and the effective installed update channel were not independently verified**. The requested `MonthlyEnterprise` channel was checked in the staged XML, not confirmed in the installed Office update configuration.
-- Offline operation, alternate x86/arm64 variants, failure/recovery paths and repeated timed samples remain separate tests.
+- Other offline conditions (such as no USB with fully staged source), alternate x86/arm64 variants, failure/recovery paths and repeated timed samples remain separate tests.
 - Source `Runtime.log` and WinPE staging checks were supplied during testing; raw environment logs were not added to the public repository.
+
+## Offline end-to-end validation — OSDApps 0.30.0 test 5 (9 October 2026)
+
+Test 5 started with a fully populated `OSDCloud` USB cache. All expected built-in source files were checked on the USB stick before reboot, and the two repository packages had already been staged. The network connection was physically disconnected before boot and remained unavailable throughout SetupComplete.
+
+The `Runtime.log` confirmed `CacheVolumeFound`, `CacheUsed=True`, `BuiltInRefreshSkipped` for Office, Teams, Chrome and Adobe, and no online refresh. PreInstall completed in **7.6 s**; Runner completed in **380.7 s**. All six entries had successful install/provisioning exit codes (`0`), with a measured total of **388.3 s (6:28)**, excluding WinPE preparation.
+
+The same run exposed an **Adobe staging path mismatch**: `BuiltInCacheRestaged` for Adobe showed the cache was copied from USB during PreInstall because the local archive was not at the manifest's architecture-specific path. The 0.30.1 change fixes that mismatch and adds file-copy regression tests. **Test 5 remains a valid successful fully offline deployment**; the additional path fix removes an unnecessary restage and aligns WinPE staging with runtime expectations.
 
 ## Validated built-ins and remaining variants
 
