@@ -59,6 +59,7 @@ function Add-OSDAppCiscoWebex {
         StagedRelativePath = $stagedRelativePath
         Confirm = $false
     }
+    if (-not $DefaultTheme) { $addParams.Remove('DefaultTheme') | Out-Null }
     $result = Add-OSDAppCiscoWebexInternal @addParams
 
     $manifestPath = Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'

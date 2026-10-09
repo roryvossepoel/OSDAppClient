@@ -26,6 +26,7 @@ function Add-OSDAppCiscoWebexInternal {
         EmailHint = $EmailHint
         AdditionalMsiProperties = $AdditionalMsiProperties
     }
+    if (-not $DefaultTheme) { $msiParameters.Remove('DefaultTheme') | Out-Null }
     $msiProperties = @(New-OSDAppCiscoWebexMsiProperties @msiParameters)
 
     $destinationRoot = Join-Path $WindowsPath $StagedRelativePath

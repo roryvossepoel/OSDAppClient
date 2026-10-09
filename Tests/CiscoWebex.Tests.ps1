@@ -83,6 +83,28 @@ Describe 'Cisco Webex built-in MSI integration' {
         }
     }
 
+    It 'allows the public Add cmdlet to stage defaults without optional theme or cached media' {
+        InModuleScope OSDApps {
+            $windows = Join-Path $TestDrive 'PublicAddWindows'
+            New-Item -ItemType Directory -Path $windows -Force | Out-Null
+            Mock Resolve-OSDAppWindowsPath { $WindowsPath }
+            Mock Get-OSDAppCachePath { throw 'No USB cache' }
+            Mock Add-OSDAppSetupComplete { }
+
+            $result = Add-OSDAppCiscoWebex -WindowsPath $windows -Confirm:$false
+            $manifestPath = Join-Path $windows 'Windows\Temp\OSDApps\DeviceManifest.json'
+            (Test-Path -LiteralPath $manifestPath -PathType Leaf) | Should -BeTrue
+            $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+            $app = @($manifest.Apps | Where-Object Id -eq 'CiscoWebex')[0]
+            $result.Name | Should -Be 'CiscoWebex'
+            $app.MsiProperties | Should -Contain 'AUTOSTART_WITH_WINDOWS=FALSE'
+            $app.MsiProperties | Should -Contain 'ALLUSERS=1'
+            $app.MsiProperties | Should -Not -Contain 'DEFAULT_THEME=Light'
+            $app.MsiProperties | Should -Not -Contain 'ENABLEOUTLOOKINTEGRATION=0'
+            Should -Invoke Add-OSDAppSetupComplete -Exactly -Times 1
+        }
+    }
+
     It 'copies real cached MSI bytes to exactly the x64 and arm64 manifest paths' {
         InModuleScope OSDApps {
             foreach ($arch in @('x64','arm64')) {
