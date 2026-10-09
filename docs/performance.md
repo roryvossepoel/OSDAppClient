@@ -47,6 +47,16 @@ All four runs completed the six-entry queue successfully according to `Runtime.l
 
 See [Validation matrix](testing.md) for the test sequence, acceptance criteria, cache behavior and outstanding coverage.
 
+## Warm USB cache, fully offline — OSDApps 0.30.0 test 5 (9 October 2026)
+
+| Phase | Duration |
+| --- | ---: |
+| PreInstall (offline cache fallback) | 7.6 s |
+| Runner (six applications) | 380.7 s |
+| **Measured total** | **388.3 s (6:28)** |
+
+All six installer/provisioning calls exited with code `0` with networking disconnected before reboot. The populated USB cache was recognized. Office, Teams and Chrome used existing local staging, while Adobe was restaged from USB after a local staging path mismatch. That mismatch is corrected in **0.30.1**; these numbers describe the original successful **0.30.0** field run, not a benchmark of the patched release.
+
 ## Historical cold/warm cache benchmark — OSDApps 0.29.1
 
 The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB stick, the same application order, and the same deployment configuration.

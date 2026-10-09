@@ -1,11 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.30.1
 
 ### Fixed
 
+- Corrected Adobe Acrobat Unified WinPE staging from the USB cache: `Package.zip` now lands under `BuiltIn/AdobeAcrobatUnified/<architecture>/`, matching its DeviceManifest entry and SetupComplete runtime path. Previously, it was copied to the parent directory, so offline PreInstall had to restage it from USB.
+- Adobe staging now stops on copy errors, a missing staged archive, or an archive size mismatch instead of reporting successful staging for an absent/partial payload.
 - Added syntax-only validation for custom Office `-ConfigurationXml` in both Add and Sync, rejecting missing files and malformed XML while leaving ODT-specific settings to Microsoft.
 - Corrected the Office architecture documentation to use public `x86` and `x64` values.
+
+### Validation
+
+- Added file-backed Pester regression tests for Adobe x64 and x86 staging, missing-cache staging intent, and exact cache-to-manifest staging paths for the other four built-in applications.
+- Documented the successful 0.30.0 warm-USB offline field test (test 5, six installations with exit code 0) and the Adobe restaging anomaly that exposed this bug.
+- The patched 0.30.1 staging path requires deployment verification; the prior 0.30.0 offline test remains successful.
 
 ## 0.30.0
 

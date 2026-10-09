@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.30.0'
+    ModuleVersion     = '0.30.1'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -39,7 +39,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.30.0: unified x86/x64 architecture for built-in apps with x64 default, Office XML generator, update control, Visio and Project options.'
+            ReleaseNotes = '0.30.1: Fix Adobe Unified USB-cache staging to its architecture-specific manifest path and verify copied payload; validate custom Office XML syntax; add file-copy regression tests.'
             RequireLicenseAcceptance = $false
         }
     }
