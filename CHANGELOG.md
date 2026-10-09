@@ -24,7 +24,15 @@
 
 ### Validation
 
-- Added Office configuration and architecture regression tests. Full SetupComplete installation remains to be tested.
+- Added Office configuration and architecture regression tests. At the time of tagging 0.30.0, full SetupComplete deployment still required field validation.
+
+### Post-release field validation (9 October 2026)
+
+- Completed four fresh OSDCloud v2 SetupComplete scenarios: no USB cache, cold USB cache, warm USB cache, and warm USB with changed Office configuration.
+- All six application queue items completed successfully in each run (24/24 successful installer/provisioning results).
+- Word, Excel, Visio and Project executables were confirmed present following the modified Office installation.
+- Captured PreInstall/Runner measurements and remaining coverage limitations in [Validation matrix](docs/testing.md) and [Performance](docs/performance.md).
+- Office licensing activation and the effective installed update channel were not independently verified.
 
 ## 0.29.3
 

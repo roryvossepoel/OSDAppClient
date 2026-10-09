@@ -2,7 +2,52 @@
 
 OSDApps includes explicit runtime timing so cold-cache and warm-cache deployments can be compared without manually reconstructing every phase from timestamps.
 
-## Validated cold vs warm cache benchmark
+## End-to-end measurements — OSDApps 0.30.0 (9 October 2026)
+
+Four fresh OSDCloud v2 deployments validated the same six-application queue: Microsoft 365 Apps, Teams, Chrome Enterprise, Adobe Acrobat Unified, Omnissa Horizon Client (repository), and Notepad++ (repository). The fourth run changed the Office XML to MonthlyEnterprise / nl-nl with Visio and Project.
+
+| Scenario | PreInstall | Runner | Measured Windows total | Application results |
+| --- | ---: | ---: | ---: | --- |
+| 1. No USB cache, online | 217.3 s | 329.3 s | **546.6 s (9:07)** | 6/6 successful |
+| 2. Cold USB cache, online | 114.2 s | 328.4 s | **442.6 s (7:23)** | 6/6 successful |
+| 3. Warm USB cache, online | 41.7 s | 330.4 s | **372.1 s (6:12)** | 6/6 successful |
+| 4. Warm USB, modified Office XML | 104.1 s | 346.0 s | **450.1 s (7:30)** | 6/6 successful |
+
+The timings are reported by the runtime itself; the measured total is the **sum of the PreInstall and Runner durations**, not full end-to-end OSDCloud elapsed time. It excludes the module install, WinPE staging and brief hand-off gaps.
+
+### Acquisition/refresh timings (seconds)
+
+| Built-in app | No USB | Cold USB | Warm USB | Warm USB + changed Office |
+| --- | ---: | ---: | ---: | ---: |
+| Microsoft 365 Apps | 69.4 | 74.5 | 31.8 | 93.5 |
+| Microsoft Teams | 4.3 | 5.4 | 1.2 | 1.5 |
+| Google Chrome Enterprise | 2.4 | 3.0 | 0.5 | 0.5 |
+| Adobe Acrobat Unified | 138.0 | 27.6 | 4.7 | 4.9 |
+
+The no-USB Adobe transfer took approximately 137 seconds, versus 21.9 seconds for the cold-USB Adobe transfer. This is an observed network/CDN difference and **must not be represented as caching speedup**: both scenarios acquired Adobe content from the vendor for the first time.
+
+### Per-application processing times (seconds)
+
+These timings are from `ApplicationInstallComplete` and include any per-item validation or extraction performed in Runner.
+
+| Application | No USB | Cold USB | Warm USB | Changed Office |
+| --- | ---: | ---: | ---: | ---: |
+| Microsoft 365 Apps | 136.4 | 136.5 | 138.5 | 150.8 |
+| Microsoft Teams | 1.1 | 1.1 | 1.1 | 1.1 |
+| Google Chrome Enterprise | 18.1 | 18.1 | 18.2 | 18.1 |
+| Adobe Acrobat Unified | 107.8 | 107.7 | 107.8 | 109.8 |
+| Omnissa Horizon Client | 55.2 | 55.4 | 55.2 | 55.5 |
+| Notepad++ | 10.2 | 9.2 | 9.2 | 10.2 |
+
+**Warm-cache effect:** cold USB versus warm USB saved **70.5 seconds** in the measured Windows phases (442.6 s to 372.1 s). PreInstall saved 72.5 seconds while Runner differed by 2.0 seconds. The USB cache retained the same Office build (16.0.20430.20146), and Teams/Chrome/Adobe reported `PackageUpdated=False`; Teams refreshed only its small bootstrapper.
+
+**Changed Office configuration:** Office PreInstall grew from 31.8 s to 93.5 s and Office's install item from 138.5 s to 150.8 s. Although the Office build stayed the same, **Word, Excel, Visio and Project executables were verified present after SetupComplete**. The effective Office update channel and licensing activation still need separate verification.
+
+All four runs completed the six-entry queue successfully according to `Runtime.log` (24 successful installer/provisioning result codes in total). These are **single field observations**, not repeatability or statistical performance claims; installation/activation of all apps has not been interactively validated.
+
+See [Validation matrix](testing.md) for the test sequence, acceptance criteria, cache behavior and outstanding coverage.
+
+## Historical cold/warm cache benchmark — OSDApps 0.29.1
 
 The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB stick, the same application order, and the same deployment configuration.
 

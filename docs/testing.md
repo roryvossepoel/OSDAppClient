@@ -1,87 +1,109 @@
 # Validation matrix
 
-This page tracks end-to-end deployment paths that have been exercised with OSDCloud v2.
+This page tracks real OSDCloud v2 / OSDApps deployment scenarios. **Staging success alone is not an installation success**: the Windows `SetupComplete.cmd` phases must finish and the individual app results must be checked.
 
-| Scenario | Status | Expected source path |
+## Scenario coverage
+
+| Scenario | Status | Evidence / expected behavior |
 | --- | --- | --- |
-| Blank OSDCloud USB + online | Validated | Populate USB cache during SetupComplete, then install locally |
-| Existing OSDCloud USB cache + online | Validated | Reuse/refresh USB cache, then install locally |
-| Existing OSDCloud USB cache + offline | Next validation | Use staged/cached fallback without online refresh |
-| No USB + online | Next validation | Acquire built-ins directly to Windows Temp |
-| No USB + offline | Expected failure without staged fallback | PreInstall stops before Runner |
+| Empty OSDCloud USB cache, online | **Validated — 0.30.0 test 2** | USB cache populated during SetupComplete; six queued apps installed |
+| Existing OSDCloud USB cache, online | **Validated — 0.30.0 tests 3 and 4** | Reuse/freshness checking; altered Office configuration tested separately |
+| No USB cache, online | **Validated — 0.30.0 test 1** | Built-ins acquired on Windows volume; repository apps staged in WinPE |
+| Existing OSDCloud USB cache, offline | **Not yet validated** | Requires complete staged/cached payloads |
+| No USB, offline | **Not yet validated** | Without a complete staged fallback, PreInstall is expected to stop before Runner |
 
-## Validated built-in applications
+## Real-world end-to-end validation — OSDApps 0.30.0
 
-- Microsoft 365 Apps
-- Microsoft Teams
-- Adobe Acrobat Unified x64
-- Google Chrome Enterprise x64
-- Mozilla Firefox Enterprise Rapid x64
+**Executed:** 9 October 2026, on freshly deployed Windows installations via OSDCloud v2. All four scenarios used OSDApps **0.30.0** from PowerShell Gallery, `CleanupMode=Never`, the same six application IDs, and the same installation order. These are four deployment executions, not repeated statistical benchmark samples.
 
-## Built-ins awaiting end-to-end validation
+The application queue, in order:
+
+1. `Microsoft365Apps` (built-in; x64)
+2. `Teams` (built-in; x64)
+3. `GoogleChromeEnterprise` (built-in; x64)
+4. `AdobeAcrobatUnified` (built-in; x64)
+5. `OmnissaHorizonClient` (organization-managed repository; x64)
+6. `NotepadPlusPlus` (organization-managed repository; x64)
+
+Omnissa Horizon Client and Notepad++ were **test repository packages**, not OSDApps built-ins.
+
+### Measured Windows phases
+
+Durations below are from the `PreInstallComplete` / `InstallComplete` events in `Runtime.log`. **Total = PreInstall + Runner**, excluding WinPE/OSDCloud installation, module installation, repository staging and small gaps between phases.
+
+| Test | USB cache state | PreInstall | Runner | Measured total | Runner outcome |
+| --- | --- | ---: | ---: | ---: | --- |
+| **1** | No USB connected | 217.3 s | 329.3 s | **546.6 s (9:07)** | **6/6**, success |
+| **2** | USB connected, initially empty | 114.2 s | 328.4 s | **442.6 s (7:23)** | **6/6**, success |
+| **3** | Same USB, populated (warm) | 41.7 s | 330.4 s | **372.1 s (6:12)** | **6/6**, success |
+| **4** | Warm USB, changed Office configuration | 104.1 s | 346.0 s | **450.1 s (7:30)** | **6/6**, success |
+
+**24 of 24 queued application executions reported successful completion** across the four `Runtime.log` files (each application installer returned exit code `0`). This is an installer/runtime result, not proof of every app's later activation or interactive launch.
+
+### Per-test observations
+
+**Test 1 — USB removed after OSDCloud, before OSDApps staging.** The USB remained disconnected through SetupComplete. Four built-ins acquired content on the local OS disk; both repository packages were staged locally in WinPE and their SHA-256 hashes validated by Runner. PreInstall and Runner completed successfully. This validates the USB-optional path and the Office PreInstall self-copy fix.
+
+**Test 2 — cold USB cache.** The `OSDCloud` volume was present at `E:\OSDApps`. Both repository package cache entries passed the WinPE cache check; built-ins were acquired/synchronized to USB in full Windows. `CacheUsed=True`; PreInstall and Runner completed with six successful installs. The same USB was retained for the next scenarios.
+
+**Test 3 — warm USB cache.** PreInstall reported `CacheUsed=True`. Office build `16.0.20430.20146` was unchanged (`VersionChanged=False`). Teams, Chrome and Adobe reported `PackageUpdated=False`; Teams downloaded only the small bootstrapper, not the large MSIX again. PreInstall fell from 114.2 s (cold USB) to 41.7 s (warm USB). Runner times remained close.
+
+**Test 4 — warm USB with changed Microsoft 365 Apps configuration.** The staged XML was checked before reboot: x64 / ODT `OfficeClientEdition=64`, `MonthlyEnterprise`, `nl-nl`, updates enabled, plus `O365ProPlusRetail`, `VisioProRetail` and `ProjectProRetail`. Office PreInstall took 93.5 s; the detected Office build remained `16.0.20430.20146` (`VersionChanged=False`). Runner reported exit code `0` for all six queue entries. **Word, Excel, Visio and Project executables were separately confirmed present in Windows** after installation.
+
+The unchanged build number in test 4 does **not** mean the Office configuration was unchanged: the extra products and language can use the same build. Separately checking installed executables was therefore important.
+
+### Interpretation and remaining checks
+
+- Warm USB versus cold USB reduced the **measured Windows phase** by **70.5 s**, largely in PreInstall (114.2 s to 41.7 s).
+- Warm USB versus no USB reduced the measured Windows phase by **174.5 s**, but the no-USB and cold-USB runs had different observed Adobe download speeds. Do **not** attribute the entire difference to cache state; these are single real-world runs, not controlled or statistical benchmarks.
+- The four execution paths and six installer exit codes were confirmed; **Office activation and the effective installed update channel were not independently verified**. The requested `MonthlyEnterprise` channel was checked in the staged XML, not confirmed in the installed Office update configuration.
+- Offline operation, alternate x86/arm64 variants, failure/recovery paths and repeated timed samples remain separate tests.
+- Source `Runtime.log` and WinPE staging checks were supplied during testing; raw environment logs were not added to the public repository.
+
+## Validated built-ins and remaining variants
+
+The 0.30.0 end-to-end tests above cover Microsoft 365 Apps, Microsoft Teams, Adobe Acrobat Unified **x64**, and Google Chrome Enterprise **x64**. The earlier validation matrix also listed Mozilla Firefox Enterprise Rapid x64 as validated; it was **not** part of these four 0.30.0 runs.
+
+Still requiring separate end-to-end checks:
 
 - Google Chrome Enterprise x86
 - Mozilla Firefox Enterprise Rapid x86
 - Mozilla Firefox Enterprise ESR x64/x86
 - Adobe Acrobat Unified x86
+- Microsoft Teams x86 / arm64 and Microsoft 365 Apps x86 (new public architecture contract)
 
-## Success criteria
+## Success criteria and logs
 
-A built-in test is considered successful when:
+1. WinPE stages the intended `DeviceManifest.json` queue and any available repository payload.
+2. USB cache is detected only when connected, or a local no-USB path is selected.
+3. Repository `Package.zip` files validate against their SHA-256 metadata.
+4. `SetupComplete.cmd` starts `Invoke-OSDAppPreInstall.ps1`; `PreInstallComplete` reports success.
+5. `Invoke-OSDAppRunner.ps1` installs the six queued applications; each expected `*InstallComplete` has an accepted exit code.
+6. The final `InstallComplete` reports the expected application count.
+7. The configured `CleanupMode` is honored; for these tests `Never` retained the staged runtime.
 
-1. WinPE stages the intended application metadata and any available fallback payload.
-2. SetupComplete starts PreInstall in full Windows.
-3. Source resolution selects USB cache or local acquisition as expected.
-4. A complete payload exists under `%SystemRoot%\Temp\OSDApps` before installation.
-5. The Runner completes each application with an accepted exit code.
-6. `InstallComplete` is logged.
-7. The configured cleanup policy is honored after success (`OnSuccess` schedules cleanup; `Never` retains the runtime).
-
-Runtime evidence is written to:
+Windows runtime log:
 
 ```text
 %ProgramData%\OSDApps\Logs\Runtime.log
 ```
 
-WinPE/cache operations are logged to:
+Module/cache log when USB is attached:
 
 ```text
 <OSDCloud>:\OSDApps\Logs\Client.log
 ```
 
-## Performance baselines
+For a no-USB run, module-side logging may be on the Windows volume, while the standalone runner still uses the configured Windows runtime log.
 
-For performance validation, use the same application order for both runs and compare:
+## Historical cold/warm benchmark — OSDApps 0.29.1
 
-1. **Cold cache** — blank OSDCloud cache; all built-in content must be acquired.
-2. **Warm cache** — reuse the populated cache from the cold-cache run.
+The earlier 0.29.1 benchmark is retained separately, using the same hardware, USB stick, application set and install order for its cold/warm pair.
 
-Record at least:
-- PreInstall duration;
-- per-built-in acquisition/refresh duration;
-- Runner duration;
-- per-application installation duration;
-- total SetupComplete duration.
-
-For troubleshooting runs, use:
-
-```powershell
-Set-OSDAppConfiguration -CleanupMode Never
-```
-
-so the staged runtime, payloads, and `Work` directory remain available after success.
-
-
-## Validated 0.29.1 cold/warm benchmark
-
-A full cold-cache and warm-cache comparison has been validated using the same hardware, OSDCloud USB stick, application set and installation order.
-
-| Phase | Cold cache | Warm cache |
+| Phase | Cold USB | Warm USB |
 | --- | ---: | ---: |
-| PreInstall / refresh | 125.2 s | 40.6 s |
-| Runner / installations | 330.7 s | 327.4 s |
-| Total measured Windows phase | 455.9 s | 368.0 s |
+| PreInstall | 125.2 s | 40.6 s |
+| Runner | 330.7 s | 327.4 s |
+| Measured Windows total | 455.9 s | 368.0 s |
 
-The warm-cache run completed the measured Windows phase 87.9 seconds faster. Runner duration differed by only 3.3 seconds, confirming that cache state primarily affects acquisition and refresh rather than installation.
-
-See [Performance](performance.md) for the full benchmark and per-application timings.
+See [Performance](performance.md) for the historical benchmark details and the updated 0.30.0 comparison.
