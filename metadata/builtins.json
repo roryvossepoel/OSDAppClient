@@ -111,6 +111,24 @@
       "CachePath": "BuiltIn/MozillaFirefoxEnterprise/<channel>/<architecture>/<language>",
       "RepositoryAlternative": true,
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/firefox.svg"
+    },
+    {
+      "Id": "CiscoWebex",
+      "DisplayName": "Cisco Webex",
+      "Source": "BuiltIn",
+      "Vendor": "Cisco",
+      "Acquisition": "VendorMsi",
+      "SyncPhase": "FullWindowsPreInstall",
+      "AddCommand": "Add-OSDAppCiscoWebex",
+      "SyncCommand": "Sync-OSDAppCiscoWebex",
+      "Architectures": [
+        "x64",
+        "arm64"
+      ],
+      "DefaultArchitecture": "x64",
+      "CachePath": "BuiltIn/CiscoWebex/<architecture>",
+      "RepositoryAlternative": true,
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/ciscowebex.svg"
     }
   ]
 }

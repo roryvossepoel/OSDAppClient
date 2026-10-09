@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OSDApps.psm1'
-    ModuleVersion     = '0.31.0'
+    ModuleVersion     = '0.32.0'
     GUID              = 'efc06c0c-6a69-4c21-8f34-2f539a7d5409'
     Author            = 'Rory Vossepoel'
     Copyright         = '(c) 2026 Rory Vossepoel. Licensed under the MIT License.'
@@ -17,6 +17,7 @@
         'Sync-OSDAppMicrosoftTeams',
         'Sync-OSDAppAdobeAcrobatUnified',
         'Sync-OSDAppGoogleChromeEnterprise',
+        'Sync-OSDAppCiscoWebex',
         'Sync-OSDAppMozillaFirefoxEnterprise',
         'Clear-OSDAppCache',
         'Add-OSDApp',
@@ -24,6 +25,7 @@
         'Add-OSDAppMicrosoftTeams',
         'Add-OSDAppAdobeAcrobatUnified',
         'Add-OSDAppGoogleChromeEnterprise',
+        'Add-OSDAppCiscoWebex',
         'Add-OSDAppMozillaFirefoxEnterprise',
         'New-OSDAppRepository',
         'New-OSDAppPackage',
@@ -39,7 +41,7 @@
             Tags = @('PowerShell','OSDCloud','OSDCloudV2','WinPE','WindowsDeployment','ApplicationDeployment','AppDeployment','OOBE','Autopilot','SetupComplete','OfflineCache','ApplicationCache','ApplicationPackaging','Repository')
             ProjectUri = 'https://github.com/roryvossepoel/OSDApps'
             LicenseUri = 'https://github.com/roryvossepoel/OSDApps/blob/main/LICENSE'
-            ReleaseNotes = '0.31.0: Rename built-in Teams to MicrosoftTeams across cmdlets, cache, metadata, manifests and standalone runtime. Breaking change: no legacy aliases or automatic cache migration.'
+            ReleaseNotes = '0.32.0: Add Cisco Webex App built-in (x64/arm64, vendor MSI, USB cache, offline SetupComplete and configurable MSI installation properties).'
             RequireLicenseAcceptance = $false
         }
     }
