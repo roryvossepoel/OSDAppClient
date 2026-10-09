@@ -10,11 +10,14 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
     )
 
     $destinationRoot = Join-Path $WindowsPath $StagedRelativePath
-    $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\AdobeAcrobatUnified'
+    # Use the same architecture-specific relative path for USB cache,
+    # WinPE staging, DeviceManifest and the SetupComplete runtime.
+    $relativeRoot = Join-Path 'BuiltIn\AdobeAcrobatUnified' $Architecture
+    $destinationBuiltIn = Join-Path $destinationRoot $relativeRoot
     $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
-    $cacheRoot = if ($CachePath) { Join-Path $CachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' $Architecture) } else { $null }
+    $cacheRoot = if ($CachePath) { Join-Path $CachePath $relativeRoot } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
         $cacheHasPayload = Test-Path -LiteralPath (Join-Path $cacheRoot 'Package.zip') -PathType Leaf
@@ -48,7 +51,7 @@ function Add-OSDAppAdobeAcrobatUnifiedInternal {
         Id = 'AdobeAcrobatUnified'
         DisplayName = 'Adobe Acrobat Unified'
         Type = 'AdobeAcrobatUnifiedZip'
-        Package = (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $Architecture 'Package.zip'))
+        Package = (Join-Path $relativeRoot 'Package.zip')
         Architecture = $Architecture
         PackageUri = $PackageUri
         CachePreferred = [bool]$CachePath
