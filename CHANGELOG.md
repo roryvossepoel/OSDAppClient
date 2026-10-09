@@ -24,7 +24,15 @@
 
 ### Validation
 
-- Added Office configuration and architecture regression tests. Full SetupComplete installation remains to be tested.
+- Added Office configuration and architecture regression tests. Full SetupComplete installation remained unverified at release publication time.
+
+### Post-release field validation (9 October 2026)
+
+- Four OSDCloud v2 / OSDApps 0.30.0 deployments were observed: no USB, cold USB, warm USB, and warm USB with a revised Office XML (Monthly Enterprise, Dutch, Visio and Project).
+- All six applications completed installation with accepted exit codes in all four runs (24/24 logged successes), including both SHA-256 validated repository packages.
+- The tester separately confirmed Word, Excel, Visio and Project executable files were present after the changed-Office run; license activation and effective update channel were not independently checked.
+- The combined measured PreInstall + Runner durations were 546.6 s, 442.6 s, 372.1 s and 450.1 s respectively. These are single-run field measurements, not guaranteed benchmarks.
+- Detailed observations and test limitations are documented in [Validation matrix](docs/testing.md) and [Performance](docs/performance.md). The immutable published 0.30.0 release artifacts were not changed.
 
 ## 0.29.3
 
