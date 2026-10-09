@@ -47,9 +47,7 @@ All four runs completed the six-entry queue successfully according to `Runtime.l
 
 See [Validation matrix](testing.md) for the test sequence, acceptance criteria, cache behavior and outstanding coverage.
 
-## Historical benchmark — OSDApps 0.29.1
-
-## Validated cold vs warm cache benchmark (historical)
+## Historical cold/warm cache benchmark — OSDApps 0.29.1
 
 The following benchmark was captured with OSDApps 0.29.1 using the same hardware, the same OSDCloud USB stick, the same application order, and the same deployment configuration.
 
