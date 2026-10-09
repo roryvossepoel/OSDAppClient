@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.31.0
+
+### Breaking changes
+
+- Renamed the built-in application ID `Teams` to `MicrosoftTeams` throughout the module, `DeviceManifest.json`, cache metadata, PreInstall, Runner, logs and the machine-readable built-in catalog.
+- Replaced `Add-OSDAppTeams` / `Sync-OSDAppTeams` with `Add-OSDAppMicrosoftTeams` / `Sync-OSDAppMicrosoftTeams`. No compatibility aliases are shipped.
+- Moved the canonical Teams cache and staging directory from `BuiltIn/Teams` to `BuiltIn/MicrosoftTeams`. Previously populated USB caches are **not automatically migrated**; run `Sync-OSDAppMicrosoftTeams` on full Windows before using old media for a fully offline deployment.
+- Updated the built-in manifest type from `TeamsBootstrapper` to `MicrosoftTeamsBootstrapper`. Regenerate deployment manifests with 0.31.0.
+
+### Changed
+
+- Updated cache discovery and clearing, WinPE staging, SetupComplete acquisition and installation, public examples, built-in JSON metadata and icon URL.
+- Updated the application-queue diagram and renamed the published Teams icon to `metadata/icons/microsoftteams.svg`.
+
+### Validation
+
+- Extended file-backed staging regression tests and added explicit tests for the new public commands, absent legacy exports, manifest identity/type and paths, cache recognition, and runtime dispatch.
+- The earlier successful OSDCloud field tests 1–5 were executed with 0.30.0 and remain historical evidence. A new 0.31.0 field deployment is pending.
+
 ## 0.30.1
 
 ### Fixed

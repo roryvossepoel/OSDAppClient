@@ -1,9 +1,9 @@
-function Add-OSDAppTeams {
+function Add-OSDAppMicrosoftTeams {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [ValidateSet('x86','x64','arm64')][string]$Architecture = 'x64',
         [bool]$InstallMeetingAddin = $false,
-        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
+        [string]$MicrosoftTeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
         [string]$WindowsPath
     )
 
@@ -25,26 +25,26 @@ function Add-OSDAppTeams {
     $stagedRelativePath = 'Windows\Temp\OSDApps'
 
     if ($cachePath) {
-        $existingTeamsCache = (
-            (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\Teams\teams.msix') -PathType Leaf) -and
-            (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\Teams\teamsbootstrapper.exe') -PathType Leaf)
+        $existingMicrosoftTeamsCache = (
+            (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\MicrosoftTeams\teams.msix') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Join-Path $cachePath 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe') -PathType Leaf)
         )
 
-        if ($existingTeamsCache) {
-            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Teams' -Message 'Existing cache found; cached payload will be staged as fallback and refreshed during SetupComplete' }
+        if ($existingMicrosoftTeamsCache) {
+            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'MicrosoftTeams' -Message 'Existing cache found; cached payload will be staged as fallback and refreshed during SetupComplete' }
         }
         else {
-            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Teams' -Message 'No existing cache found; cache will be created during SetupComplete' }
+            if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'MicrosoftTeams' -Message 'No existing cache found; cache will be created during SetupComplete' }
         }
     }
 
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Teams' -Message 'Staging deployment intent to the OS disk' }
-    $result = Add-OSDAppTeamsInternal `
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'MicrosoftTeams' -Message 'Staging deployment intent to the OS disk' }
+    $result = Add-OSDAppMicrosoftTeamsInternal `
         -CachePath $cachePath `
         -WindowsPath $resolvedWindowsPath `
         -Architecture $Architecture `
         -InstallMeetingAddin $InstallMeetingAddin `
-        -TeamsBootstrapperUri $TeamsBootstrapperUri `
+        -MicrosoftTeamsBootstrapperUri $MicrosoftTeamsBootstrapperUri `
         -StagedRelativePath $stagedRelativePath `
         -Confirm:$false
 
@@ -54,8 +54,8 @@ function Add-OSDAppTeams {
     $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
     Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'Teams' -Message 'Device manifest updated and SetupComplete integration verified' }
-    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=Teams; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Success -Component 'MicrosoftTeams' -Message 'Device manifest updated and SetupComplete integration verified' }
+    if ($VerbosePreference -ne 'SilentlyContinue') { Write-OSDAppConsole -Level Info -Component 'Summary' -Message ("Application=MicrosoftTeams; Windows={0}; USB cache={1}; Acquisition=SetupComplete" -f $resolvedWindowsPath, $(if ($cachePath) { $cachePath } else { 'Not available' })) }
 
     if ($cachePath -and -not $script:OSDAppCacheMediaWarningShown) {
         Write-Warning 'OSDCloud cache media detected. Keep the USB device connected until OOBE is displayed.'

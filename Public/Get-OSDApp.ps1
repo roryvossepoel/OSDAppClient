@@ -94,7 +94,7 @@ function Get-OSDApp {
     }
 
     $officeCacheInfo = $null
-    $teamsCacheInfo = $null
+    $microsoftTeamsCacheInfo = $null
     $adobeCacheInfo = $null
     $chromeCacheInfo = $null
     $firefoxCacheInfo = $null
@@ -102,7 +102,7 @@ function Get-OSDApp {
     if ($cachePath) {
         foreach ($definition in @(
             @{ Id='Microsoft365Apps'; Path=(Join-Path $cachePath 'BuiltIn\Microsoft365Apps\CacheInfo.json') },
-            @{ Id='Teams'; Path=(Join-Path $cachePath 'BuiltIn\Teams\CacheInfo.json') },
+            @{ Id='MicrosoftTeams'; Path=(Join-Path $cachePath 'BuiltIn\MicrosoftTeams\CacheInfo.json') },
             @{ Id='AdobeAcrobatUnified'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\AdobeAcrobatUnified' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) },
             @{ Id='GoogleChromeEnterprise'; Path=(Join-Path $cachePath (Join-Path 'BuiltIn\GoogleChromeEnterprise' (Join-Path $(if ($hostArchitecture -eq 'x86') { 'x86' } else { 'x64' }) 'CacheInfo.json'))) }
         )) {
@@ -111,7 +111,7 @@ function Get-OSDApp {
                     $info = Get-Content -LiteralPath $definition.Path -Raw -Encoding UTF8 | ConvertFrom-Json
                     switch ($definition.Id) {
                         'Microsoft365Apps' { $officeCacheInfo = $info }
-                        'Teams' { $teamsCacheInfo = $info }
+                        'MicrosoftTeams' { $microsoftTeamsCacheInfo = $info }
                         'AdobeAcrobatUnified' { $adobeCacheInfo = $info }
                         'GoogleChromeEnterprise' { $chromeCacheInfo = $info }
                     }
@@ -143,7 +143,7 @@ function Get-OSDApp {
 
     foreach ($builtIn in @(
         @{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps'; Info=$officeCacheInfo },
-        @{ Id='Teams'; DisplayName='Microsoft Teams'; Info=$teamsCacheInfo },
+        @{ Id='MicrosoftTeams'; DisplayName='Microsoft Teams'; Info=$microsoftTeamsCacheInfo },
         @{ Id='AdobeAcrobatUnified'; DisplayName='Adobe Acrobat Unified'; Info=$adobeCacheInfo },
         @{ Id='GoogleChromeEnterprise'; DisplayName='Google Chrome Enterprise'; Info=$chromeCacheInfo },
         @{ Id='MozillaFirefoxEnterprise'; DisplayName='Mozilla Firefox Enterprise'; Info=$firefoxCacheInfo }

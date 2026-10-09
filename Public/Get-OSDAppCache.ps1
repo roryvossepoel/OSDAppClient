@@ -69,7 +69,7 @@ function Get-OSDAppCache {
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'configuration.xml') -PathType Leaf) -and
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'Office\Data') -PathType Container)
                     }
-                    'Teams' {
+                    'MicrosoftTeams' {
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'teamsbootstrapper.exe') -PathType Leaf) -and
                         (Test-Path -LiteralPath (Join-Path $entryRoot 'teams.msix') -PathType Leaf)
                     }

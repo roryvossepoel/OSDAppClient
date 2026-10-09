@@ -107,21 +107,24 @@ Describe 'Built-in cache staging aligns with DeviceManifest runtime paths' {
             $usb = Join-Path $TestDrive 'MicrosoftUsb'
             $windows = Join-Path $TestDrive 'MicrosoftWindows'
             $office = Join-Path $usb 'BuiltIn\Microsoft365Apps'
-            $teams = Join-Path $usb 'BuiltIn\Teams'
+            $teams = Join-Path $usb 'BuiltIn\MicrosoftTeams'
             New-Item -ItemType Directory -Path $windows,$office,$teams,(Join-Path $office 'Office\Data') -Force | Out-Null
             Set-Content -LiteralPath (Join-Path $office 'setup.exe') -Value 'setup' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $office 'configuration.xml') -Value '<Configuration />' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $teams 'teams.msix') -Value 'msix' -Encoding Ascii
             Set-Content -LiteralPath (Join-Path $teams 'teamsbootstrapper.exe') -Value 'bootstrapper' -Encoding Ascii
             Add-OSDAppMicrosoft365AppsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
-            Add-OSDAppTeamsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
+            Add-OSDAppMicrosoftTeamsInternal -CachePath $usb -WindowsPath $windows -Confirm:$false | Out-Null
 
             $stage = Join-Path $windows 'Windows\Temp\OSDApps'
             $manifest = Get-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Raw | ConvertFrom-Json
             @($manifest.Apps).Count | Should -Be 2
             $officeApp = @($manifest.Apps | Where-Object Id -eq 'Microsoft365Apps')[0]
-            $teamsApp = @($manifest.Apps | Where-Object Id -eq 'Teams')[0]
-            foreach ($path in @($officeApp.Setup,$officeApp.Configuration,$teamsApp.Setup,$teamsApp.OfflinePackage)) {
+            $microsoftTeamsApp = @($manifest.Apps | Where-Object Id -eq 'MicrosoftTeams')[0]
+            $microsoftTeamsApp.Type | Should -Be 'MicrosoftTeamsBootstrapper'
+            $microsoftTeamsApp.Setup | Should -Be 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
+            $microsoftTeamsApp.OfflinePackage | Should -Be 'BuiltIn\MicrosoftTeams\teams.msix'
+            foreach ($path in @($officeApp.Setup,$officeApp.Configuration,$microsoftTeamsApp.Setup,$microsoftTeamsApp.OfflinePackage)) {
                 (Test-Path -LiteralPath (Join-Path $stage $path) -PathType Leaf) | Should -BeTrue
             }
             (Test-Path -LiteralPath (Join-Path $stage 'BuiltIn\Microsoft365Apps\Office\Data') -PathType Container) | Should -BeTrue

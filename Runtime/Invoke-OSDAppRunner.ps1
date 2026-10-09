@@ -210,7 +210,7 @@ try {
 
                 Write-RunnerLog -LogPath $logPath -Event 'BuiltInInstallComplete' -Message 'Built-in Microsoft 365 Apps installation completed.' -Data @{ Id = $app.Id; ExitCode = $process.ExitCode }
             }
-            'TeamsBootstrapper' {
+            'MicrosoftTeamsBootstrapper' {
                 $setupPath = Join-Path $StagedPath $app.Setup
                 $workingDirectory = Split-Path $setupPath -Parent
 

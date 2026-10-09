@@ -1,16 +1,16 @@
-function Add-OSDAppTeamsInternal {
+function Add-OSDAppMicrosoftTeamsInternal {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$CachePath,
         [Parameter(Mandatory)][string]$WindowsPath,
         [ValidateSet('x86','x64','arm64')][string]$Architecture = 'x64',
         [bool]$InstallMeetingAddin = $false,
-        [string]$TeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
+        [string]$MicrosoftTeamsBootstrapperUri = 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2243204',
         [string]$StagedRelativePath = 'Windows\Temp\OSDApps'
     )
 
     $destinationRoot = Join-Path $WindowsPath $StagedRelativePath
-    $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\Teams'
+    $destinationBuiltIn = Join-Path $destinationRoot 'BuiltIn\MicrosoftTeams'
     $deviceManifestPath = Join-Path $destinationRoot 'DeviceManifest.json'
     $clientLogPath = if ($CachePath) { Join-Path $CachePath 'Logs\Client.log' } else { Join-Path $WindowsPath 'ProgramData\OSDApps\Logs\Client.log' }
 
@@ -22,7 +22,7 @@ function Add-OSDAppTeamsInternal {
         'arm64' { 'https://go.microsoft.com/fwlink/?clcid=0x409&linkid=2196207' }
     }
 
-    $cacheRoot = if ($CachePath) { Join-Path $CachePath 'BuiltIn\Teams' } else { $null }
+    $cacheRoot = if ($CachePath) { Join-Path $CachePath 'BuiltIn\MicrosoftTeams' } else { $null }
     $cacheHasPayload = $false
     if ($cacheRoot) {
         $cacheHasPayload = (
@@ -51,14 +51,14 @@ function Add-OSDAppTeamsInternal {
 
     $manifestApp = [pscustomobject]@{
         Source = 'BuiltIn'
-        Id = 'Teams'
+        Id = 'MicrosoftTeams'
         DisplayName = 'Microsoft Teams'
-        Type = 'TeamsBootstrapper'
-        Setup = 'BuiltIn\Teams\teamsbootstrapper.exe'
-        OfflinePackage = 'BuiltIn\Teams\teams.msix'
+        Type = 'MicrosoftTeamsBootstrapper'
+        Setup = 'BuiltIn\MicrosoftTeams\teamsbootstrapper.exe'
+        OfflinePackage = 'BuiltIn\MicrosoftTeams\teams.msix'
         InstallMeetingAddin = $InstallMeetingAddin
         Architecture = $resolvedArchitecture
-        BootstrapperUri = $TeamsBootstrapperUri
+        BootstrapperUri = $MicrosoftTeamsBootstrapperUri
         MsixUri = $msixUri
         CachePreferred = [bool]$CachePath
     }
@@ -67,13 +67,13 @@ function Add-OSDAppTeamsInternal {
     $deviceManifest.StagedAt = (Get-Date).ToUniversalTime().ToString('o')
     $deviceManifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $deviceManifestPath -Encoding UTF8
 
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'StageTarget' -Message 'Microsoft Teams deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
-    Write-OSDAppLog -LogPath $clientLogPath -Component 'Teams' -Event 'TeamsStageComplete' -Message 'Microsoft Teams deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$resolvedArchitecture }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MicrosoftTeams' -Event 'CacheDetection' -Message $(if ($CachePath) { 'OSDCloud USB cache detected.' } else { 'No OSDCloud USB cache detected. Direct local acquisition will be used during SetupComplete.' }) -Data @{ CachePath=$CachePath; CacheAvailable=$cacheHasPayload }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MicrosoftTeams' -Event 'StageTarget' -Message 'Microsoft Teams deployment intent staged to the OS disk.' -Data @{ Destination=$destinationBuiltIn; AcquisitionPhase='SetupComplete'; CachePreferred=[bool]$CachePath }
+    Write-OSDAppLog -LogPath $clientLogPath -Component 'MicrosoftTeams' -Event 'MicrosoftTeamsStageComplete' -Message 'Microsoft Teams deployment intent staged.' -Data @{ Destination=$destinationBuiltIn; CacheAvailable=$cacheHasPayload; CachePath=$CachePath; Architecture=$resolvedArchitecture }
 
     [pscustomobject]@{
         PSTypeName='OSDApps.StagedApp'
-        Name='Teams'
+        Name='MicrosoftTeams'
         CachePath=$CachePath
         WindowsPath=$WindowsPath
         StagedPath=$destinationBuiltIn

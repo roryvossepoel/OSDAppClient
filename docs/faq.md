@@ -26,6 +26,10 @@ Package them as normal repository applications.
 
 Repository acquisition does not depend on a vendor bootstrapper and is designed to run in WinPE.
 
+## Can I use the old Teams USB cache after upgrading to 0.31.0?
+
+Not without re-synchronizing. The built-in ID was renamed from `Teams` to `MicrosoftTeams`, including the new `BuiltIn\MicrosoftTeams` cache path. OSDApps 0.31.0 intentionally has no aliases or migration logic for the previous ID and folder. On a full Windows computer with the `OSDCloud` USB attached, run `Sync-OSDAppMicrosoftTeams` to populate the new cache. An online deployment can also acquire the new Teams content during PreInstall. For a fully offline deployment, prepare the new cache first.
+
 ## What happens if the USB is removed too early?
 
 If cache functionality is being used, removing the `OSDCloud` USB early prevents the full-Windows built-in refresh from checking and updating that cache. OSDApps itself does not require USB media; without an `OSDCloud` USB cache, content can be acquired directly to the local Windows runtime when online.
@@ -94,7 +98,7 @@ Use the built-in Add cmdlets with `-Verbose`:
 
 ```powershell
 Add-OSDAppMicrosoft365Apps -Verbose
-Add-OSDAppTeams -Verbose
+Add-OSDAppMicrosoftTeams -Verbose
 ```
 
 The output shows whether an `OSDCloud` cache volume was detected, whether a usable cache already exists, the offline Windows target and whether content will be acquired through the USB cache or directly to the OS disk.
@@ -155,7 +159,7 @@ Built-in applications:
 
 ```powershell
 Sync-OSDAppMicrosoft365Apps
-Sync-OSDAppTeams
+Sync-OSDAppMicrosoftTeams
 Sync-OSDAppAdobeAcrobatUnified
 Sync-OSDAppGoogleChromeEnterprise
 Sync-OSDAppMozillaFirefoxEnterprise

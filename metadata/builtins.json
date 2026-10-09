@@ -34,23 +34,23 @@
       "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/microsoft365.svg"
     },
     {
-      "Id": "Teams",
+      "Id": "MicrosoftTeams",
       "DisplayName": "Microsoft Teams",
       "Source": "BuiltIn",
       "Vendor": "Microsoft",
-      "Acquisition": "TeamsBootstrapper",
+      "Acquisition": "MicrosoftTeamsBootstrapper",
       "SyncPhase": "FullWindowsPreInstall",
-      "AddCommand": "Add-OSDAppTeams",
-      "SyncCommand": "Sync-OSDAppTeams",
+      "AddCommand": "Add-OSDAppMicrosoftTeams",
+      "SyncCommand": "Sync-OSDAppMicrosoftTeams",
       "Architectures": [
         "x86",
         "x64",
         "arm64"
       ],
       "DefaultArchitecture": "x64",
-      "CachePath": "BuiltIn/Teams",
+      "CachePath": "BuiltIn/MicrosoftTeams",
       "RepositoryAlternative": true,
-      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/teams.svg"
+      "IconUrl": "https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/microsoftteams.svg"
     },
     {
       "Id": "AdobeAcrobatUnified",

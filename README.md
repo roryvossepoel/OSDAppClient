@@ -60,7 +60,7 @@ The example below deliberately mixes both source types. Microsoft 365 Apps, Team
 ```powershell
 # Built-ins
 Add-OSDAppMicrosoft365Apps
-Add-OSDAppTeams
+Add-OSDAppMicrosoftTeams
 Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppAdobeAcrobatUnified
 
@@ -97,7 +97,7 @@ Get-OSDApp
 
 # Built-ins
 Add-OSDAppMicrosoft365Apps
-Add-OSDAppTeams
+Add-OSDAppMicrosoftTeams
 Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppAdobeAcrobatUnified
 
@@ -107,6 +107,8 @@ Add-OSDApp NotepadPlusPlus
 ```
 
 No OSDApps module installation is required in the deployed Windows installation. The required standalone runtime is staged automatically.
+
+**Version 0.31.0 breaking rename:** the built-in app is now `MicrosoftTeams`, including `Add-OSDAppMicrosoftTeams`, `Sync-OSDAppMicrosoftTeams`, and USB staging under `BuiltIn\MicrosoftTeams`. No aliases or automatic migration from `BuiltIn\Teams` are provided. Re-synchronize the new Teams cache before any offline deployment using existing media.
 
 Default runtime log:
 
