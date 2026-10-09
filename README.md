@@ -27,10 +27,11 @@ Install-Module OSDApps -SkipPublisherCheck
 Import-Module OSDApps
 ```
 
-To install a specific version:
+To install a specific version (for example, the field-validated 0.30.0 release):
 
 ```powershell
-Install-Module OSDApps -SkipPublisherCheck
+Install-Module OSDApps -RequiredVersion 0.30.0 -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.30.0
 ```
 
 `Install-PSResource` is the newer PSResourceGet equivalent, but PSResourceGet is not normally available by default in Windows PowerShell 5.1 / WinPE. For OSDCloud and WinPE scenarios, `Install-Module` is therefore the recommended installation method.
@@ -224,21 +225,22 @@ Inspect the current cache with:
 Get-OSDAppCache
 ```
 
-## Validated performance
+## Field validation and performance
 
-Cold-cache and warm-cache deployments were validated on the same hardware, USB stick and application set with OSDApps 0.29.1.
+**OSDApps 0.30.0** was validated in four real OSDCloud v2 / SetupComplete deployments (9 October 2026) with the same six-application queue: Microsoft 365 Apps, Teams, Chrome Enterprise, Adobe Acrobat Unified, Omnissa Horizon Client, and Notepad++. The two repository applications were acquired in WinPE; all four runtime logs report successful installation of all six apps.
 
-![OSDApps cold vs warm cache benchmark](docs/images/cold-warm-benchmark.svg)
+| Scenario | PreInstall | Runner | Combined phases | Results |
+| --- | ---: | ---: | ---: | --- |
+| USB removed, online | 217.3 s | 329.3 s | 9:07 | 6/6 |
+| Cold USB cache, online | 114.2 s | 328.4 s | 7:23 | 6/6 |
+| Warm USB cache, online | 41.7 s | 330.4 s | **6:12** | 6/6 |
+| Warm USB, changed Office XML | 104.1 s | 346.0 s | 7:30 | 6/6 |
 
-| Phase | Cold | Warm |
-| --- | ---: | ---: |
-| PreInstall / refresh | 125.2 s | 40.6 s |
-| Runner / installations | 330.7 s | 327.4 s |
-| **Total measured Windows phase** | **455.9 s** | **368.0 s** |
+The warm USB run was **70.5 seconds faster than cold USB** in the logged PreInstall + Runner phases. The changed Office scenario included Dutch, Monthly Enterprise, Visio and Project; the tester confirmed the Word, Excel, Visio and Project executable files were present.
 
-The warm cache reduced the measured Windows phase by **87.9 seconds**. Almost all of the improvement came from acquisition and refresh; installation time remained effectively unchanged.
+These are single field observations, not controlled performance guarantees. The measurements exclude OSDCloud deployment/OOBE, and Office license activation and the effective UI update channel were not separately verified.
 
-See [Performance](docs/performance.md).
+See [Validation matrix](docs/testing.md) for the detailed test evidence and [Performance](docs/performance.md) for per-app timings. The earlier **0.29.1** cold/warm benchmark remains documented separately.
 
 ## Development
 
@@ -259,7 +261,7 @@ Run the same validation locally with:
 
 Every push to `main` and every pull request runs GitHub Actions CI.
 
-PowerShell Gallery publishing uses a separate release workflow and is not performed by normal CI.
+A version bump merged into `main` triggers the GitHub Release workflow and, after successful release validation, the separate PowerShell Gallery publishing workflow. Normal CI does not publish packages.
 
 See [Releasing](docs/releasing.md).
 
