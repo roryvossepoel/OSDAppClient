@@ -5,10 +5,10 @@
 <text x="600" y="42" text-anchor="middle" class="h">Add order becomes install order</text>
 <text x="275" y="92" text-anchor="middle" class="sh">PowerShell</text><text x="865" y="92" text-anchor="middle" class="sh">DeviceManifest.json · Apps[]</text>
 <rect x="70" y="120" width="410" height="345" rx="12" class="box"/>
-<text x="95" y="160" class="cmd">Add-OSDAppMicrosoft365Apps</text><text x="95" y="205" class="cmd">Add-OSDAppTeams</text><text x="95" y="250" class="cmd">Add-OSDAppGoogleChromeEnterprise</text><text x="95" y="295" class="cmd">Add-OSDApp OmnissaHorizonClient</text><text x="95" y="340" class="cmd">Add-OSDApp NotepadPlusPlus</text><text x="95" y="385" class="cmd">Add-OSDAppAdobeAcrobatUnified</text><text x="95" y="430" class="s">Re-adding an app moves it to the end.</text>
+<text x="95" y="160" class="cmd">Add-OSDAppMicrosoft365Apps</text><text x="95" y="205" class="cmd">Add-OSDAppMicrosoftTeams</text><text x="95" y="250" class="cmd">Add-OSDAppGoogleChromeEnterprise</text><text x="95" y="295" class="cmd">Add-OSDApp OmnissaHorizonClient</text><text x="95" y="340" class="cmd">Add-OSDApp NotepadPlusPlus</text><text x="95" y="385" class="cmd">Add-OSDAppAdobeAcrobatUnified</text><text x="95" y="430" class="s">Re-adding an app moves it to the end.</text>
 <path d="M480 292 H585" class="arrow"/>
 <rect x="610" y="120" width="500" height="55" rx="10" class="built"/><text x="635" y="153" class="t">1 · Microsoft365Apps</text>
-<rect x="610" y="185" width="500" height="55" rx="10" class="built"/><text x="635" y="218" class="t">2 · Teams</text>
+<rect x="610" y="185" width="500" height="55" rx="10" class="built"/><text x="635" y="218" class="t">2 · MicrosoftTeams</text>
 <rect x="610" y="250" width="500" height="55" rx="10" class="built"/><text x="635" y="283" class="t">3 · GoogleChromeEnterprise</text>
 <rect x="610" y="315" width="500" height="55" rx="10" class="repo"/><text x="635" y="348" class="t">4 · OmnissaHorizonClient</text>
 <rect x="610" y="380" width="500" height="55" rx="10" class="repo"/><text x="635" y="413" class="t">5 · NotepadPlusPlus</text>

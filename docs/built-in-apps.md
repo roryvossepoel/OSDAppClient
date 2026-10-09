@@ -6,7 +6,7 @@ Currently supported:
 
 ```text
 Microsoft365Apps
-Teams
+MicrosoftTeams
 AdobeAcrobatUnified
 GoogleChromeEnterprise
 MozillaFirefoxEnterprise
@@ -112,7 +112,7 @@ For advanced or unusual configurations, export XML from Microsoft's Office Custo
 ### Microsoft Teams
 
 ```powershell
-Sync-OSDAppTeams -Architecture x64
+Sync-OSDAppMicrosoftTeams -Architecture x64
 ```
 
 Supported architectures:
@@ -127,6 +127,8 @@ The Teams cache contains:
 - `teamsbootstrapper.exe`
 - `teams.msix`
 - `CacheInfo.json`
+
+The canonical built-in ID is `MicrosoftTeams`. Its USB cache and WinPE staging location is `BuiltIn\MicrosoftTeams`, containing `teamsbootstrapper.exe`, `teams.msix` and `CacheInfo.json`. Version 0.31.0 intentionally does **not** recognize or automatically migrate the previous `BuiltIn\Teams` folder or the old cmdlet names. To use existing deployment media offline, pre-populate the new cache with `Sync-OSDAppMicrosoftTeams` in full Windows before booting WinPE.
 
 Teams freshness is checked using HTTP metadata. ETag is preferred; Last-Modified plus Content-Length is the fallback.
 
@@ -399,7 +401,7 @@ The same commands are used with or without USB cache:
 
 ```powershell
 Add-OSDAppMicrosoft365Apps
-Add-OSDAppTeams
+Add-OSDAppMicrosoftTeams
 Add-OSDAppAdobeAcrobatUnified
 Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppMozillaFirefoxEnterprise
@@ -446,7 +448,7 @@ Use:
 
 ```powershell
 Add-OSDAppMicrosoft365Apps -Verbose
-Add-OSDAppTeams -Verbose
+Add-OSDAppMicrosoftTeams -Verbose
 Add-OSDAppAdobeAcrobatUnified -Verbose
 Add-OSDAppGoogleChromeEnterprise -Verbose
 Add-OSDAppMozillaFirefoxEnterprise -Verbose

@@ -185,7 +185,7 @@ Set-OSDAppConfiguration `
 
 # Built-ins
 Add-OSDAppMicrosoft365Apps
-Add-OSDAppTeams
+Add-OSDAppMicrosoftTeams
 Add-OSDAppGoogleChromeEnterprise
 
 # Example applications from the configured repository
