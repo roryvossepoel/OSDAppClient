@@ -69,13 +69,44 @@ Describe 'Show-OSDAppUI MVP - staging adapter' {
         }
     }
 
-    It 'refuses staging from full Windows in preview mode' {
+    It 'requires explicit -TestMode for staging on full Windows' {
         InModuleScope OSDApps {
             Mock Test-OSDAppWinPE { $false }
             Mock Add-OSDApp {}
             { Invoke-OSDAppUIStage -Applications @([pscustomobject]@{Id='AppA';Source='Repository'}) -WindowsPath 'C:\OfflineWindows' } |
-                Should -Throw '*supported in WinPE*'
+                Should -Throw '*requires -TestMode*'
             Should -Invoke Add-OSDApp -Exactly 0
+        }
+    }
+
+    It 'refuses a Windows 11 staging target outside the designated TEMP folder' {
+        InModuleScope OSDApps {
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppUITestWindowsPath { 'C:\SafeUIStaging' }
+            Mock Add-OSDApp {}
+            { Invoke-OSDAppUIStage -Applications @([pscustomobject]@{Id='AppA';Source='Repository'}) -WindowsPath 'C:\' -TestMode } |
+                Should -Throw '*only permitted under the isolated test target*'
+            Should -Invoke Add-OSDApp -Exactly 0
+        }
+    }
+
+    It 'stages two apps to a safe Windows 11 test root when TestMode is explicit' {
+        InModuleScope OSDApps {
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppUITestWindowsPath { 'C:\SafeUIStaging' }
+            Mock Resolve-OSDAppWindowsPath { 'C:\SafeUIStaging' }
+            Mock Add-OSDApp {}
+            Mock Get-OSDAppUIStagedIds { 'AppA'; 'AppB' }
+            $apps = @(
+                [pscustomobject]@{ Id='AppA';Source='Repository' },
+                [pscustomobject]@{ Id='AppB';Source='Repository' }
+            )
+            $result = Invoke-OSDAppUIStage -Applications $apps -WindowsPath 'C:\SafeUIStaging' -Offline -TestMode
+            $result.WindowsPath | Should -Be 'C:\SafeUIStaging'
+            $result.Staged.Count | Should -Be 2
+            Should -Invoke Add-OSDApp -Exactly 1 -ParameterFilter {
+                $WindowsPath -eq 'C:\SafeUIStaging' -and [bool]$SkipCacheRefresh
+            }
         }
     }
 
