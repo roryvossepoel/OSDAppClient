@@ -62,13 +62,19 @@ function Show-OSDAppUI {
     Show-OSDAppUI -PreviewOnly
     .EXAMPLE
     Show-OSDAppUI -CatalogUri 'https://example.org/catalog.json'
+    .EXAMPLE
+    Show-OSDAppUI -TestMode -Offline
+    .NOTES
+    TestMode permits full-Windows staging only to a dedicated TEMP directory.
+    The active Windows setup and installation remain untouched.
     #>
     [CmdletBinding()]
     param(
         [uri]$CatalogUri,
         [string]$WindowsPath,
         [switch]$Offline,
-        [switch]$PreviewOnly
+        [switch]$PreviewOnly,
+        [switch]$TestMode
     )
 
     if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne [System.Threading.ApartmentState]::STA) {
@@ -87,8 +93,19 @@ function Show-OSDAppUI {
     $initialCatalog = if ($PSBoundParameters.ContainsKey('CatalogUri')) { $CatalogUri } else { $originalCatalog }
     $winPE = Test-OSDAppWinPE
     $target = $null
-    $targetLabel = 'Full Windows: inspection only'
-    if ($winPE) {
+    $targetLabel = 'Full Windows: inspection only. Use -TestMode for safe staging.'
+    if ($TestMode -and $winPE) {
+        throw '-TestMode is for full Windows only; use the normal WinPE staging mode.'
+    }
+    if ($TestMode -and $PSBoundParameters.ContainsKey('WindowsPath')) {
+        throw '-TestMode uses its own isolated TEMP target; do not specify -WindowsPath.'
+    }
+    if ($TestMode) {
+        $target = Get-OSDAppUITestWindowsPath
+        New-Item -Path $target -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        $targetLabel = "Windows test mode | Isolated target: $target"
+    }
+    elseif ($winPE) {
         try {
             $target = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
             $targetLabel = "WinPE | Offline Windows target: $target"
@@ -99,7 +116,7 @@ function Show-OSDAppUI {
     }
 
     $form = [System.Windows.Forms.Form]::new()
-    $form.Text = 'OSDApps Manager - Development Preview'
+    $form.Text = if ($TestMode) { 'OSDApps Manager - Staging Test Mode' } else { 'OSDApps Manager - Development Preview' }
     $form.Size = [System.Drawing.Size]::new(980, 700)
     $form.MinimumSize = [System.Drawing.Size]::new(780, 560)
     $form.StartPosition = 'CenterScreen'
@@ -208,7 +225,7 @@ function Show-OSDAppUI {
     $stage.Text = 'Stage selected apps'
     $stage.SetBounds(735,8,175,32)
     $stage.Anchor = 'Top,Right'
-    $stage.Enabled = ($winPE -and $null -ne $target -and -not $PreviewOnly)
+    $stage.Enabled = (($winPE -or $TestMode) -and $null -ne $target -and -not $PreviewOnly)
     $appActions.Controls.Add($stage)
 
     $cacheLayout = [System.Windows.Forms.TableLayoutPanel]::new()
@@ -253,7 +270,7 @@ function Show-OSDAppUI {
         Form=$form; Apps=$appList; Cache=$cacheList; Url=$url
         Offline=$offlineCheck; Status=$status; Target=$target
         Selection=$selection; Stage=$stage; Refresh=$refresh
-        PreviewOnly=[bool]$PreviewOnly
+        PreviewOnly=[bool]$PreviewOnly; TestMode=[bool]$TestMode
     }
     $appList.Add_ItemChecked({
         $s = $script:OSDAppUIState
@@ -278,9 +295,14 @@ function Show-OSDAppUI {
             [void][System.Windows.Forms.MessageBox]::Show('Select at least one app.','OSDApps','OK','Information')
             return
         }
+        $message = if ($s.TestMode) {
+            "TEST MODE: Stage $($items.Count) app(s) under $($s.Target)? This is a disposable staging folder; SetupComplete will NOT run at next Windows boot. Built-in defaults apply."
+        }
+        else {
+            "Stage $($items.Count) app(s) on $($s.Target)? Built-in defaults apply. Previous staged apps will remain."
+        }
         $confirmation = [System.Windows.Forms.MessageBox]::Show(
-            "Stage $($items.Count) app(s) on $($s.Target)? Built-in defaults apply. Previous staged apps will remain.",
-            'Confirm staging','YesNo','Question'
+            $message, 'Confirm staging','YesNo','Question'
         )
         if ($confirmation -ne [System.Windows.Forms.DialogResult]::Yes) { return }
         $s.Stage.Enabled = $false
@@ -288,9 +310,14 @@ function Show-OSDAppUI {
         $s.Status.Text = 'Staging selected applications; please wait...'
         $s.Form.Refresh()
         try {
-            $result = Invoke-OSDAppUIStage -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked
-            $s.Status.Text = "Staged $($items.Count) applications for SetupComplete."
-            [void][System.Windows.Forms.MessageBox]::Show('Applications were staged, not yet installed.','OSDApps','OK','Information')
+            $result = Invoke-OSDAppUIStage -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked -TestMode:$s.TestMode
+            $s.Status.Text = if ($s.TestMode) { "Staging TEST completed for $($items.Count) apps (not installed)." } else { "Staged $($items.Count) apps for SetupComplete." }
+            $successMessage = if ($s.TestMode) {
+                "Staging test files created under $($s.Target). No apps were installed and the running Windows SetupComplete was not changed."
+            } else {
+                'Applications were staged, not yet installed.'
+            }
+            [void][System.Windows.Forms.MessageBox]::Show($successMessage,'OSDApps','OK','Information')
             Update-OSDAppUIInventory -State $s
         }
         catch {
