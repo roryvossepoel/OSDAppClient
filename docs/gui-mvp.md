@@ -9,7 +9,7 @@ Download the OSDApps artifact from the green CI run on PR #14 (do not download t
     Import-Module 'C:\Temp\OSDApps\OSDApps.psd1' -Force
     Show-OSDAppUI -PreviewOnly
 
-Check: window opens; six built-ins appear; checkbox selection works; Cache Management tab displays local cache if attached; custom catalog can be pasted into the URL field and refreshed. Offline-only refresh should use local cache and not contact the remote catalog.
+Check: window opens; six built-ins appear; checkbox selection works; Cache Management tab displays local cache if attached. The repository URL is shown as read-only status and is taken from Get-OSDAppConfiguration. Offline-only refresh uses local cache without querying that URL or changing the configured value.
 
 ## Staging tests on Windows 11 — without changing the active OS
 
@@ -30,7 +30,16 @@ Select cached repository apps (start with one small app), click **Stage selected
 
 Run Stage again to verify no duplicate queue entries or SetupComplete blocks. This **does not** modify the live Windows SetupComplete script and **will not** actually install apps on reboot; only staging can be validated. Full Windows without `-TestMode` is still browse-only.
 
-Use `Show-OSDAppUI -TestMode -CatalogUri 'https://example.org/catalog.json'` for an online repository sync-and-stage test. `-Offline` skips the repository network calls and requires an already populated cache on the USB drive (label OSDCloud).
+For an online repository sync-and-stage test, configure the URL in the SAME PowerShell session before launching the GUI:
+
+    Set-OSDAppConfiguration -CatalogUri 'https://example.org/catalog.json'
+    Show-OSDAppUI -TestMode
+
+Offline testing:
+
+    Show-OSDAppUI -TestMode -Offline
+
+Offline mode skips repository network calls without removing or changing CatalogUri. It requires an already populated cache on the USB volume (default label OSDCloud). Configuration is session-scoped; a fresh PowerShell session must configure the repository again.
 
 ## Third smoke test: actual WinPE (read-only first)
 
@@ -47,7 +56,8 @@ Copy the PR artifact's OSDApps folder to the USB and import it using the correct
 
 If the read-only form works, test selecting/staging on a disposable test device with:
 
-    Show-OSDAppUI -CatalogUri 'https://example.org/your-repository/catalog.json'
+    Set-OSDAppConfiguration -CatalogUri 'https://example.org/your-repository/catalog.json'
+    Show-OSDAppUI
 
 For real deployment, the Stage button becomes active in WinPE with a detected offline Windows target. On full Windows it can also be enabled explicitly using -TestMode (only for the isolated test target). It requests confirmation before it invokes the existing Add-OSDApp cmdlets. Built-ins use default parameters; repository apps are staged together in one batch. All apps install later via SetupComplete.
 
