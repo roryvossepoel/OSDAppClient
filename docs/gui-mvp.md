@@ -22,13 +22,13 @@ The module creates a dedicated staging target under:
 
     %TEMP%\OSDApps-GUI-Staging-Test
 
-Select cached repository apps (start with one small app), click **Stage selected apps**, and inspect:
+Select cached repository apps (start with one small app), click **Apply Changes**, and inspect:
 
     $target = Join-Path $env:TEMP 'OSDApps-GUI-Staging-Test'
     Get-Content (Join-Path $target 'Windows\Temp\OSDApps\DeviceManifest.json') -Raw
     Get-Content (Join-Path $target 'Windows\Setup\Scripts\SetupComplete.cmd')
 
-Run Stage again to verify no duplicate queue entries or SetupComplete blocks. This **does not** modify the live Windows SetupComplete script and **will not** actually install apps on reboot; only staging can be validated. Full Windows without `-TestMode` is still browse-only.
+Run Apply Changes again to verify no duplicate queue entries or SetupComplete blocks. This **does not** modify the live Windows SetupComplete script and **will not** actually install apps on reboot; only staging can be validated. Full Windows without `-TestMode` is still browse-only.
 
 For an online repository sync-and-stage test, configure the URL in the SAME PowerShell session before launching the GUI:
 
@@ -61,11 +61,43 @@ If the read-only form works, test selecting/staging on a disposable test device 
 
 For real deployment, the Stage button becomes active in WinPE with a detected offline Windows target. On full Windows it can also be enabled explicitly using -TestMode (only for the isolated test target). It requests confirmation before it invokes the existing Add-OSDApp cmdlets. Built-ins use default parameters; repository apps are staged together in one batch. All apps install later via SetupComplete.
 
+## Unstage applications (new)
+
+The application checkboxes now reflect the **desired SetupComplete queue**, not just
+individual additions. Check an app to stage it; uncheck an already staged app to
+mark it for removal, then use **Apply Changes**. The queue column shows
+`Staged`, `Add` or `Remove`.
+
+The GUI first stages newly selected apps using existing CLI cmdlets, then calls
+the new public `Remove-OSDAppStaging` cmdlet for removed apps. Unchanged
+applications are not re-staged. Staged apps remain listed and pre-checked even
+if the configured online repository is temporarily unavailable.
+
+Command-line examples:
+
+    # Preview removal in WinPE, after OSDCloud applied Windows
+    Remove-OSDAppStaging -Name MicrosoftTeams -WindowsPath 'C:\' -WhatIf
+
+    # In WinPE, remove Teams from the pending queue (not the installed OS)
+    Remove-OSDAppStaging -Name MicrosoftTeams -WindowsPath 'C:\' -Confirm:$false
+
+    # Safe Windows 11 simulation using only the dedicated TEMP staging folder
+    Remove-OSDAppStaging -Name MicrosoftTeams -TestMode -Confirm:$false
+
+Unstaging removes only the selected application's local staged files and its
+entry in `DeviceManifest.json`; **the USB cache is never deleted**. If the
+last app is removed, the OSDApps-owned blocks are removed from SetupComplete
+without deleting unrelated commands. The CLI rejects malformed markers and
+unsafe app IDs. Full Windows always requires `-TestMode` for unstaging.
+
+**Not included:** uninstalling apps already installed in Windows, silently
+unstaging apps from another user's managed volume, or modifying the USB cache.
+
 ## Limitations of this MVP
 
 - Cache tab is READ ONLY; GUI synchronization and clearing are for later iterations.
 - No presets, SUUD/MUSD/KIOSK logic, embedded repository URLs or external GUI dependencies.
-- Unchecking a staged app does not remove it; staging is additive.
+- Unchecking a staged app marks it for removal when Apply Changes is confirmed; installed Windows applications are never uninstalled.
 - Advanced Office settings, Firefox language and other custom app options still require CLI.
 - Staging happens synchronously; the GUI may be temporarily unresponsive while work is in progress.
 - GUI requires an STA PowerShell 5.1 session and WinPE GUI/.NET dependencies.
