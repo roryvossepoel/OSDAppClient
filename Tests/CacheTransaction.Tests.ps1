@@ -103,7 +103,7 @@ Describe 'Transactional multi-app repository synchronization' {
                 if ([string]$LiteralPath -like '*CacheCatalog.json.new') {
                     throw 'Simulated catalog commit failure'
                 }
-                Microsoft.PowerShell.Management\Move-Item @PSBoundParameters
+                Microsoft.PowerShell.Management\Move-Item -LiteralPath $LiteralPath -Destination $Destination -ErrorAction Stop
             }
 
             { Sync-OSDAppCache -CatalogPath $newCatalog -CachePath $cache -Confirm:$false } |
