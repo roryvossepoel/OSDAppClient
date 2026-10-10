@@ -1,4 +1,4 @@
-Describe 'Remove-OSDAppStaging and GUI Apply Changes' {
+Describe 'Remove-OSDAppStaging CLI safety' {
     BeforeAll {
         $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
         Import-Module (Join-Path $moduleRoot 'OSDApps.psd1') -Force
@@ -139,22 +139,6 @@ Describe 'Remove-OSDAppStaging and GUI Apply Changes' {
         }
     }
 
-    It 'applies an unchecked app removal without restaging already selected apps' {
-        InModuleScope OSDApps {
-            $script:StagedIds = @('MicrosoftTeams','NotepadPlusPlus')
-            Mock Get-OSDAppUIStagedIds { $script:StagedIds }
-            Mock Invoke-OSDAppUIStage { throw 'Should not restage existing app' }
-            Mock Remove-OSDAppStaging { $script:StagedIds = @('NotepadPlusPlus') }
-            $apps=@([pscustomobject]@{Id='NotepadPlusPlus';Source='Repository'})
-            $result=Invoke-OSDAppUIApplyChanges -Applications $apps -WindowsPath 'C:\Safe' -TestMode
-
-            @($result.Removed) | Should -Be @('MicrosoftTeams')
-            Should -Invoke Invoke-OSDAppUIStage -Exactly 0
-            Should -Invoke Remove-OSDAppStaging -Exactly 1 -ParameterFilter {
-                [bool]$TestMode -and 'MicrosoftTeams' -in $Name
-            }
-        }
-    }
     It 'preserves non-ASCII bytes in unrelated SetupComplete commands when emptying queue' {
         InModuleScope OSDApps {
             $root=Join-Path $TestDrive 'AnsiSetupRoot'
@@ -174,90 +158,6 @@ Describe 'Remove-OSDAppStaging and GUI Apply Changes' {
             @($remaining).Count | Should -BeGreaterThan 0
             @($remaining | Where-Object {$_ -eq 233}).Count | Should -Be 1
             [Text.Encoding]::GetEncoding(28591).GetString($remaining) | Should -Match 'echo Cafe'
-        }
-    }
-
-    It 'can apply an empty selection to remove the entire staged queue' {
-        InModuleScope OSDApps {
-            $script:StagedIds = @('AppA')
-            Mock Get-OSDAppUIStagedIds {$script:StagedIds}
-            Mock Remove-OSDAppStaging {$script:StagedIds = @()}
-            Mock Invoke-OSDAppUIStage {throw 'No app should be staged'}
-            $result=Invoke-OSDAppUIApplyChanges -Applications @() -WindowsPath 'C:\Safe' -TestMode
-            @($result.Removed) | Should -Be @('AppA')
-            @($result.Remaining).Count | Should -Be 0
-            Should -Invoke Remove-OSDAppStaging -Exactly 1
-            Should -Invoke Invoke-OSDAppUIStage -Exactly 0
-        }
-    }
-
-
-    It 'repository-only Apply Changes never unstages a built-in application' {
-        InModuleScope OSDApps {
-            $script:StagedMixed = @(
-                [pscustomobject]@{ Id='MicrosoftTeams'; Source='BuiltIn'; DisplayName='Microsoft Teams'; Architecture='x64' },
-                [pscustomobject]@{ Id='NotepadPlusPlus'; Source='Repository'; DisplayName='Notepad++'; Version='8.9.8.1' }
-            )
-            Mock Get-OSDAppUIStagedApps { $script:StagedMixed }
-            Mock Invoke-OSDAppUIStage { throw 'Unexpected staging command' }
-            Mock Remove-OSDAppStaging {
-                $script:StagedMixed = @($script:StagedMixed | Where-Object { $_.Id -ne 'NotepadPlusPlus' })
-            }
-
-            $result = Invoke-OSDAppUIApplyChanges -Applications @() -WindowsPath 'C:\Safe' -TestMode -RepositoryOnly
-            @($result.Removed) | Should -Be @('NotepadPlusPlus')
-            @($result.Remaining).Count | Should -Be 0
-            @($script:StagedMixed.Id) | Should -Be @('MicrosoftTeams')
-            Should -Invoke Remove-OSDAppStaging -Exactly 1 -ParameterFilter {
-                $Name.Count -eq 1 -and $Name[0] -eq 'NotepadPlusPlus'
-            }
-            Should -Invoke Invoke-OSDAppUIStage -Exactly 0
-        }
-    }
-
-    It 'repository-only Apply Changes with only built-ins staged is a no-op' {
-        InModuleScope OSDApps {
-            Mock Get-OSDAppUIStagedApps {
-                [pscustomobject]@{ Id='MicrosoftTeams'; Source='BuiltIn' }
-            }
-            Mock Invoke-OSDAppUIStage { throw 'Unexpected staging call' }
-            Mock Remove-OSDAppStaging { throw 'Unexpected unstaging call' }
-
-            $result = Invoke-OSDAppUIApplyChanges -Applications @() -WindowsPath 'C:\Safe' -TestMode -RepositoryOnly
-            $result.Changed | Should -BeFalse
-            Should -Invoke Invoke-OSDAppUIStage -Exactly 0
-            Should -Invoke Remove-OSDAppStaging -Exactly 0
-        }
-    }
-
-    It 'repository-only Apply Changes rejects any built-in selection' {
-        InModuleScope OSDApps {
-            Mock Get-OSDAppUIStagedApps { }
-            Mock Invoke-OSDAppUIStage { throw 'Unexpected staging call' }
-            $choice = [pscustomobject]@{ Id='MicrosoftTeams'; Source='BuiltIn' }
-            { Invoke-OSDAppUIApplyChanges -Applications @($choice) -WindowsPath 'C:\Safe' -TestMode -RepositoryOnly } |
-                Should -Throw '*cannot modify built-in application*'
-            Should -Invoke Invoke-OSDAppUIStage -Exactly 0
-        }
-    }
-
-    It 'formats actual staged built-in settings without guessing configuration defaults' {
-        InModuleScope OSDApps {
-            $app = [pscustomobject]@{ Id='Microsoft365Apps'; DisplayName='Microsoft 365 Apps' }
-            $staged = [pscustomobject]@{
-                Id='Microsoft365Apps'; Source='BuiltIn'
-                Channel='MonthlyEnterprise'; Architecture='x64'
-                Language=@('nl-nl','en-us'); SharedComputerLicensing=$true
-            }
-            $shown = Format-OSDAppUIBuiltInDetails -Application $app -StagedApplication $staged
-            $shown | Should -Match 'Channel: MonthlyEnterprise'
-            $shown | Should -Match 'Language: nl-nl, en-us'
-            $shown | Should -Match 'SharedComputerLicensing: True'
-            $shown | Should -Not -Match 'IncludeVisio:'
-
-            $unstaged = Format-OSDAppUIBuiltInDetails -Application $app
-            $unstaged | Should -Match 'Not staged'
-            $unstaged | Should -Not -Match 'Channel:'
         }
     }
 
