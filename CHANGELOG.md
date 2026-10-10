@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.33.0
+
+### Added
+
+- Added `-SkipCacheRefresh` to the generic repository `Add-OSDApp` command for explicitly offline staging from an existing USB cache.
+- Added automatic, SHA-256-validated offline fallback when a configured repository cannot be synchronized. The fallback is allowed only when **all** requested repository packages are present and valid.
+- Introduced transactional multi-application repository synchronization: download and validate packages before committing them together, with catalog/package rollback on a failed commit.
+
+### Fixed
+
+- `Add-OSDApp -WhatIf` no longer synchronizes or changes the offline Windows installation.
+- Repeated OSDApps staging maintains a single installation-queue entry and refreshes its own SetupComplete blocks while preserving third-party commands.
+- Reject malformed/duplicate OSDApps SetupComplete markers and invalid repository package identifiers instead of silently creating an inconsistent deployment.
+- Tightened cache cleanup and commit/error logging; made PreInstall, Runner and Client CMTrace-style log messages single-line, and added bounded PreInstall log rotation.
+- Generic `Add-OSDApp` now explicitly redirects built-in Microsoft Teams and Cisco Webex IDs to their dedicated commands.
+
+### Validation
+
+- **CI (10 October 2026):** 74/74 Pester tests passed, with PSScriptAnalyzer free of blocking errors and distributable module build successful. The suite includes SHA-256 failure and transactional catalog-commit rollback simulations.
+- **WinPE + SetupComplete physical validation (10 October 2026):** Two x64 PCs using the same USB cache completed separate online and fully offline deployments. Each staged Horizon Client 8.16.2.36295 and Notepad++ 8.9.8.1 without duplicate manifest entries/SetupComplete blocks; SetupComplete independently revalidated both staged SHA-256 hashes; both installations exited 0 on both PCs (4/4).
+- Runner totals: **60.2 s** (PC1 online, without USB at Windows boot) and **59.1 s** (PC2 offline, USB attached). `CleanupMode Never` was used deliberately for validation.
+- **Limit:** physical power-interruption/catalog-publish failure rollback was not fault-injected; rollback was validated in automated tests. These measurements are two test executions, not a performance benchmark.
+
 ## 0.32.0
 
 ### Added
