@@ -9,6 +9,9 @@ function Get-OSDAppUIStagedApps {
 
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 |
         ConvertFrom-Json -ErrorAction Stop
+    if ($null -eq $manifest -or -not ($manifest.PSObject.Properties.Name -contains 'Apps')) {
+        throw "Invalid DeviceManifest.json: Apps property is missing: $manifestPath"
+    }
     foreach ($app in @($manifest.Apps)) {
         if ($null -ne $app -and -not [string]::IsNullOrWhiteSpace([string]$app.Id)) {
             $app
@@ -30,214 +33,94 @@ function Get-OSDAppUITestWindowsPath {
     param()
 
     if ([string]::IsNullOrWhiteSpace($env:TEMP)) {
-        throw 'TEMP is unavailable; cannot create a safe Windows staging test target.'
+        throw 'TEMP is unavailable.'
     }
-    # Fixed, explicitly isolated root. Never use the active Windows directory
-    # or its SetupComplete.cmd when testing GUI staging on full Windows.
     [System.IO.Path]::GetFullPath((Join-Path $env:TEMP 'OSDApps-GUI-Staging-Test'))
 }
 
-function Invoke-OSDAppUIStage {
+function Format-OSDAppUIStagedDetails {
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][object[]]$Applications,
-        [Parameter(Mandatory)][string]$WindowsPath,
-        [switch]$Offline,
-        [switch]$TestMode
-    )
-
-    $winPE = Test-OSDAppWinPE
-    if ($TestMode) {
-        if ($winPE) {
-            throw 'TestMode is for full Windows only. In WinPE, stage to the actual offline Windows installation.'
-        }
-        $expectedTestRoot = Get-OSDAppUITestWindowsPath
-        $provided = [System.IO.Path]::GetFullPath($WindowsPath)
-        if (-not [string]::Equals($provided.TrimEnd('\'), $expectedTestRoot.TrimEnd('\'), [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Full Windows staging is only permitted under the isolated test target '$expectedTestRoot'."
-        }
-    }
-    elseif (-not $winPE) {
-        throw 'Full Windows staging requires -TestMode. Normal GUI staging is intended for WinPE after Windows has been applied.'
-    }
-
-    $resolvedTarget = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
-    $apps = @($Applications)
-    if ($apps.Count -eq 0) {
-        throw 'Select at least one application.'
-    }
-
-    $builtInCmdlets = @{
-        Microsoft365Apps          = 'Add-OSDAppMicrosoft365Apps'
-        MicrosoftTeams            = 'Add-OSDAppMicrosoftTeams'
-        AdobeAcrobatUnified       = 'Add-OSDAppAdobeAcrobatUnified'
-        GoogleChromeEnterprise   = 'Add-OSDAppGoogleChromeEnterprise'
-        MozillaFirefoxEnterprise = 'Add-OSDAppMozillaFirefoxEnterprise'
-        CiscoWebex                = 'Add-OSDAppCiscoWebex'
-    }
-
-    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    $builtIns = [System.Collections.Generic.List[object]]::new()
-    $repository = [System.Collections.Generic.List[string]]::new()
-
-    # Resolve/validate the entire selection before executing any staging.
-    foreach ($app in $apps) {
-        $id = [string]$app.Id
-        if ([string]::IsNullOrWhiteSpace($id) -or $id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $id -match '\.\.') {
-            throw "Invalid application ID: '$id'."
-        }
-        if (-not $seen.Add($id)) {
-            throw "Application '$id' is selected multiple times."
-        }
-
-        if ($app.Source -eq 'BuiltIn') {
-            if (-not $builtInCmdlets.ContainsKey($id)) {
-                throw "Unsupported built-in application: '$id'."
-            }
-            $builtIns.Add($app)
-        }
-        elseif ($app.Source -eq 'Repository') {
-            if ($builtInCmdlets.ContainsKey($id)) {
-                throw "Application '$id' must be staged as a built-in, not a repository package."
-            }
-            $repository.Add($id)
-        }
-        else {
-            throw "Unknown application source '$($app.Source)' for '$id'."
-        }
-    }
-
-    # UI lists built-ins before repository packages to match queue order.
-    # Repository apps are staged in one call to retain P1 multi-app integrity.
-    foreach ($app in $builtIns) {
-        $commandName = $builtInCmdlets[[string]$app.Id]
-        & $commandName -WindowsPath $resolvedTarget -Confirm:$false -ErrorAction Stop | Out-Null
-    }
-
-    if ($repository.Count -gt 0) {
-        Add-OSDApp -Name @($repository.ToArray()) -WindowsPath $resolvedTarget -SkipCacheRefresh:$Offline -Confirm:$false -ErrorAction Stop | Out-Null
-    }
-
-    $staged = @(Get-OSDAppUIStagedIds -WindowsPath $resolvedTarget)
-    $missing = @($apps | Where-Object { [string]$_.Id -notin $staged })
-    if ($missing.Count -gt 0) {
-        throw "Staging completed but DeviceManifest is missing: $((@($missing.Id)) -join ', ')."
-    }
-
-    [pscustomobject]@{
-        WindowsPath = $resolvedTarget
-        Requested   = @($apps | ForEach-Object { [string]$_.Id })
-        Staged      = @($staged)
-        Offline     = [bool]$Offline
-    }
-}
-
-
-function Invoke-OSDAppUIApplyChanges {
-    [CmdletBinding()]
-    param(
-        [object[]]$Applications = @(),
-        [Parameter(Mandatory)][string]$WindowsPath,
-        [switch]$Offline,
-        [switch]$TestMode,
-        [switch]$RepositoryOnly
-    )
-
-    $selected = @($Applications | Where-Object { $null -ne $_ })
-    if ($RepositoryOnly) {
-        foreach ($app in $selected) {
-            if ([string]$app.Source -ne 'Repository') {
-                throw "Repository-only mode cannot modify built-in application '$($app.Id)'."
-            }
-        }
-    }
-    $selectedIds = @($selected | ForEach-Object { [string]$_.Id })
-    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($id in $selectedIds) {
-        if ([string]::IsNullOrWhiteSpace($id) -or $id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
-            $id -match '\.\.' -or -not $seen.Add($id)) {
-            throw "Invalid or duplicate application selection '$id'."
-        }
-    }
-
-    $existing = if ($RepositoryOnly) {
-        @(Get-OSDAppUIStagedApps -WindowsPath $WindowsPath |
-            Where-Object { [string]$_.Source -eq 'Repository' } |
-            ForEach-Object { [string]$_.Id })
-    } else { @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath) }
-    $toAdd = @($selected | Where-Object { [string]$_.Id -notin $existing })
-    $toRemove = @($existing | Where-Object { $_ -notin $selectedIds })
-
-    # Add first. Failed staging must not remove previously staged applications.
-    if ($toAdd.Count -gt 0) {
-        Invoke-OSDAppUIStage -Applications $toAdd -WindowsPath $WindowsPath -Offline:$Offline -TestMode:$TestMode -ErrorAction Stop | Out-Null
-    }
-
-    if ($toRemove.Count -gt 0) {
-        if ($TestMode) {
-            Remove-OSDAppStaging -Name $toRemove -TestMode -Confirm:$false -ErrorAction Stop | Out-Null
-        }
-        else {
-            Remove-OSDAppStaging -Name $toRemove -WindowsPath $WindowsPath -Confirm:$false -ErrorAction Stop | Out-Null
-        }
-    }
-
-    $final = if ($RepositoryOnly) {
-        @(Get-OSDAppUIStagedApps -WindowsPath $WindowsPath |
-            Where-Object { [string]$_.Source -eq 'Repository' } |
-            ForEach-Object { [string]$_.Id })
-    } else { @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath) }
-    $missing = @($selectedIds | Where-Object { $_ -notin $final })
-    $unexpected = @($final | Where-Object { $_ -notin $selectedIds })
-    if ($missing.Count -gt 0 -or $unexpected.Count -gt 0) {
-        throw "Post-apply validation failed. Missing: $($missing -join ', '); unexpected: $($unexpected -join ', ')."
-    }
-
-    [pscustomobject]@{
-        WindowsPath = $WindowsPath
-        Added = @($toAdd | ForEach-Object { [string]$_.Id })
-        Removed = @($toRemove)
-        Remaining = @($final)
-        Changed = ($toAdd.Count -gt 0 -or $toRemove.Count -gt 0)
-    }
-}
-
-
-function Format-OSDAppUIBuiltInDetails {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]$Application,
-        $StagedApplication
-    )
+    param([Parameter(Mandatory)]$Application)
 
     $lines = [System.Collections.Generic.List[string]]::new()
-    $lines.Add([string]$Application.DisplayName)
-    if ($null -eq $StagedApplication) {
-        $lines.Add('Not staged. Use the corresponding Add-OSDApp* cmdlet in PowerShell to configure and stage this built-in application.')
-        return ($lines -join [Environment]::NewLine)
-    }
-
-    $lines.Add('Staged for SetupComplete (not installed)')
-    # Only print actual values stored in DeviceManifest.json, never guessed
-    # defaults, URLs, package paths, or raw arbitrary installation content.
+    # Whitelist descriptive manifest fields; do not display arbitrary scripts,
+    # custom arguments, installer command lines or authenticated download URLs.
     foreach ($key in @(
-        'Architecture','Version','Channel','Language','ProductId',
-        'SharedComputerLicensing','DeviceBasedLicensing','UpdatesEnabled',
-        'InstallMeetingAddin','IncludeVisio','IncludeProject','ExcludeApp',
-        'AutoStartWithWindows','PreventPreLoginUpdates',
+        'DisplayName','Id','Source','Type','Version','Architecture','Channel',
+        'Language','ProductId','SharedComputerLicensing','DeviceBasedLicensing',
+        'UpdatesEnabled','InstallMeetingAddin','IncludeVisio','IncludeProject',
+        'ExcludeApp','AutoStartWithWindows','PreventPreLoginUpdates',
         'EnableOutlookIntegration','DefaultTheme','InstallTimeoutMinutes'
     )) {
-        $property = $StagedApplication.PSObject.Properties[$key]
+        $property = $Application.PSObject.Properties[$key]
         if ($null -eq $property -or $null -eq $property.Value) { continue }
-        if ($property.Value -is [array]) {
-            $value = @($property.Value) -join ', '
-        }
-        else {
-            $value = [string]$property.Value
+        $value = if ($property.Value -is [array]) {
+            @($property.Value) -join ', '
+        } else {
+            [string]$property.Value
         }
         if (-not [string]::IsNullOrWhiteSpace($value)) {
             $lines.Add(('{0}: {1}' -f $key,$value))
         }
     }
-    return ($lines -join [Environment]::NewLine)
+    $lines.Add('')
+    $lines.Add('Staged for SetupComplete. This does not confirm the application was installed.')
+    $lines -join [Environment]::NewLine
+}
+
+function Get-OSDAppUIReadOnlySnapshot {
+    [CmdletBinding()]
+    param(
+        [string]$WindowsPath,
+        [switch]$Offline
+    )
+
+    # Only reads files, disk metadata and (optionally) catalog contents.
+    # No SetupComplete, DeviceManifest, cache, or configuration mutations.
+    $staged = @()
+    $manifestPath = $null
+    $setupCompletePath = $null
+    if ($WindowsPath) {
+        $manifestPath = Join-Path $WindowsPath 'Windows\Temp\OSDApps\DeviceManifest.json'
+        $setupCompletePath = Join-Path $WindowsPath 'Windows\Setup\Scripts\SetupComplete.cmd'
+        $staged = @(Get-OSDAppUIStagedApps -WindowsPath $WindowsPath)
+    }
+
+    $catalog = @(Get-OSDApp -Offline:$Offline -ErrorAction Stop)
+    $cache = @(Get-OSDAppCache -ErrorAction Stop)
+    $cachePath = $null
+    try { $cachePath = Get-OSDAppCachePath } catch { }
+
+    $logFiles = [System.Collections.Generic.List[object]]::new()
+    if ($cachePath) {
+        foreach ($name in @('Client.log','Runtime.log')) {
+            $file = Join-Path $cachePath (Join-Path 'Logs' $name)
+            if (Test-Path -LiteralPath $file -PathType Leaf) {
+                $logFiles.Add([pscustomobject]@{ Label="USB cache: $name"; Path=$file })
+            }
+        }
+    }
+    if ($WindowsPath) {
+        foreach ($definition in @(
+            @{ Label='Device: Runtime.log'; Relative='ProgramData\OSDApps\Logs\Runtime.log' },
+            @{ Label='Device: Client.log'; Relative='ProgramData\OSDApps\Logs\Client.log' }
+        )) {
+            $file = Join-Path $WindowsPath $definition.Relative
+            if (Test-Path -LiteralPath $file -PathType Leaf) {
+                $logFiles.Add([pscustomobject]@{ Label=$definition.Label; Path=$file })
+            }
+        }
+    }
+
+    [pscustomobject]@{
+        WindowsPath = $WindowsPath
+        ManifestPath = $manifestPath
+        ManifestExists = [bool]($manifestPath -and (Test-Path -LiteralPath $manifestPath -PathType Leaf))
+        SetupCompleteExists = [bool]($setupCompletePath -and (Test-Path -LiteralPath $setupCompletePath -PathType Leaf))
+        StagedApps = @($staged)
+        CatalogApps = @($catalog)
+        CacheEntries = @($cache)
+        CachePath = $cachePath
+        Logs = @($logFiles)
+    }
 }
