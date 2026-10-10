@@ -139,10 +139,18 @@ function Invoke-OSDAppUIApplyChanges {
         [object[]]$Applications = @(),
         [Parameter(Mandatory)][string]$WindowsPath,
         [switch]$Offline,
-        [switch]$TestMode
+        [switch]$TestMode,
+        [switch]$RepositoryOnly
     )
 
     $selected = @($Applications | Where-Object { $null -ne $_ })
+    if ($RepositoryOnly) {
+        foreach ($app in $selected) {
+            if ([string]$app.Source -ne 'Repository') {
+                throw "Repository-only mode cannot modify built-in application '$($app.Id)'."
+            }
+        }
+    }
     $selectedIds = @($selected | ForEach-Object { [string]$_.Id })
     $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($id in $selectedIds) {
@@ -152,7 +160,11 @@ function Invoke-OSDAppUIApplyChanges {
         }
     }
 
-    $existing = @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath)
+    $existing = if ($RepositoryOnly) {
+        @(Get-OSDAppUIStagedApps -WindowsPath $WindowsPath |
+            Where-Object { [string]$_.Source -eq 'Repository' } |
+            ForEach-Object { [string]$_.Id })
+    } else { @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath) }
     $toAdd = @($selected | Where-Object { [string]$_.Id -notin $existing })
     $toRemove = @($existing | Where-Object { $_ -notin $selectedIds })
 
@@ -170,7 +182,11 @@ function Invoke-OSDAppUIApplyChanges {
         }
     }
 
-    $final = @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath)
+    $final = if ($RepositoryOnly) {
+        @(Get-OSDAppUIStagedApps -WindowsPath $WindowsPath |
+            Where-Object { [string]$_.Source -eq 'Repository' } |
+            ForEach-Object { [string]$_.Id })
+    } else { @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath) }
     $missing = @($selectedIds | Where-Object { $_ -notin $final })
     $unexpected = @($final | Where-Object { $_ -notin $selectedIds })
     if ($missing.Count -gt 0 -or $unexpected.Count -gt 0) {
@@ -184,4 +200,44 @@ function Invoke-OSDAppUIApplyChanges {
         Remaining = @($final)
         Changed = ($toAdd.Count -gt 0 -or $toRemove.Count -gt 0)
     }
+}
+
+
+function Format-OSDAppUIBuiltInDetails {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Application,
+        $StagedApplication
+    )
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add([string]$Application.DisplayName)
+    if ($null -eq $StagedApplication) {
+        $lines.Add('Not staged. Use the corresponding Add-OSDApp* cmdlet in PowerShell to configure and stage this built-in application.')
+        return ($lines -join [Environment]::NewLine)
+    }
+
+    $lines.Add('Staged for SetupComplete (not installed)')
+    # Only print actual values stored in DeviceManifest.json, never guessed
+    # defaults, URLs, package paths, or raw arbitrary installation content.
+    foreach ($key in @(
+        'Architecture','Version','Channel','Language','ProductId',
+        'SharedComputerLicensing','DeviceBasedLicensing','UpdatesEnabled',
+        'InstallMeetingAddin','IncludeVisio','IncludeProject','ExcludeApp',
+        'AutoStartWithWindows','PreventPreLoginUpdates',
+        'EnableOutlookIntegration','DefaultTheme','InstallTimeoutMinutes'
+    )) {
+        $property = $StagedApplication.PSObject.Properties[$key]
+        if ($null -eq $property -or $null -eq $property.Value) { continue }
+        if ($property.Value -is [array]) {
+            $value = @($property.Value) -join ', '
+        }
+        else {
+            $value = [string]$property.Value
+        }
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            $lines.Add(('{0}: {1}' -f $key,$value))
+        }
+    }
+    return ($lines -join [Environment]::NewLine)
 }
