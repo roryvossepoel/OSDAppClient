@@ -1,6 +1,9 @@
 function Update-OSDAppUIInventory {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][hashtable]$State)
+    param(
+        [Parameter(Mandatory)][hashtable]$State,
+        [switch]$ResetSelection
+    )
 
     # The catalog is managed exclusively through Set-OSDAppConfiguration.
     # Offline only affects lookup behavior and never changes the configuration.
@@ -16,12 +19,14 @@ function Update-OSDAppUIInventory {
             if ($item.Checked) { [string]$item.Tag.Id }
         }
     )
+    if ($ResetSelection) { $State.InventoryLoaded = $false }
     $stagedApps = if ($State.Target) { @(Get-OSDAppUIStagedApps -WindowsPath $State.Target) } else { @() }
     $stagedIds = @($stagedApps | ForEach-Object { [string]$_.Id })
 
-    # Keep staged apps visible even when the online catalog changes.
+    # The repository tab contains only custom packages. Built-ins are shown
+    # separately and never enter the set of changes being applied here.
     $catalogApps = @(Get-OSDApp -Offline:$State.Offline.Checked -ErrorAction Stop |
-        Sort-Object @{Expression={ if ($_.Source -eq 'BuiltIn') { 0 } else { 1 } }}, DisplayName)
+        Sort-Object DisplayName)
     foreach ($app in $stagedApps) {
         if ([string]$app.Id -notin @($catalogApps.Id)) {
             $catalogApps += [pscustomobject]@{
@@ -30,18 +35,21 @@ function Update-OSDAppUIInventory {
                 DisplayName = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
                 Availability = 'Staged only'
                 Version = [string]$app.Version
+                Architecture = [string]$app.Architecture
             }
         }
     }
+    $repositoryApps = @($catalogApps | Where-Object { [string]$_.Source -eq 'Repository' } | Sort-Object DisplayName)
+    $repositoryStagedIds = @($stagedApps | Where-Object { [string]$_.Source -eq 'Repository' } | ForEach-Object { [string]$_.Id })
     $State.Apps.BeginUpdate()
     try {
         $State.Apps.Items.Clear()
-        foreach ($app in $catalogApps) {
+        foreach ($app in $repositoryApps) {
             $item = [System.Windows.Forms.ListViewItem]::new([string]$app.DisplayName)
-            [void]$item.SubItems.Add([string]$app.Source)
             [void]$item.SubItems.Add([string]$app.Availability)
             [void]$item.SubItems.Add([string]$app.Version)
-            $wasStaged = [string]$app.Id -in $stagedIds
+            [void]$item.SubItems.Add([string]$app.Architecture)
+            $wasStaged = [string]$app.Id -in $repositoryStagedIds
             $checked = if ($State.InventoryLoaded) { [string]$app.Id -in $selectedIds } else { $wasStaged }
             [void]$item.SubItems.Add($(if ($wasStaged) { if ($checked) { 'Staged' } else { 'Remove' } } elseif ($checked) { 'Add' } else { '' }))
             $item.Tag = $app
@@ -51,7 +59,26 @@ function Update-OSDAppUIInventory {
     }
     finally { $State.Apps.EndUpdate() }
     $State.InventoryLoaded = $true
-    $State.Selection.Text = "$(@($State.Apps.CheckedItems).Count) selected | $($stagedIds.Count) staged"
+    $State.Selection.Text = "$(@($State.Apps.CheckedItems).Count) selected | $($repositoryStagedIds.Count) repository apps staged"
+
+    # Built-in inventory is read-only, including the exact config captured in
+    # DeviceManifest.json. Never infer runtime config from vendor defaults.
+    $State.BuiltInApps.BeginUpdate()
+    try {
+        $State.BuiltInApps.Items.Clear()
+        foreach ($app in @($catalogApps | Where-Object { [string]$_.Source -eq 'BuiltIn' } | Sort-Object DisplayName)) {
+            $staged = @($stagedApps | Where-Object { [string]$_.Id -eq [string]$app.Id } | Select-Object -First 1)
+            $stagedEntry = if ($staged.Count -gt 0) { $staged[0] } else { $null }
+            $item = [System.Windows.Forms.ListViewItem]::new([string]$app.DisplayName)
+            [void]$item.SubItems.Add($(if ($stagedEntry) { 'Staged' } else { 'Not staged' }))
+            [void]$item.SubItems.Add([string]$app.Availability)
+            [void]$item.SubItems.Add($(if ($stagedEntry) { [string]$stagedEntry.Architecture } else { '-' }))
+            $item.Tag = [pscustomobject]@{ App=$app; Staged=$stagedEntry }
+            [void]$State.BuiltInApps.Items.Add($item)
+        }
+    }
+    finally { $State.BuiltInApps.EndUpdate() }
+    $State.BuiltInDetails.Text = 'Select a built-in application to inspect its staging configuration.'
 
     $State.Cache.BeginUpdate()
     try {
@@ -66,7 +93,7 @@ function Update-OSDAppUIInventory {
         }
     }
     finally { $State.Cache.EndUpdate() }
-    $State.Status.Text = "Loaded $($catalogApps.Count) applications and $($State.Cache.Items.Count) cache entries."
+    $State.Status.Text = "Repository: $($repositoryApps.Count) apps | Built-in: $($State.BuiltInApps.Items.Count) apps | Cache: $($State.Cache.Items.Count) entries."
 }
 
 function Show-OSDAppUI {
@@ -157,7 +184,7 @@ function Show-OSDAppUI {
     $header.Controls.Add($title)
 
     $description = [System.Windows.Forms.Label]::new()
-    $description.Text = 'Application deployment and cache management - first preview'
+    $description.Text = 'Repository staging, built-in overview and cache inventory'
     $description.ForeColor = [System.Drawing.Color]::White
     $description.SetBounds(20,54,750,24)
     $header.Controls.Add($description)
@@ -193,9 +220,11 @@ function Show-OSDAppUI {
     $tabs = [System.Windows.Forms.TabControl]::new()
     $tabs.Dock = 'Fill'
     [void]$root.Controls.Add($tabs,0,1)
-    $appTab = [System.Windows.Forms.TabPage]::new('Install Applications')
-    $cacheTab = [System.Windows.Forms.TabPage]::new('Cache Management')
+    $appTab = [System.Windows.Forms.TabPage]::new('Repository')
+    $builtInTab = [System.Windows.Forms.TabPage]::new('Built-in')
+    $cacheTab = [System.Windows.Forms.TabPage]::new('Cache')
     [void]$tabs.TabPages.Add($appTab)
+    [void]$tabs.TabPages.Add($builtInTab)
     [void]$tabs.TabPages.Add($cacheTab)
 
     # Explicit table rows prevent Dock=Fill from covering footer controls.
@@ -208,7 +237,7 @@ function Show-OSDAppUI {
     $appTab.Controls.Add($appLayout)
 
     $appInfo = [System.Windows.Forms.Label]::new()
-    $appInfo.Text = 'Check apps to add, uncheck to remove. Apply Changes updates the pending SetupComplete queue.'
+    $appInfo.Text = 'Select repository apps for SetupComplete. Built-in apps are managed through PowerShell.'
     $appInfo.Dock = 'Fill'
     $appInfo.TextAlign = 'MiddleLeft'
     $appInfo.AutoEllipsis = $true
@@ -221,9 +250,9 @@ function Show-OSDAppUI {
     $appList.FullRowSelect = $true
     $appList.GridLines = $true
     [void]$appList.Columns.Add('Application',270)
-    [void]$appList.Columns.Add('Source',125)
     [void]$appList.Columns.Add('Availability',145)
     [void]$appList.Columns.Add('Version',125)
+    [void]$appList.Columns.Add('Architecture',115)
     [void]$appList.Columns.Add('Queue',100)
     [void]$appLayout.Controls.Add($appList,0,1)
 
@@ -260,6 +289,41 @@ function Show-OSDAppUI {
         $stage.ForeColor = [System.Drawing.Color]::DimGray
     }
     [void]$appActions.Controls.Add($stage,1,0)
+
+    $builtInLayout = [System.Windows.Forms.TableLayoutPanel]::new()
+    $builtInLayout.Dock = 'Fill'
+    $builtInLayout.RowCount = 3
+    [void]$builtInLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',39))
+    [void]$builtInLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
+    [void]$builtInLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',154))
+    [void]$builtInTab.Controls.Add($builtInLayout,0,0)
+
+    $builtInInfo = [System.Windows.Forms.Label]::new()
+    $builtInInfo.Text = 'Read-only. Configure and stage built-in applications using Add-OSDApp* in PowerShell.'
+    $builtInInfo.Dock = 'Fill'
+    $builtInInfo.TextAlign = 'MiddleLeft'
+    [void]$builtInLayout.Controls.Add($builtInInfo,0,0)
+
+    $builtInList = [System.Windows.Forms.ListView]::new()
+    $builtInList.Dock = 'Fill'
+    $builtInList.View = 'Details'
+    $builtInList.FullRowSelect = $true
+    $builtInList.GridLines = $true
+    $builtInList.MultiSelect = $false
+    [void]$builtInList.Columns.Add('Application',270)
+    [void]$builtInList.Columns.Add('Deployment',130)
+    [void]$builtInList.Columns.Add('Cache / availability',170)
+    [void]$builtInList.Columns.Add('Staged architecture',145)
+    [void]$builtInLayout.Controls.Add($builtInList,0,1)
+
+    $builtInDetails = [System.Windows.Forms.TextBox]::new()
+    $builtInDetails.Multiline = $true
+    $builtInDetails.ReadOnly = $true
+    $builtInDetails.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $builtInDetails.Dock = 'Fill'
+    $builtInDetails.BackColor = [System.Drawing.Color]::White
+    $builtInDetails.Text = 'Select an app to view its staged configuration.'
+    [void]$builtInLayout.Controls.Add($builtInDetails,0,2)
 
     $cacheLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $cacheLayout.Dock = 'Fill'
@@ -300,7 +364,8 @@ function Show-OSDAppUI {
     $footer.Controls.Add($close)
 
     $script:OSDAppUIState = @{
-        Form=$form; Apps=$appList; Cache=$cacheList; RepositoryStatus=$repositoryStatus
+        Form=$form; Apps=$appList; Cache=$cacheList; BuiltInApps=$builtInList
+        BuiltInDetails=$builtInDetails; RepositoryStatus=$repositoryStatus
         Offline=$offlineCheck; Status=$status; Target=$target
         Selection=$selection; Stage=$stage; Refresh=$refresh
         PreviewOnly=[bool]$PreviewOnly; TestMode=[bool]$TestMode; InventoryLoaded=$false
@@ -316,12 +381,18 @@ function Show-OSDAppUI {
             if ($item.Checked) { 'Staged' } else { 'Remove' }
         } elseif ($item.Checked) { 'Add' } else { '' }
     })
+    $builtInList.Add_SelectedIndexChanged({
+        $s = $script:OSDAppUIState
+        if (-not $s -or $s.BuiltInApps.SelectedItems.Count -eq 0) { return }
+        $entry = $s.BuiltInApps.SelectedItems[0].Tag
+        $s.BuiltInDetails.Text = Format-OSDAppUIBuiltInDetails -Application $entry.App -StagedApplication $entry.Staged
+    })
     $refresh.Add_Click({
         $s = $script:OSDAppUIState
         if (-not $s) { return }
         $s.Status.Text = 'Refreshing...'
         $s.Form.Refresh()
-        try { Update-OSDAppUIInventory -State $s }
+        try { Update-OSDAppUIInventory -State $s -ResetSelection }
         catch {
             $s.Status.Text = "Refresh failed: $($_.Exception.Message)"
             [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Refresh','OK','Error')
@@ -332,7 +403,7 @@ function Show-OSDAppUI {
         if (-not $s -or $s.PreviewOnly) { return }
 
         $items = @(foreach ($item in @($s.Apps.CheckedItems)) { $item.Tag })
-        $existing = @(Get-OSDAppUIStagedIds -WindowsPath $s.Target)
+        $existing = @(Get-OSDAppUIStagedApps -WindowsPath $s.Target | Where-Object { [string]$_.Source -eq 'Repository' } | ForEach-Object { [string]$_.Id })
         $selectedIds = @($items | ForEach-Object { [string]$_.Id })
         $toAdd = @($items | Where-Object { [string]$_.Id -notin $existing })
         $toRemove = @($existing | Where-Object { $_ -notin $selectedIds })
@@ -362,10 +433,10 @@ function Show-OSDAppUI {
         $s.Status.Text = 'Applying changes; please wait...'
         $s.Form.Refresh()
         try {
-            $result = Invoke-OSDAppUIApplyChanges -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked -TestMode:$s.TestMode -ErrorAction Stop
+            $result = Invoke-OSDAppUIApplyChanges -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked -TestMode:$s.TestMode -RepositoryOnly -ErrorAction Stop
             $s.Status.Text = "Applied: $(@($result.Added).Count) added, $(@($result.Removed).Count) removed, $(@($result.Remaining).Count) staged."
             [void][System.Windows.Forms.MessageBox]::Show($s.Status.Text,'OSDApps - Queue updated','OK','Information')
-            Update-OSDAppUIInventory -State $s
+            Update-OSDAppUIInventory -State $s -ResetSelection
         }
         catch {
             $s.Status.Text = "Apply failed: $($_.Exception.Message)"
