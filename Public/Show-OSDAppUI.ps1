@@ -296,7 +296,7 @@ function Show-OSDAppUI {
     [void]$builtInLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',39))
     [void]$builtInLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
     [void]$builtInLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute',154))
-    [void]$builtInTab.Controls.Add($builtInLayout,0,0)
+    [void]$builtInTab.Controls.Add($builtInLayout)
 
     $builtInInfo = [System.Windows.Forms.Label]::new()
     $builtInInfo.Text = 'Read-only. Configure and stage built-in applications using Add-OSDApp* in PowerShell.'
