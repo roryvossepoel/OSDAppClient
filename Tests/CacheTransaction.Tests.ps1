@@ -3,7 +3,7 @@ Describe 'Transactional multi-app repository synchronization' {
         $moduleRoot = Split-Path -Parent $PSScriptRoot
         Import-Module (Join-Path $moduleRoot 'OSDApps.psd1') -Force
 
-        function New-Snapshot {
+        function global:New-Snapshot {
             param(
                 [Parameter(Mandatory)][string]$Root,
                 [Parameter(Mandatory)][string]$Version,
@@ -45,6 +45,10 @@ Describe 'Transactional multi-app repository synchronization' {
 
             return $catalogPath
         }
+    }
+
+    AfterAll {
+        Remove-Item Function:\New-Snapshot -ErrorAction SilentlyContinue
     }
 
     It 'does not mutate a prior two-package cache when the second download fails SHA-256' {
