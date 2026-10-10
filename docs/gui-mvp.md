@@ -1,111 +1,79 @@
-# Show-OSDAppUI — experimental WinForms preview
+# OSDApps Manager – read-only device inspector (development preview)
 
-This feature is on a development branch only, not yet in PowerShell Gallery. The public module has no organization-specific repository URL or deployment profiles.
+OSDApps is CLI-first. **All configuration, package acquisition, cache changes,
+staging, unstaging, and automation must be performed through PowerShell cmdlets
+and existing orchestration.** The GUI is a read-only inspection tool only.
 
-## First smoke test: full Windows (read-only)
+The GUI is available on the development branch in PR #14; it is not yet in
+the stable 0.33.0 PowerShell Gallery release. It has no organization-specific
+repository URL or deployment profile presets.
 
-Download the OSDApps artifact from the green CI run on PR #14 (do not download the 0.33.0 PowerShell Gallery module). Extract the OSDApps folder and run in Windows PowerShell 5.1:
+## Four read-only tabs
 
-    Import-Module 'C:\Temp\OSDApps\OSDApps.psd1' -Force
-    Show-OSDAppUI -PreviewOnly
+| Tab | Purpose | Data source |
+| --- | --- | --- |
+| Staged for device | Exactly what is queued for SetupComplete, in manifest order, including source and details | DeviceManifest.json on selected Windows target |
+| Applications | Built-in and repository applications, their availability and staged status | Get-OSDApp and the staged manifest |
+| Cache | Cached built-in and repository packages, sizes and validation status | Get-OSDAppCache on the OSDCloud volume |
+| Logs | Last 250 lines from available cache/client and selected Windows target log files | Existing log files only |
 
-Check: three tabs (`Repository`, `Built-in`, `Cache`) appear. Repository app selection is editable; the Built-in tab is read-only and shows the six built-ins, any staged status and actual configuration fields from DeviceManifest.json when selected. Cache displays the existing read-only inventory. The repository URL is shown as read-only status and is taken from Get-OSDAppConfiguration. Offline-only refresh uses local cache without querying that URL or changing the configured value.
+The GUI never claims that **staged** means **installed**. Runtime logs for
+SetupComplete may not exist until after the deployment has executed.
 
-## Staging tests on Windows 11 — without changing the active OS
+Configuration is displayed from the actual staged manifest, not recomputed
+from assumed default settings. The details panel deliberately omits installer
+command lines and authenticated package download URLs.
 
-Staging, DeviceManifest.json, SetupComplete script generation, SHA-256 checks and repeated UI selections can be tested entirely on full Windows 11. Use the explicit isolated test mode:
+## Quick Windows 11 read-only test
 
-    Import-Module 'C:\Temp\OSDApps\OSDApps.psd1' -Force
-    Show-OSDAppUI -TestMode -Offline
-
-The module creates a dedicated staging target under:
-
-    %TEMP%\OSDApps-GUI-Staging-Test
-
-Select cached repository apps (start with one small app), click **Apply Changes**, and inspect:
-
-    $target = Join-Path $env:TEMP 'OSDApps-GUI-Staging-Test'
-    Get-Content (Join-Path $target 'Windows\Temp\OSDApps\DeviceManifest.json') -Raw
-    Get-Content (Join-Path $target 'Windows\Setup\Scripts\SetupComplete.cmd')
-
-Run Apply Changes again to verify no duplicate queue entries or SetupComplete blocks. This **does not** modify the live Windows SetupComplete script and **will not** actually install apps on reboot; only staging can be validated. Full Windows without `-TestMode` is still browse-only.
-
-For an online repository sync-and-stage test, configure the URL in the SAME PowerShell session before launching the GUI:
+Run in Windows PowerShell 5.1, in STA:
 
     Set-OSDAppConfiguration -CatalogUri 'https://example.org/catalog.json'
-    Show-OSDAppUI -TestMode
-
-Offline testing:
-
     Show-OSDAppUI -TestMode -Offline
 
-Offline mode skips repository network calls without removing or changing CatalogUri. It requires an already populated cache on the USB volume (default label OSDCloud). Configuration is session-scoped; a fresh PowerShell session must configure the repository again.
+If the isolated test folder from previous GUI tests exists, its
+DeviceManifest is inspected, **without creating or changing anything**.
+If it is absent, the interface simply reports that no manifest exists.
 
-## Third smoke test: actual WinPE (read-only first)
+To inspect a specific prepared Windows directory from full Windows:
 
-After OSDCloud has applied Windows but before reboot:
+    Show-OSDAppUI -WindowsPath 'D:\' -Offline
+
+With no WindowsPath on full Windows, the current Windows system drive is
+inspected read-only. In WinPE, the module attempts to discover the offline
+Windows target automatically, or specify the target using -WindowsPath.
+
+No download, staging, cache-clearing or configuration controls exist in the GUI.
+The only actions are **Refresh**, choosing an item to inspect, switching tabs,
+reading existing logs and **Close**.
+
+## On WinPE
+
+After the OSDCloud CLI deployment has applied Windows and staged applications,
+load the same development module and run:
 
     powershell.exe -STA -NoProfile
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
-
-Copy the PR artifact's OSDApps folder to the USB and import it using the correct drive letter, for example:
-
     Import-Module 'E:\Modules\OSDApps\OSDApps.psd1' -Force
-    Show-OSDAppUI -PreviewOnly
+    Show-OSDAppUI -Offline
 
-If the read-only form works, test selecting/staging on a disposable test device with:
+The exact USB drive letter can vary. A WinPE image must include the required
+PowerShell, Windows Forms and .NET components. This runtime must still be
+manually validated on a WinPE device.
 
-    Set-OSDAppConfiguration -CatalogUri 'https://example.org/your-repository/catalog.json'
-    Show-OSDAppUI
+## Important distinctions
 
-For real deployment, Apply Changes becomes active in WinPE with a detected offline Windows target. On full Windows it can also be enabled explicitly using -TestMode (only for the isolated test target). The Repository tab controls repository apps only: built-ins cannot be staged, configured or unstaged there. All apps install later via SetupComplete.
+- **Device staging** is under the selected Windows root, normally
+  Windows\Temp\OSDApps. It contains DeviceManifest.json.
+- **USB cache** is normally under the volume labeled OSDCloud, at \OSDApps.
+  Get-OSDAppCache reads that inventory without changing or clearing it.
+- **Built-ins** and **repository apps** have distinct Source values.
+- The CLI, not the GUI, controls whether either type is staged or removed.
+- Online catalog reading is optional. Use -Offline to avoid remote catalog
+  lookups and inspect the local staged manifest and USB cache.
+- The GUI is intentionally not a replacement for full CLI logging,
+  configuration management, synchronization, or deployment automation.
 
-## Unstage applications (new)
+## Troubleshooting
 
-The repository checkboxes reflect the **desired repository subset** of the SetupComplete queue, not just
-individual additions. Built-in apps are read-only and not affected by Apply Changes. Check an app to stage it; uncheck an already staged app to
-mark it for removal, then use **Apply Changes**. The queue column shows
-`Staged`, `Add` or `Remove`.
-
-The GUI first stages newly selected repository apps using existing CLI cmdlets, then calls
-the new public `Remove-OSDAppStaging` cmdlet for removed repository apps. Unchanged
-applications are not re-staged. Staged apps remain listed and pre-checked even
-if the configured online repository is temporarily unavailable.
-
-Command-line examples:
-
-    # Preview removal in WinPE, after OSDCloud applied Windows
-    Remove-OSDAppStaging -Name MicrosoftTeams -WindowsPath 'C:\' -WhatIf
-
-    # In WinPE, remove Teams from the pending queue (not the installed OS)
-    Remove-OSDAppStaging -Name MicrosoftTeams -WindowsPath 'C:\' -Confirm:$false
-
-    # Safe Windows 11 simulation using only the dedicated TEMP staging folder
-    Remove-OSDAppStaging -Name MicrosoftTeams -TestMode -Confirm:$false
-
-Unstaging removes only the selected application's local staged files and its
-entry in `DeviceManifest.json`; **the USB cache is never deleted**. If the
-last app is removed, the OSDApps-owned blocks are removed from SetupComplete
-without deleting unrelated commands. The CLI rejects malformed markers and
-unsafe app IDs. Full Windows always requires `-TestMode` for unstaging.
-
-**Not included:** uninstalling apps already installed in Windows, silently
-unstaging apps from another user's managed volume, or modifying the USB cache.
-
-## Limitations of this MVP
-
-- Cache tab is READ ONLY; GUI synchronization and clearing are for later iterations.
-- Built-in tab is READ ONLY, including staged configuration. Manage built-ins via existing CLI cmdlets.
-- Refresh resets pending unsaved checkbox changes to the staged repository queue. Built-in staging remains untouched by GUI Apply Changes.
-- No presets, SUUD/MUSD/KIOSK logic, embedded repository URLs or external GUI dependencies.
-- Unchecking a staged app marks it for removal when Apply Changes is confirmed; installed Windows applications are never uninstalled.
-- Advanced Office settings, Firefox language and other custom app options still require CLI.
-- Staging happens synchronously; the GUI may be temporarily unresponsive while work is in progress.
-- GUI requires an STA PowerShell 5.1 session and WinPE GUI/.NET dependencies.
-- Public release 0.33.0 remains unchanged.
-
-If the form cannot open, capture the error using:
-
-    try { Show-OSDAppUI -PreviewOnly -ErrorAction Stop }
+    try { Show-OSDAppUI -TestMode -Offline -ErrorAction Stop }
     catch { $_ | Format-List * -Force; $_.ScriptStackTrace }
