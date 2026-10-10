@@ -4,6 +4,34 @@ Describe 'Show-OSDAppUI MVP - staging adapter' {
         Import-Module (Join-Path $script:root 'OSDApps.psd1') -Force
     }
 
+    It 'does not query the configured remote repository when Get-OSDApp -Offline is used' {
+        InModuleScope OSDApps {
+            Mock Get-OSDAppConfiguration {
+                [pscustomobject]@{ CatalogUri = [uri]'https://example.org/catalog.json' }
+            }
+            Mock Get-OSDAppCachePath { throw 'No USB media attached' }
+            Mock Get-OSDAppCatalogPackages { throw 'Online repository was queried unexpectedly' }
+
+            $apps = @(Get-OSDApp -Offline -ErrorAction Stop)
+            @($apps | Where-Object Source -eq 'BuiltIn').Count | Should -Be 6
+            Should -Invoke Get-OSDAppCatalogPackages -Exactly 0
+            (Get-OSDAppConfiguration).CatalogUri.AbsoluteUri | Should -Be 'https://example.org/catalog.json'
+        }
+    }
+
+    It 'queries the configured repository when offline mode is not requested' {
+        InModuleScope OSDApps {
+            Mock Get-OSDAppConfiguration {
+                [pscustomobject]@{ CatalogUri = [uri]'https://example.org/catalog.json' }
+            }
+            Mock Get-OSDAppCachePath { throw 'No USB media attached' }
+            Mock Get-OSDAppCatalogPackages { [pscustomobject]@{ Packages = @() } }
+
+            Get-OSDApp -ErrorAction Stop | Out-Null
+            Should -Invoke Get-OSDAppCatalogPackages -Exactly 1
+        }
+    }
+
     It 'exports the public UI command but does not load GUI assemblies at module import' {
         Get-Command Show-OSDAppUI -Module OSDApps | Should -Not -BeNullOrEmpty
     }
