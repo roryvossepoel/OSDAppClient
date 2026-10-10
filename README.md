@@ -27,10 +27,10 @@ Install-Module OSDApps -SkipPublisherCheck
 Import-Module OSDApps
 ```
 
-To install a specific, reproducible release (for example, the field-tested 0.30.0):
+To install a specific, reproducible release (for example, the x64 Webex field-tested 0.32.0):
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.30.0 -Force -SkipPublisherCheck
+Install-Module OSDApps -RequiredVersion 0.32.0 -Force -SkipPublisherCheck
 Import-Module OSDApps -RequiredVersion 0.30.0 -Force
 ```
 
@@ -63,6 +63,7 @@ Add-OSDAppMicrosoft365Apps
 Add-OSDAppMicrosoftTeams
 Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppCiscoWebex
 
 # Self-maintained repository examples
 Add-OSDApp OmnissaHorizonClient
@@ -76,6 +77,7 @@ Microsoft 365 Apps
 → Microsoft Teams
 → Google Chrome Enterprise
 → Adobe Acrobat Unified
+→ Cisco Webex
 → Omnissa Horizon Client
 → Notepad++
 ```
@@ -100,6 +102,7 @@ Add-OSDAppMicrosoft365Apps
 Add-OSDAppMicrosoftTeams
 Add-OSDAppGoogleChromeEnterprise
 Add-OSDAppAdobeAcrobatUnified
+Add-OSDAppCiscoWebex
 
 # Examples resolved from your configured repository
 Add-OSDApp OmnissaHorizonClient
@@ -133,6 +136,7 @@ Current built-ins:
 | Adobe Acrobat Unified | Adobe Unified installer |
 | Google Chrome Enterprise | Google Enterprise MSI |
 | Mozilla Firefox Enterprise | Mozilla MSI |
+| Cisco Webex | Cisco non-localized Webex App MSI (x64/ARM64) |
 
 Built-ins are always acquired directly from the software vendor. OSDApps does not redistribute built-in application binaries.
 
@@ -151,9 +155,37 @@ Repository
 → full Windows only installs the staged package
 ```
 
+### Cisco Webex (new in 0.32.0)
+
+Cisco Webex App is available as a vendor-native built-in, with x64 or ARM64 MSI and optional USB caching. No separate Meetings bundle or VDI support is included.
+
+```powershell
+Add-OSDAppCiscoWebex
+# Optional: enable Control Hub-aligned post-login updates, and prefill the UPN at Webex sign-in
+Add-OSDAppCiscoWebex -PreventPreLoginUpdates $true -EmailHint '$userPrincipalName'
+```
+
+The default install is per-machine and does not auto-start with Windows. See [Cisco Webex options](docs/built-in-apps.md#cisco-webex) for MSI properties and offline-cache preparation.
+
 See [Built-in applications](docs/built-in-apps.md).
 
-Machine-readable built-in metadata is published in [`metadata/builtins.json`](metadata/builtins.json). This provides a stable public source for tooling such as repository browsers and dashboards without having to parse PowerShell source files.
+Machine-readable built-in metadata is published in [`metadata/builtins.json`](metadata/builtins.json), including **CiscoWebex**, its public icon URL, architecture options and Add/Sync commands. This public JSON can power repository viewers and dashboards without scraping PowerShell code. It describes **built-ins**, not the contents of an organization's private `catalog.json` repository. See [Public metadata contract](docs/public-metadata.md).
+
+## Deployment in one diagram
+
+```mermaid
+flowchart LR
+    A[OSDCloud / WinPE] --> B[Stage device manifest and available payloads]
+    B --> C[Windows SetupComplete]
+    C --> D[PreInstall: vendor refresh or offline fallback]
+    D --> E[Runner: install locally in manifest order]
+    E --> F[OOBE / Autopilot]
+    R[Organization repository] -->|WinPE sync| B
+    U[(Optional OSDCloud USB cache)] --> B
+    U -->|Refresh / fallback| D
+```
+
+Repository packages synchronize in **WinPE**. Vendor-native built-ins refresh in **full Windows**; a complete staged MSI can be used offline. Installation **always runs from local staging**, never directly from USB.
 
 ## Repository applications
 
@@ -238,6 +270,8 @@ All four runs completed PreInstall and Runner successfully: **24/24 application 
 
 These times cover **PreInstall + Runner only**. They do not include WinPE staging or Windows image deployment. A warm USB cache saved **70.5 seconds** compared with the cold USB run, principally in PreInstall. One run per scenario is not a statistical benchmark. Effective Office update channel and licensing activation remain unchecked.
 
+**Later deployments:** OSDApps 0.31.0 completed a six-app queue (6/6) with working Adobe staging, MicrosoftTeams cache rename and `CleanupMode OnSuccess`. OSDApps 0.32.0 passed Cisco Webex **x64** direct MSI installation, online SetupComplete, cold/warm cache, and fully offline SetupComplete (single-app queue). The ARM64 option is implemented but **not field-validated**; a combined seven-app deployment remains untested.
+
 Read the [0.30.0 validation matrix](docs/testing.md) and [detailed performance measurements](docs/performance.md) for setup, evidence, caveats and remaining test coverage.
 
 ### Earlier 0.29.1 benchmark
@@ -275,6 +309,7 @@ See [Releasing](docs/releasing.md).
 
 - [Architecture](docs/architecture.md)
 - [Built-in applications](docs/built-in-apps.md)
+- [Public JSON metadata for repository viewers](docs/public-metadata.md)
 - [Repository applications](docs/repository.md)
 - [Runtime and cleanup](docs/runtime.md)
 - [Performance](docs/performance.md)

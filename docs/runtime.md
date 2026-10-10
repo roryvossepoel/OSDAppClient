@@ -54,7 +54,7 @@ Runner:
 - executes `Install.ps1`;
 - installs built-ins;
 - extracts Adobe Acrobat Unified's cached ZIP locally before invoking Adobe Setup.exe;
-- installs vendor MSI built-ins such as Google Chrome Enterprise and Mozilla Firefox Enterprise through `msiexec.exe /i ... /qn /norestart`;
+- installs vendor MSI built-ins such as Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex through `msiexec.exe /i ... /qn /norestart`;
 - stops on unrecoverable installation failure;
 - schedules cleanup after full success.
 
@@ -180,7 +180,7 @@ This avoids the significant performance overhead observed with `Invoke-WebReques
 
 ## Vendor MSI built-ins
 
-MSI-based built-ins use the generic `VendorMsi` runtime type. The MSI is always acquired directly from the vendor, staged locally, and installed with Windows Installer.
+MSI-based built-ins (Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex) use the generic `VendorMsi` runtime type. The MSI is always acquired directly from the vendor, staged locally, and installed with Windows Installer.
 
 ```text
 vendor MSI
@@ -189,7 +189,7 @@ vendor MSI
 → msiexec.exe /i Package.msi /qn /norestart
 ```
 
-The generic MSI runner uses a 10-minute default timeout, writes 60-second `BuiltInInstallWaiting` heartbeat events, accepts exit codes `0` and `3010`, and retains the runtime source if installation fails.
+The generic MSI runner appends any validated built-in `MsiProperties` (for example, Cisco Webex per-machine, autostart and update settings) to the silent `msiexec` command. It uses a 10-minute default timeout, writes 60-second `BuiltInInstallWaiting` heartbeat events, accepts exit codes `0` and `3010`, and retains the runtime source if installation fails.
 
 
 ## Timing and failure diagnostics

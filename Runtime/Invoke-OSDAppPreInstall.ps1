@@ -504,6 +504,21 @@ try {
                     throw "Adobe Acrobat Unified acquisition failed and no staged fallback is available. $($_.Exception.Message)"
                 }
             }
+            'CiscoWebex' {
+                $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }
+                if ($architecture -notin @('x64','arm64')) { throw "Cisco Webex supports only x64 and arm64; received '$architecture'." }
+                $packageUri = if ($app.PackageUri) {
+                    [string]$app.PackageUri
+                }
+                else {
+                    switch ($architecture) {
+                        'x64' { 'https://binaries.webex.com/WebexOfclDesktop-Win-64-Gold/Webex_en.msi' }
+                        'arm64' { 'https://binaries.webex.com/WebexOfclDesktop-Win-Arm-64-Gold/Webex_en.msi' }
+                    }
+                }
+                $relativeRoot = Join-Path 'BuiltIn\CiscoWebex' $architecture
+                Sync-PreInstallVendorMsi -App $app -RelativeRoot $relativeRoot -PackageUri $packageUri -DisplayName 'Cisco Webex'
+            }
             'GoogleChromeEnterprise' {
                 $architecture = if ($app.Architecture) { [string]$app.Architecture } else { 'x64' }
                 $packageUri = if ($app.PackageUri) {
