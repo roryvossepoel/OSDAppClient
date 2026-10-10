@@ -16,11 +16,23 @@ function Update-OSDAppUIInventory {
             if ($item.Checked) { [string]$item.Tag.Id }
         }
     )
-    $stagedIds = if ($State.Target) { @(Get-OSDAppUIStagedIds -WindowsPath $State.Target) } else { @() }
+    $stagedApps = if ($State.Target) { @(Get-OSDAppUIStagedApps -WindowsPath $State.Target) } else { @() }
+    $stagedIds = @($stagedApps | ForEach-Object { [string]$_.Id })
 
-    # Get-OSDApp remains the one source of truth, including custom repositories.
+    # Keep staged apps visible even when the online catalog changes.
     $catalogApps = @(Get-OSDApp -Offline:$State.Offline.Checked -ErrorAction Stop |
         Sort-Object @{Expression={ if ($_.Source -eq 'BuiltIn') { 0 } else { 1 } }}, DisplayName)
+    foreach ($app in $stagedApps) {
+        if ([string]$app.Id -notin @($catalogApps.Id)) {
+            $catalogApps += [pscustomobject]@{
+                Id = [string]$app.Id
+                Source = [string]$app.Source
+                DisplayName = if ($app.DisplayName) { [string]$app.DisplayName } else { [string]$app.Id }
+                Availability = 'Staged only'
+                Version = [string]$app.Version
+            }
+        }
+    }
     $State.Apps.BeginUpdate()
     try {
         $State.Apps.Items.Clear()
@@ -30,13 +42,16 @@ function Update-OSDAppUIInventory {
             [void]$item.SubItems.Add([string]$app.Availability)
             [void]$item.SubItems.Add([string]$app.Version)
             $wasStaged = [string]$app.Id -in $stagedIds
-            [void]$item.SubItems.Add($(if ($wasStaged) { 'Staged' } else { '' }))
+            $checked = if ($State.InventoryLoaded) { [string]$app.Id -in $selectedIds } else { $wasStaged }
+            [void]$item.SubItems.Add($(if ($wasStaged) { if ($checked) { 'Staged' } else { 'Remove' } } elseif ($checked) { 'Add' } else { '' }))
             $item.Tag = $app
-            $item.Checked = ($wasStaged -or [string]$app.Id -in $selectedIds)
+            $item.Checked = $checked
             [void]$State.Apps.Items.Add($item)
         }
     }
     finally { $State.Apps.EndUpdate() }
+    $State.InventoryLoaded = $true
+    $State.Selection.Text = "$(@($State.Apps.CheckedItems).Count) selected | $($stagedIds.Count) staged"
 
     $State.Cache.BeginUpdate()
     try {
@@ -193,7 +208,7 @@ function Show-OSDAppUI {
     $appTab.Controls.Add($appLayout)
 
     $appInfo = [System.Windows.Forms.Label]::new()
-    $appInfo.Text = 'Select apps to STAGE for SetupComplete. Built-ins use defaults. Unchecking does not remove existing entries.'
+    $appInfo.Text = 'Check apps to add, uncheck to remove. Apply Changes updates the pending SetupComplete queue.'
     $appInfo.Dock = 'Fill'
     $appInfo.TextAlign = 'MiddleLeft'
     $appInfo.AutoEllipsis = $true
@@ -233,7 +248,7 @@ function Show-OSDAppUI {
     [void]$appActions.Controls.Add($selection,0,0)
 
     $stage = [System.Windows.Forms.Button]::new()
-    $stage.Text = if ($TestMode) { 'Stage to test folder' } else { 'Stage selected apps' }
+    $stage.Text = 'Apply Changes'
     $stage.Dock = 'Fill'
     $stage.Margin = [System.Windows.Forms.Padding]::new(4,0,4,0)
     $stage.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -288,11 +303,18 @@ function Show-OSDAppUI {
         Form=$form; Apps=$appList; Cache=$cacheList; RepositoryStatus=$repositoryStatus
         Offline=$offlineCheck; Status=$status; Target=$target
         Selection=$selection; Stage=$stage; Refresh=$refresh
-        PreviewOnly=[bool]$PreviewOnly; TestMode=[bool]$TestMode
+        PreviewOnly=[bool]$PreviewOnly; TestMode=[bool]$TestMode; InventoryLoaded=$false
     }
     $appList.Add_ItemChecked({
         $s = $script:OSDAppUIState
-        if ($s) { $s.Selection.Text = "$(@($s.Apps.CheckedItems).Count) selected" }
+        if (-not $s) { return }
+        $s.Selection.Text = "$(@($s.Apps.CheckedItems).Count) selected"
+        $item = $_.Item
+        $stagedIds = if ($s.Target) { @(Get-OSDAppUIStagedIds -WindowsPath $s.Target) } else { @() }
+        $wasStaged = [string]$item.Tag.Id -in $stagedIds
+        $item.SubItems[4].Text = if ($wasStaged) {
+            if ($item.Checked) { 'Staged' } else { 'Remove' }
+        } elseif ($item.Checked) { 'Add' } else { '' }
     })
     $refresh.Add_Click({
         $s = $script:OSDAppUIState
@@ -308,39 +330,46 @@ function Show-OSDAppUI {
     $stage.Add_Click({
         $s = $script:OSDAppUIState
         if (-not $s -or $s.PreviewOnly) { return }
+
         $items = @(foreach ($item in @($s.Apps.CheckedItems)) { $item.Tag })
-        if ($items.Count -eq 0) {
-            [void][System.Windows.Forms.MessageBox]::Show('Select at least one app.','OSDApps','OK','Information')
+        $existing = @(Get-OSDAppUIStagedIds -WindowsPath $s.Target)
+        $selectedIds = @($items | ForEach-Object { [string]$_.Id })
+        $toAdd = @($items | Where-Object { [string]$_.Id -notin $existing })
+        $toRemove = @($existing | Where-Object { $_ -notin $selectedIds })
+
+        if ($toAdd.Count -eq 0 -and $toRemove.Count -eq 0) {
+            $s.Status.Text = 'No changes to the staging queue.'
             return
         }
-        $message = if ($s.TestMode) {
-            "TEST MODE: Stage $($items.Count) app(s) under $($s.Target)? This is a disposable staging folder; SetupComplete will NOT run at next Windows boot. Built-in defaults apply."
+
+        $message = @(
+            "Apply changes to $($s.Target)?"
+            ""
+            "Add: $($toAdd.Count)"
+            "Remove: $($toRemove.Count)"
+        ) -join [Environment]::NewLine
+        if ($toRemove.Count -gt 0) {
+            $message += [Environment]::NewLine + 'Unstaging removes only staged files and queue entries; USB cache is preserved.'
         }
-        else {
-            "Stage $($items.Count) app(s) on $($s.Target)? Built-in defaults apply. Previous staged apps will remain."
+        if ($s.TestMode) {
+            $message += [Environment]::NewLine + 'TEST MODE: The real Windows installation is unaffected.'
         }
-        $confirmation = [System.Windows.Forms.MessageBox]::Show(
-            $message, 'Confirm staging','YesNo','Question'
-        )
-        if ($confirmation -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+        $answer = [System.Windows.Forms.MessageBox]::Show($message,'Confirm queue changes','YesNo','Question')
+        if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+
         $s.Stage.Enabled = $false
         $s.Refresh.Enabled = $false
-        $s.Status.Text = 'Staging selected applications; please wait...'
+        $s.Status.Text = 'Applying changes; please wait...'
         $s.Form.Refresh()
         try {
-            $result = Invoke-OSDAppUIStage -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked -TestMode:$s.TestMode
-            $s.Status.Text = if ($s.TestMode) { "Staging TEST completed for $($items.Count) apps (not installed)." } else { "Staged $($items.Count) apps for SetupComplete." }
-            $successMessage = if ($s.TestMode) {
-                "Staging test files created under $($s.Target). No apps were installed and the running Windows SetupComplete was not changed."
-            } else {
-                'Applications were staged, not yet installed.'
-            }
-            [void][System.Windows.Forms.MessageBox]::Show($successMessage,'OSDApps','OK','Information')
+            $result = Invoke-OSDAppUIApplyChanges -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked -TestMode:$s.TestMode -ErrorAction Stop
+            $s.Status.Text = "Applied: $(@($result.Added).Count) added, $(@($result.Removed).Count) removed, $(@($result.Remaining).Count) staged."
+            [void][System.Windows.Forms.MessageBox]::Show($s.Status.Text,'OSDApps - Queue updated','OK','Information')
             Update-OSDAppUIInventory -State $s
         }
         catch {
-            $s.Status.Text = "Stage failed: $($_.Exception.Message)"
-            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Stage failed','OK','Error')
+            $s.Status.Text = "Apply failed: $($_.Exception.Message)"
+            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Apply failed','OK','Error')
         }
         finally {
             $s.Refresh.Enabled = $true
