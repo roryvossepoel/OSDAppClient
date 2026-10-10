@@ -27,11 +27,11 @@ Install-Module OSDApps -SkipPublisherCheck
 Import-Module OSDApps
 ```
 
-To install a specific, reproducible release (for example, the x64 Webex field-tested 0.32.0):
+To install a specific, reproducible release (for example, the field-validated 0.33.0):
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.32.0 -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.32.0 -Force
+Install-Module OSDApps -RequiredVersion 0.33.0 -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.33.0 -Force
 ```
 
 `Install-PSResource` is the newer PSResourceGet equivalent, but PSResourceGet is not normally available by default in Windows PowerShell 5.1 / WinPE. For OSDCloud and WinPE scenarios, `Install-Module` is therefore the recommended installation method.
