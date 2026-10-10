@@ -54,7 +54,7 @@ Runner:
 - executes `Install.ps1`;
 - installs built-ins;
 - extracts Adobe Acrobat Unified's cached ZIP locally before invoking Adobe Setup.exe;
-- installs vendor MSI built-ins such as Google Chrome Enterprise and Mozilla Firefox Enterprise through `msiexec.exe /i ... /qn /norestart`;
+- installs vendor MSI built-ins such as Google Chrome Enterprise, Mozilla Firefox Enterprise and Cisco Webex through `msiexec.exe /i ... /qn /norestart`;
 - stops on unrecoverable installation failure;
 - schedules cleanup after full success.
 
