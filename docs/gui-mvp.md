@@ -9,7 +9,7 @@ Download the OSDApps artifact from the green CI run on PR #14 (do not download t
     Import-Module 'C:\Temp\OSDApps\OSDApps.psd1' -Force
     Show-OSDAppUI -PreviewOnly
 
-Check: window opens; six built-ins appear; checkbox selection works; Cache Management tab displays local cache if attached. The repository URL is shown as read-only status and is taken from Get-OSDAppConfiguration. Offline-only refresh uses local cache without querying that URL or changing the configured value.
+Check: three tabs (`Repository`, `Built-in`, `Cache`) appear. Repository app selection is editable; the Built-in tab is read-only and shows the six built-ins, any staged status and actual configuration fields from DeviceManifest.json when selected. Cache displays the existing read-only inventory. The repository URL is shown as read-only status and is taken from Get-OSDAppConfiguration. Offline-only refresh uses local cache without querying that URL or changing the configured value.
 
 ## Staging tests on Windows 11 — without changing the active OS
 
@@ -59,17 +59,17 @@ If the read-only form works, test selecting/staging on a disposable test device 
     Set-OSDAppConfiguration -CatalogUri 'https://example.org/your-repository/catalog.json'
     Show-OSDAppUI
 
-For real deployment, the Stage button becomes active in WinPE with a detected offline Windows target. On full Windows it can also be enabled explicitly using -TestMode (only for the isolated test target). It requests confirmation before it invokes the existing Add-OSDApp cmdlets. Built-ins use default parameters; repository apps are staged together in one batch. All apps install later via SetupComplete.
+For real deployment, Apply Changes becomes active in WinPE with a detected offline Windows target. On full Windows it can also be enabled explicitly using -TestMode (only for the isolated test target). The Repository tab controls repository apps only: built-ins cannot be staged, configured or unstaged there. All apps install later via SetupComplete.
 
 ## Unstage applications (new)
 
-The application checkboxes now reflect the **desired SetupComplete queue**, not just
-individual additions. Check an app to stage it; uncheck an already staged app to
+The repository checkboxes reflect the **desired repository subset** of the SetupComplete queue, not just
+individual additions. Built-in apps are read-only and not affected by Apply Changes. Check an app to stage it; uncheck an already staged app to
 mark it for removal, then use **Apply Changes**. The queue column shows
 `Staged`, `Add` or `Remove`.
 
-The GUI first stages newly selected apps using existing CLI cmdlets, then calls
-the new public `Remove-OSDAppStaging` cmdlet for removed apps. Unchanged
+The GUI first stages newly selected repository apps using existing CLI cmdlets, then calls
+the new public `Remove-OSDAppStaging` cmdlet for removed repository apps. Unchanged
 applications are not re-staged. Staged apps remain listed and pre-checked even
 if the configured online repository is temporarily unavailable.
 
@@ -96,6 +96,8 @@ unstaging apps from another user's managed volume, or modifying the USB cache.
 ## Limitations of this MVP
 
 - Cache tab is READ ONLY; GUI synchronization and clearing are for later iterations.
+- Built-in tab is READ ONLY, including staged configuration. Manage built-ins via existing CLI cmdlets.
+- Refresh resets pending unsaved checkbox changes to the staged repository queue. Built-in staging remains untouched by GUI Apply Changes.
 - No presets, SUUD/MUSD/KIOSK logic, embedded repository URLs or external GUI dependencies.
 - Unchecking a staged app marks it for removal when Apply Changes is confirmed; installed Windows applications are never uninstalled.
 - Advanced Office settings, Firefox language and other custom app options still require CLI.
