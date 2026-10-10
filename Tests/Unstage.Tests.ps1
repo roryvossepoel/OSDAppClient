@@ -23,7 +23,23 @@ Describe 'Remove-OSDAppStaging and GUI Apply Changes' {
                 )
             } | ConvertTo-Json -Depth 10 |
                 Set-Content -LiteralPath (Join-Path $stage 'DeviceManifest.json') -Encoding UTF8
-            Add-OSDAppSetupComplete -WindowsPath $Root -Confirm:$false | Out-Null
+            # Canonical SetupComplete block fixture; the helper is global, while
+            # Add-OSDAppSetupComplete is an intentionally private module command.
+            $relative='Windows\Temp\OSDApps'
+            @(
+                '@echo off'
+                ':: OSDApps PreInstall'
+                ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SystemDrive%\{0}\Invoke-OSDAppPreInstall.ps1" -StagedPath "%SystemDrive%\{0}"' -f $relative)
+                'set "OSDAPPS_PREINSTALL_EXITCODE=%ERRORLEVEL%"'
+                'if not "%OSDAPPS_PREINSTALL_EXITCODE%"=="0" exit /b %OSDAPPS_PREINSTALL_EXITCODE%'
+                ':: OSDApps Begin'
+                ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SystemDrive%\{0}\Invoke-OSDAppRunner.ps1" -StagedPath "%SystemDrive%\{0}"' -f $relative)
+                'set "OSDAPPS_EXITCODE=%ERRORLEVEL%"'
+                'if not "%OSDAPPS_EXITCODE%"=="0" exit /b %OSDAPPS_EXITCODE%'
+                ':: OSDApps End'
+            ) | Set-Content -LiteralPath (Join-Path $scripts 'SetupComplete.cmd') -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $stage 'Invoke-OSDAppRunner.ps1') -Value '# runner' -Encoding ASCII
+            Set-Content -LiteralPath (Join-Path $stage 'Invoke-OSDAppPreInstall.ps1') -Value '# preinstall' -Encoding ASCII
             return [pscustomobject]@{
                 Manifest=Join-Path $stage 'DeviceManifest.json'
                 Setup=Join-Path $scripts 'SetupComplete.cmd'
@@ -125,9 +141,10 @@ Describe 'Remove-OSDAppStaging and GUI Apply Changes' {
 
     It 'applies an unchecked app removal without restaging already selected apps' {
         InModuleScope OSDApps {
-            Mock Get-OSDAppUIStagedIds { 'MicrosoftTeams'; 'NotepadPlusPlus' }
+            $script:StagedIds = @('MicrosoftTeams','NotepadPlusPlus')
+            Mock Get-OSDAppUIStagedIds { $script:StagedIds }
             Mock Invoke-OSDAppUIStage { throw 'Should not restage existing app' }
-            Mock Remove-OSDAppStaging { }
+            Mock Remove-OSDAppStaging { $script:StagedIds = @('NotepadPlusPlus') }
             $apps=@([pscustomobject]@{Id='NotepadPlusPlus';Source='Repository'})
             $result=Invoke-OSDAppUIApplyChanges -Applications $apps -WindowsPath 'C:\Safe' -TestMode
 
