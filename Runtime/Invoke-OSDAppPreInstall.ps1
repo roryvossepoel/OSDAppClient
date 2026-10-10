@@ -14,12 +14,31 @@ $preInstallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 function Write-PreInstallLog {
     param([string]$Event,[ValidateSet('Info','Warning','Error')][string]$Level='Info',[string]$Message,[hashtable]$Data)
     New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+
+    # Runtime.log is shared by PreInstall and the runner. Apply the same
+    # 1 MB + 3 archives retention policy in both entry points.
+    if (Test-Path -LiteralPath $logPath -PathType Leaf) {
+        if ((Get-Item -LiteralPath $logPath).Length -ge 1MB) {
+            for ($i = 2; $i -ge 1; $i--) {
+                $source = "$logPath.$i"
+                $target = "$logPath.$($i + 1)"
+                if (Test-Path -LiteralPath $source -PathType Leaf) {
+                    Move-Item -LiteralPath $source -Destination $target -Force
+                }
+            }
+            Move-Item -LiteralPath $logPath -Destination "$logPath.1" -Force
+            if (Test-Path -LiteralPath "$logPath.4") {
+                Remove-Item -LiteralPath "$logPath.4" -Force
+            }
+        }
+    }
     $type = if ($Level -eq 'Warning') { 2 } elseif ($Level -eq 'Error') { 3 } else { 1 }
     $details = @()
     if ($Data) { foreach ($key in @($Data.Keys | Sort-Object)) { $value=$Data[$key]; if ($value -is [System.Collections.IEnumerable] -and $value -isnot [string]) { $value=@($value)-join ',' }; $details += ('{0}={1}' -f $key,$value) } }
     $msg = if ($Message) { "[$Event] $Message" } else { "[$Event]" }
     if ($details.Count -gt 0) { $msg += ' | ' + ($details -join '; ') }
     $msg = $msg -replace '\]LOG\]!>', ']LOG]! >'
+    $msg = $msg -replace '[\r\n\x00-\x1F]+', ' '
     $now=(Get-Date).ToUniversalTime(); $time=$now.ToString('HH:mm:ss.fff') + '+000'; $date=$now.ToString('MM-dd-yyyy'); $thread=[System.Threading.Thread]::CurrentThread.ManagedThreadId
     $line='<![LOG[{0}]LOG]!><time="{1}" date="{2}" component="PreInstall" context="" type="{3}" thread="{4}" file="">' -f $msg,$time,$date,$type,$thread
     Add-Content -LiteralPath $logPath -Value $line -Encoding UTF8
