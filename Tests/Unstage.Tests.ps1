@@ -155,4 +155,40 @@ Describe 'Remove-OSDAppStaging and GUI Apply Changes' {
             }
         }
     }
+    It 'preserves non-ASCII bytes in unrelated SetupComplete commands when emptying queue' {
+        InModuleScope OSDApps {
+            $root=Join-Path $TestDrive 'AnsiSetupRoot'
+            $fixture=New-OSDAppsStagingFixture -Root $root
+            $originalBytes=[IO.File]::ReadAllBytes($fixture.Setup)
+            $prefix=[Text.Encoding]::GetEncoding(28591).GetBytes("echo Cafe"+[char]233+[Environment]::NewLine)
+            $newBytes=New-Object byte[] ($prefix.Length+$originalBytes.Length)
+            [Array]::Copy($prefix,0,$newBytes,0,$prefix.Length)
+            [Array]::Copy($originalBytes,0,$newBytes,$prefix.Length,$originalBytes.Length)
+            [IO.File]::WriteAllBytes($fixture.Setup,$newBytes)
+
+            Mock Test-OSDAppWinPE {$false}
+            Mock Get-OSDAppUITestWindowsPath {$root}
+            Remove-OSDAppStaging -Name @('MicrosoftTeams','NotepadPlusPlus') -TestMode -Confirm:$false | Out-Null
+
+            $remaining=[IO.File]::ReadAllBytes($fixture.Setup)
+            @($remaining).Count | Should -BeGreaterThan 0
+            @($remaining | Where-Object {$_ -eq 233}).Count | Should -Be 1
+            [Text.Encoding]::GetEncoding(28591).GetString($remaining) | Should -Match 'echo Cafe'
+        }
+    }
+
+    It 'can apply an empty selection to remove the entire staged queue' {
+        InModuleScope OSDApps {
+            $script:StagedIds = @('AppA')
+            Mock Get-OSDAppUIStagedIds {$script:StagedIds}
+            Mock Remove-OSDAppStaging {$script:StagedIds = @()}
+            Mock Invoke-OSDAppUIStage {throw 'No app should be staged'}
+            $result=Invoke-OSDAppUIApplyChanges -Applications @() -WindowsPath 'C:\Safe' -TestMode
+            @($result.Removed) | Should -Be @('AppA')
+            @($result.Remaining).Count | Should -Be 0
+            Should -Invoke Remove-OSDAppStaging -Exactly 1
+            Should -Invoke Invoke-OSDAppUIStage -Exactly 0
+        }
+    }
+
 }
