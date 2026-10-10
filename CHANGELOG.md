@@ -12,7 +12,9 @@
 ### Validation
 
 - Automated MSI property, x64/ARM64 staging and vendor manifest/cache path tests are included.
-- Cisco installer download behavior and a complete OSDCloud/Webex installation still require real-world validation. Previous 0.30.x/0.31.0 field results are unaffected.
+- **x64 practice validation (10 October 2026):** Cisco-signed 259.9 MiB MSI v46.9.0.35800 installed silently with exit code 0; online SetupComplete passed (download 3.6 s, install 8 s); cold and warm USB cache passed (warm 4.1 s, zero re-downloads); fully offline SetupComplete from locally staged USB cache passed (PreInstall 3.5 s, Runner 8.5 s, exit 0).
+- ARM64 is supported in the interface but **has not been field-validated**. A combined seven-app queue and online SetupComplete warm-cache reuse remain untested. See [test evidence](docs/testing.md#cisco-webex-built-in--0320).
+- Documented the stable public `metadata/builtins.json` contract and viewer integration; no breaking metadata schema changes.
 
 ## 0.31.0
 
