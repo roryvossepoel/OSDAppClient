@@ -2,15 +2,15 @@ function Update-OSDAppUIInventory {
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$State)
 
-    $catalog = $null
-    $inputUri = $State.Url.Text.Trim()
-    if (-not $State.Offline.Checked -and $inputUri) {
-        try { $catalog = [uri]$inputUri } catch { throw 'Invalid repository catalog URL.' }
-        if (-not $catalog.IsAbsoluteUri -or $catalog.Scheme -notin @('http','https')) {
-            throw 'Catalog URL must start with http:// or https://.'
-        }
+    # The catalog is managed exclusively through Set-OSDAppConfiguration.
+    # Offline only affects lookup behavior and never changes the configuration.
+    $catalog = (Get-OSDAppConfiguration).CatalogUri
+    $State.RepositoryStatus.Text = if ($catalog) {
+        "Repository: $($catalog.AbsoluteUri)"
     }
-    Set-OSDAppConfiguration -CatalogUri $catalog
+    else {
+        'Repository: not configured (use Set-OSDAppConfiguration)'
+    }
     $selectedIds = @(
         foreach ($item in @($State.Apps.Items)) {
             if ($item.Checked) { [string]$item.Tag.Id }
@@ -19,7 +19,7 @@ function Update-OSDAppUIInventory {
     $stagedIds = if ($State.Target) { @(Get-OSDAppUIStagedIds -WindowsPath $State.Target) } else { @() }
 
     # Get-OSDApp remains the one source of truth, including custom repositories.
-    $catalogApps = @(Get-OSDApp -ErrorAction Stop |
+    $catalogApps = @(Get-OSDApp -Offline:$State.Offline.Checked -ErrorAction Stop |
         Sort-Object @{Expression={ if ($_.Source -eq 'BuiltIn') { 0 } else { 1 } }}, DisplayName)
     $State.Apps.BeginUpdate()
     try {
@@ -61,7 +61,8 @@ function Show-OSDAppUI {
     .EXAMPLE
     Show-OSDAppUI -PreviewOnly
     .EXAMPLE
-    Show-OSDAppUI -CatalogUri 'https://example.org/catalog.json'
+    Set-OSDAppConfiguration -CatalogUri 'https://example.org/catalog.json'
+    Show-OSDAppUI
     .EXAMPLE
     Show-OSDAppUI -TestMode -Offline
     .NOTES
@@ -70,7 +71,6 @@ function Show-OSDAppUI {
     #>
     [CmdletBinding()]
     param(
-        [uri]$CatalogUri,
         [string]$WindowsPath,
         [switch]$Offline,
         [switch]$PreviewOnly,
@@ -89,8 +89,6 @@ function Show-OSDAppUI {
     }
     if ($script:OSDAppUIState) { throw 'OSDApps Manager is already open.' }
 
-    $originalCatalog = (Get-OSDAppConfiguration).CatalogUri
-    $initialCatalog = if ($PSBoundParameters.ContainsKey('CatalogUri')) { $CatalogUri } else { $originalCatalog }
     $winPE = Test-OSDAppWinPE
     $target = $null
     $targetLabel = 'Full Windows: inspection only. Use -TestMode for safe staging.'
@@ -149,11 +147,13 @@ function Show-OSDAppUI {
     $description.SetBounds(20,54,750,24)
     $header.Controls.Add($description)
 
-    $url = [System.Windows.Forms.TextBox]::new()
-    $url.Text = if ($initialCatalog) { [string]$initialCatalog.AbsoluteUri } else { '' }
-    $url.SetBounds(20,96,625,26)
-    $url.Anchor = 'Top,Left,Right'
-    $header.Controls.Add($url)
+    $repositoryStatus = [System.Windows.Forms.Label]::new()
+    $repositoryStatus.Text = 'Repository: loading...'
+    $repositoryStatus.ForeColor = [System.Drawing.Color]::Gainsboro
+    $repositoryStatus.AutoEllipsis = $true
+    $repositoryStatus.SetBounds(24,96,615,26)
+    $repositoryStatus.Anchor = 'Top,Left,Right'
+    $header.Controls.Add($repositoryStatus)
 
     $offlineCheck = [System.Windows.Forms.CheckBox]::new()
     $offlineCheck.Text = 'Offline only'
@@ -285,7 +285,7 @@ function Show-OSDAppUI {
     $footer.Controls.Add($close)
 
     $script:OSDAppUIState = @{
-        Form=$form; Apps=$appList; Cache=$cacheList; Url=$url
+        Form=$form; Apps=$appList; Cache=$cacheList; RepositoryStatus=$repositoryStatus
         Offline=$offlineCheck; Status=$status; Target=$target
         Selection=$selection; Stage=$stage; Refresh=$refresh
         PreviewOnly=[bool]$PreviewOnly; TestMode=[bool]$TestMode
@@ -358,7 +358,6 @@ function Show-OSDAppUI {
         [void]$form.ShowDialog()
     }
     finally {
-        Set-OSDAppConfiguration -CatalogUri $originalCatalog
         $script:OSDAppUIState = $null
         $form.Dispose()
     }
