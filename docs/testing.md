@@ -70,7 +70,7 @@ The same run exposed an **Adobe staging path mismatch**: `BuiltInCacheRestaged` 
 
 ## MicrosoftTeams rename — 0.31.0
 
-The five completed real-world deployment scenarios above used **0.30.0** and therefore its original built-in ID `Teams`. In **0.31.0**, the canonical built-in ID, cache folder, WinPE staging, runtime manifest type and public cmdlets change to **`MicrosoftTeams`** with no automatic legacy compatibility or USB cache migration. New file-backed Pester tests validate the updated staging and runtime contracts. A fresh 0.31.0 SetupComplete deployment has not yet been field-verified; keep the original 0.30.0 test results as historical evidence rather than relabeling them.
+The five completed real-world deployment scenarios above used **0.30.0** and therefore its original built-in ID `Teams`. In **0.31.0**, the canonical built-in ID, cache folder, WinPE staging, runtime manifest type and public cmdlets change to **`MicrosoftTeams`** with no automatic legacy compatibility or USB cache migration. New file-backed Pester tests validate the updated staging and runtime contracts. **0.31.0 field test 6** subsequently completed a six-app SetupComplete deployment with **6/6 exit code 0**, new `MicrosoftTeams` USB cache registration, correct architecture-specific Adobe staging (no `BuiltInCacheRestaged`), and successful `CleanupMode=OnSuccess` (runtime staging removed; `Runtime.log` retained). These later checks do not retroactively change the 0.30.0 historical results.
 
 ## Cisco Webex built-in — 0.32.0
 
@@ -78,7 +78,19 @@ Cisco Webex was added with x64 and ARM64 non-localized MSI sources, an architect
 
 **Direct MSI test validated — 10 October 2026, Windows x64 development device.** The official non-localized Cisco x64 `Webex_en.msi` was downloaded successfully (259.9 MiB); Authenticode reported `Valid`, signed by Cisco Systems, Inc. Silent `msiexec /i ... /qn /norestart ALLUSERS=1 ACCEPT_EULA=TRUE AUTOSTART_WITH_WINDOWS=false` completed with exit code `0`; MSI registration showed **Webex 46.9.0.35800**. The full MSI log confirms the three installation properties, per-machine assignment, existing WebView2 Runtime and `MainEngineThread is returning 0` (server and client). Two internal Cisco custom actions (`WixRemoveFoldersEx` and `KillSpark`) logged a local `1603` but were explicitly translated to success by the package; there were no `Return value 3` fatal MSI actions.
 
-**Still requires OSDApps field validation:** the end-to-end PreInstall download and HTTP freshness check, new USB cache registration/reuse, offline fallback, SetupComplete installation and behavior on a freshly deployed Windows device. ARM64 MSI download and installation remain unverified. The earlier six-app deployment results do not include Cisco Webex.
+**Field validation — 10 October 2026, OSDApps 0.32.0 test build (`a2d111fcde4764486207629200a077d74a2fa6a5`), x64:**
+
+| Test | Verified observation | Result |
+| --- | --- | --- |
+| Direct x64 MSI on Windows | Cisco-signed, 259.9 MiB, v46.9.0.35800; silent all-users MSI returned 0 | Pass |
+| Online SetupComplete, USB **not detected** by runtime | `CacheAvailable=False`, `Target=Local`; PreInstall downloaded 272,531,456 bytes in 3.6 s (reported 73 MB/s); PreInstall 7.6 s; Runner 8.5 s; MSI returned 0; Webex 46.9.0.35800 registered | Pass — **local fallback**, not USB caching |
+| Cold USB cache from retained PreInstall runtime in Windows/OOBE | Cache created at `E:\OSDApps\BuiltIn\CiscoWebex\x64\Package.msi`; `CacheSynchronized=True`, `PackageUpdated=True`; 259.9 MiB present | Pass |
+| Warm USB cache from repeated PreInstall in Windows/OOBE | `PackageUpdated=False`, `CacheSynchronized=True`, no new download, SHA256 unchanged; observed duration 4.1 s | Pass |
+| Fully offline OSDCloud v2 / SetupComplete | In WinPE, USB and local staged MSI were present and **SHA256-identical** before reboot; physically disconnected network; Windows PreInstall logged `CacheAvailable=True`, `CacheVolumeFound` for `E:\OSDApps`, and `BuiltInRefreshSkipped` due to no network; PreInstall 3.5 s; installed from **local staged MSI**, `BuiltInInstallComplete ExitCode=0` in 8 s; Runner 8.5 s; `InstallComplete ApplicationCount=1`; `CleanupSkipped` as configured (`Never`) | Pass |
+
+The offline log demonstrates the USB cache was **detected** during SetupComplete, not that the installer ran directly from the USB volume; the payload had already been copied locally in WinPE. Both SetupComplete deployments used a one-app `CiscoWebex` queue. These measured durations cover only their named phases, not WinPE/OOBE or the entire deployment. The first online run did not populate the USB cache because the volume was not detected at runtime.
+
+**Remaining limitations:** ARM64 MSI retrieval, signature and installation have **not** been field-validated; the combined seven-app SetupComplete scenario has not been run. USB cache re-use across an additional **online SetupComplete** run and recovery under other network failures are also not established by these tests.
 
 ## Validated built-ins and remaining variants
 
