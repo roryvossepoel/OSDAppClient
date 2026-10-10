@@ -36,6 +36,52 @@ Describe 'Built-in metadata' {
         }
     }
 
+    It 'keeps public raw icon URLs aligned with tracked SVG files' {
+        foreach ($app in @($script:metadata.Applications)) {
+            $expectedUrl = 'https://raw.githubusercontent.com/roryvossepoel/OSDApps/main/metadata/icons/'
+            $app.IconUrl.StartsWith($expectedUrl) | Should -BeTrue
+            $fileName = $app.IconUrl.Substring($expectedUrl.Length)
+            $fileName | Should -Match '^[a-z0-9-]+\\.svg
+        $exported = @(Get-Command -Module OSDApps -CommandType Function | Select-Object -ExpandProperty Name)
+
+        foreach ($app in @($script:metadata.Applications)) {
+            $app.AddCommand | Should -BeIn $exported
+            $app.SyncCommand | Should -BeIn $exported
+        }
+    }
+
+    It 'contains every exported built-in Add command' {
+        $exportedBuiltIns = @(
+            Get-Command -Module OSDApps -CommandType Function |
+                Select-Object -ExpandProperty Name |
+                Where-Object {
+                    $_ -like 'Add-OSDApp*' -and
+                    $_ -notin @('Add-OSDApp','Add-OSDAppPackage')
+                } |
+                ForEach-Object { $_ -replace '^Add-OSDApp','' } |
+                Sort-Object
+        )
+
+        $metadataIds = @($script:metadata.Applications.Id | Sort-Object)
+
+        Compare-Object -ReferenceObject $exportedBuiltIns -DifferenceObject $metadataIds |
+            Should -BeNullOrEmpty
+    }
+}
+
+            (Test-Path -LiteralPath (Join-Path $script:moduleRoot "metadata\\icons\\$fileName") -PathType Leaf) | Should -BeTrue
+        }
+    }
+
+    It 'advertises Cisco Webex with the stable viewer contract' {
+        $webex = @($script:metadata.Applications | Where-Object Id -eq 'CiscoWebex')
+        $webex.Count | Should -Be 1
+        $webex[0].AddCommand | Should -Be 'Add-OSDAppCiscoWebex'
+        $webex[0].SyncCommand | Should -Be 'Sync-OSDAppCiscoWebex'
+        $webex[0].CachePath | Should -Be 'BuiltIn/CiscoWebex/<architecture>'
+        @($webex[0].Architectures | Sort-Object) | Should -Be @('arm64','x64')
+    }
+
     It 'maps every metadata command to an exported function' {
         $exported = @(Get-Command -Module OSDApps -CommandType Function | Select-Object -ExpandProperty Name)
 
