@@ -99,7 +99,8 @@ Describe 'Show-OSDAppUI - read-only device inspector' {
             Mock Get-OSDAppCache {
                 [pscustomobject]@{Id='NotepadPlusPlus';Source='Repository';Valid=$true;SizeMB=6.6}
             }
-            Mock Get-OSDAppCachePath { $cache }
+            $script:FixtureCachePath = $cache
+            Mock Get-OSDAppCachePath { $script:FixtureCachePath }
             $snapshot = Get-OSDAppUIReadOnlySnapshot -WindowsPath $target -Offline
             $snapshot.CachePath | Should -Be $cache
             @($snapshot.CacheEntries).Count | Should -Be 1
