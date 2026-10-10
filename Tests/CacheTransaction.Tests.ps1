@@ -99,12 +99,9 @@ Describe 'Transactional multi-app repository synchronization' {
                 $oldHashes[$id] = (Get-FileHash -LiteralPath (Join-Path $cache "Packages\$id\Package.zip") -Algorithm SHA256).Hash
             }
 
-            Mock Move-Item {
-                if ([string]$LiteralPath -like '*CacheCatalog.json.new') {
-                    throw 'Simulated catalog commit failure'
-                }
-                Microsoft.PowerShell.Management\Move-Item -LiteralPath $LiteralPath -Destination $Destination -ErrorAction Stop
-            }
+            # Fault injection at the catalog publish boundary. Mocking Move-Item
+            # directly would recursively intercept every fallback Move-Item.
+            Mock Publish-OSDAppCacheCatalog { throw 'Simulated catalog commit failure' }
 
             { Sync-OSDAppCache -CatalogPath $newCatalog -CachePath $cache -Confirm:$false } |
                 Should -Throw '*Simulated catalog commit failure*'
