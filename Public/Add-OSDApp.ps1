@@ -4,7 +4,8 @@ function Add-OSDApp {
         [Parameter(Mandatory, Position=0, ValueFromPipeline, ValueFromPipelineByPropertyName)]
         [Alias('Id')]
         [string[]]$Name,
-        [string]$WindowsPath
+        [string]$WindowsPath,
+        [switch]$SkipCacheRefresh
     )
 
     begin { $requested=[System.Collections.Generic.List[string]]::new() }
@@ -15,10 +16,11 @@ function Add-OSDApp {
 
         foreach($app in $apps){
             if($app -ieq 'Microsoft365Apps'){throw "'Microsoft365Apps' is a built-in application. Use Add-OSDAppMicrosoft365Apps instead."}
-            if($app -ieq 'Teams'){throw "'Teams' is a built-in application. Use Add-OSDAppTeams instead."}
+            if($app -ieq 'MicrosoftTeams' -or $app -ieq 'Teams'){throw "'MicrosoftTeams' is a built-in application. Use Add-OSDAppMicrosoftTeams instead."}
             if($app -ieq 'AdobeAcrobatUnified'){throw "'AdobeAcrobatUnified' is a built-in application. Use Add-OSDAppAdobeAcrobatUnified instead."}
             if($app -ieq 'GoogleChromeEnterprise'){throw "'GoogleChromeEnterprise' is a built-in application. Use Add-OSDAppGoogleChromeEnterprise instead."}
             if($app -ieq 'MozillaFirefoxEnterprise'){throw "'MozillaFirefoxEnterprise' is a built-in application. Use Add-OSDAppMozillaFirefoxEnterprise instead."}
+            if($app -ieq 'CiscoWebex'){throw "'CiscoWebex' is a built-in application. Use Add-OSDAppCiscoWebex instead."}
         }
 
 # USB cache is optional. When absent, stage repository archives in
@@ -37,35 +39,80 @@ function Add-OSDApp {
             Write-Verbose ("Local repository cache: {0}" -f $cachePath)
         }
 
-        $sourceUri = (Get-OSDAppConfiguration).CatalogUri
-        if (-not $sourceUri) {
-            $cacheCatalogPath = Join-Path $cachePath 'CacheCatalog.json'
-            if (-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)) {
-                throw 'No OSD App Catalog is configured and no repository cache is available. Configure CatalogUri with Set-OSDAppConfiguration, or synchronize the repository cache explicitly.'
-            }
+        # WhatIf must not download, create a local cache, modify the manifest,
+        # or update SetupComplete.cmd.
+        if (-not $PSCmdlet.ShouldProcess(($apps -join ', '), "Stage repository applications for SetupComplete on $resolvedWindowsPath")) {
+            return
         }
-        else {
+
+        $sourceUri = (Get-OSDAppConfiguration).CatalogUri
+        $cacheCatalogPath = Join-Path $cachePath 'CacheCatalog.json'
+
+        if ($sourceUri -and -not $SkipCacheRefresh) {
             if ($VerbosePreference -ne 'SilentlyContinue') {
                 Write-OSDAppConsole -Level Info -Component 'Repository' -Message ("Synchronizing requested repository application(s): {0}" -f ($apps -join ', '))
             }
 
-            Sync-OSDAppCache -CatalogUri $sourceUri -CachePath $cachePath -Name $apps -Confirm:$false | Out-Null
+            try {
+                Sync-OSDAppCache -CatalogUri $sourceUri -CachePath $cachePath -Name $apps -Confirm:$false -ErrorAction Stop | Out-Null
+            }
+            catch {
+                $syncError = $_.Exception.Message
+
+                # Only fall back when *every* requested archive is present and
+                # matches the SHA-256 recorded in the local cache catalog.
+                # A partial or corrupted cache must never be staged.
+                $validCache = @()
+                if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
+                    try {
+                        $validCache = @(Test-OSDAppCache -CachePath $cachePath -Name $apps -ErrorAction Stop)
+                    }
+                    catch {
+                        Write-Verbose "Offline cache validation failed: $($_.Exception.Message)"
+                    }
+                }
+
+                $unavailable = @($apps | Where-Object {
+                    $requestedName = $_
+                    @($validCache | Where-Object { $_.Id -ieq $requestedName -and $_.Valid }).Count -ne 1
+                })
+
+                if ($unavailable.Count -gt 0) {
+                    throw "Repository synchronization failed ($syncError). No valid offline cache for: $($unavailable -join ', ')."
+                }
+
+                Write-Warning "Repository synchronization failed ($syncError). Using SHA-256 validated offline cache for: $($apps -join ', ')."
+            }
 
             if ($VerbosePreference -ne 'SilentlyContinue') {
-                Write-OSDAppConsole -Level Success -Component 'Repository' -Message 'Requested repository application cache is current'
+                Write-OSDAppConsole -Level Success -Component 'Repository' -Message 'Requested repository application cache is available'
             }
+        }
+        else {
+            if (-not (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf)) {
+                throw 'No cached repository catalog is available. Configure CatalogUri and synchronize first, or attach a USB drive with a populated OSDApps cache.'
+            }
+
+            $cachedPackages = @(Test-OSDAppCache -CachePath $cachePath -Name $apps)
+            $unavailable = @($apps | Where-Object {
+                $requestedName = $_
+                @($cachedPackages | Where-Object { $_.Id -ieq $requestedName -and $_.Valid }).Count -ne 1
+            })
+            if ($unavailable.Count -gt 0) {
+                throw "No valid offline cache for: $($unavailable -join ', ')."
+            }
+
+            Write-Verbose 'Using SHA-256 validated offline repository cache without synchronization.'
         }
 
         $stagedRelativePath='Windows\Temp\OSDApps'
 
-        if($PSCmdlet.ShouldProcess(($apps -join ', '),"Stage repository applications for SetupComplete on $resolvedWindowsPath")){
-            Copy-OSDAppContent -Name $apps -CachePath $cachePath -WindowsPath $resolvedWindowsPath -DestinationRelativePath $stagedRelativePath | Out-Null
-            $manifestPath=Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'
-            $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $manifest = Set-OSDAppManifestRuntimeConfiguration -Manifest $manifest
-            $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-            Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false | Out-Null
-        }
+        Copy-OSDAppContent -Name $apps -CachePath $cachePath -WindowsPath $resolvedWindowsPath -DestinationRelativePath $stagedRelativePath -Confirm:$false -ErrorAction Stop | Out-Null
+        $manifestPath=Join-Path (Join-Path $resolvedWindowsPath $stagedRelativePath) 'DeviceManifest.json'
+        $manifest=Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $manifest = Set-OSDAppManifestRuntimeConfiguration -Manifest $manifest
+        $manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+        Add-OSDAppSetupComplete -WindowsPath $resolvedWindowsPath -StagedRelativePath $stagedRelativePath -Confirm:$false -ErrorAction Stop | Out-Null
 
         foreach($app in $apps){[pscustomobject]@{PSTypeName='OSDApps.StagedApp';Name=$app;CachePath=$cachePath;WindowsPath=$resolvedWindowsPath;StagedPath=(Join-Path $resolvedWindowsPath $stagedRelativePath);Source='Repository'}}
     }
