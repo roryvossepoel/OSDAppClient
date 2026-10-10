@@ -123,4 +123,44 @@ Describe 'Show-OSDAppUI MVP - staging adapter' {
             (Get-Content -LiteralPath $manifestPath -Raw) | Should -Match '"MicrosoftTeams"'
         }
     }
+    It 'creates DeviceManifest and SetupComplete in a real isolated Windows staging test root' {
+        InModuleScope OSDApps {
+            $testRoot = Join-Path $TestDrive 'OSDApps-GUI-Staging-Test'
+            $cacheRoot = Join-Path $TestDrive 'Cache'
+            $pkgDir = Join-Path $cacheRoot 'Packages\AppA'
+            New-Item -ItemType Directory -Path $testRoot,$pkgDir -Force | Out-Null
+            $archive = Join-Path $pkgDir 'Package.zip'
+            Set-Content -LiteralPath $archive -Encoding ASCII -Value 'test repository payload'
+            $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+
+            @{
+                SchemaVersion = 1
+                Packages = @(
+                    @{ Id='AppA'; DisplayName='App A'; Architecture='any'; Version='1.0'
+                       Archive=@{ FileName='Package.zip'; Sha256=$hash }; SuccessCodes=@(0) }
+                )
+            } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $cacheRoot 'CacheCatalog.json') -Encoding UTF8
+
+            Mock Test-OSDAppWinPE { $false }
+            Mock Get-OSDAppUITestWindowsPath { Join-Path $TestDrive 'OSDApps-GUI-Staging-Test' }
+            Mock Get-OSDAppCachePath { Join-Path $TestDrive 'Cache' }
+
+            $app = [pscustomobject]@{ Id='AppA';Source='Repository' }
+            Invoke-OSDAppUIStage -Applications @($app) -WindowsPath $testRoot -TestMode -Offline | Out-Null
+            Invoke-OSDAppUIStage -Applications @($app) -WindowsPath $testRoot -TestMode -Offline | Out-Null
+
+            $stageDir = Join-Path $testRoot 'Windows\Temp\OSDApps'
+            $manifestFile = Join-Path $stageDir 'DeviceManifest.json'
+            $setupFile = Join-Path $testRoot 'Windows\Setup\Scripts\SetupComplete.cmd'
+            $manifest = Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json
+            @($manifest.Apps).Count | Should -Be 1
+            @($manifest.Apps.Id) | Should -Be @('AppA')
+            (Get-FileHash -LiteralPath (Join-Path $stageDir 'Packages\AppA\Package.zip') -Algorithm SHA256).Hash |
+                Should -Be $hash
+            $setup = Get-Content -LiteralPath $setupFile -Raw
+            ([regex]::Matches($setup, '(?m)^:: OSDApps Begin\r?$')).Count | Should -Be 1
+            ([regex]::Matches($setup, '(?m)^:: OSDApps End\r?$')).Count | Should -Be 1
+        }
+    }
+
 }
