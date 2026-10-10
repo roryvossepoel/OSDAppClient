@@ -212,21 +212,39 @@ function Show-OSDAppUI {
     [void]$appList.Columns.Add('Queue',100)
     [void]$appLayout.Controls.Add($appList,0,1)
 
-    $appActions = [System.Windows.Forms.Panel]::new()
+    # A table cell owns the action button. Do not position it using an
+    # absolute X coordinate plus Anchor=Right: before its parent is laid out
+    # WinForms can calculate a negative right-margin and move the button
+    # outside the visible tab (reported in the Windows 11 GUI smoke test).
+    $appActions = [System.Windows.Forms.TableLayoutPanel]::new()
     $appActions.Dock = 'Fill'
+    $appActions.RowCount = 1
+    $appActions.ColumnCount = 2
+    $appActions.Padding = [System.Windows.Forms.Padding]::new(8,6,8,6)
+    [void]$appActions.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent',100))
+    [void]$appActions.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Percent',100))
+    [void]$appActions.ColumnStyles.Add([System.Windows.Forms.ColumnStyle]::new('Absolute',206))
     [void]$appLayout.Controls.Add($appActions,0,2)
 
     $selection = [System.Windows.Forms.Label]::new()
     $selection.Text = '0 selected'
-    $selection.SetBounds(12,15,420,27)
-    $appActions.Controls.Add($selection)
+    $selection.Dock = 'Fill'
+    $selection.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    [void]$appActions.Controls.Add($selection,0,0)
 
     $stage = [System.Windows.Forms.Button]::new()
-    $stage.Text = 'Stage selected apps'
-    $stage.SetBounds(735,8,175,32)
-    $stage.Anchor = 'Top,Right'
+    $stage.Text = if ($TestMode) { 'Stage to test folder' } else { 'Stage selected apps' }
+    $stage.Dock = 'Fill'
+    $stage.Margin = [System.Windows.Forms.Padding]::new(4,0,4,0)
+    $stage.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $stage.BackColor = [System.Drawing.Color]::FromArgb(35,59,95)
+    $stage.ForeColor = [System.Drawing.Color]::White
     $stage.Enabled = (($winPE -or $TestMode) -and $null -ne $target -and -not $PreviewOnly)
-    $appActions.Controls.Add($stage)
+    if (-not $stage.Enabled) {
+        $stage.BackColor = [System.Drawing.Color]::Gainsboro
+        $stage.ForeColor = [System.Drawing.Color]::DimGray
+    }
+    [void]$appActions.Controls.Add($stage,1,0)
 
     $cacheLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $cacheLayout.Dock = 'Fill'
