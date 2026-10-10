@@ -16,16 +16,40 @@ function Get-OSDAppUIStagedIds {
     }
 }
 
+function Get-OSDAppUITestWindowsPath {
+    [CmdletBinding()]
+    param()
+
+    if ([string]::IsNullOrWhiteSpace($env:TEMP)) {
+        throw 'TEMP is unavailable; cannot create a safe Windows staging test target.'
+    }
+    # Fixed, explicitly isolated root. Never use the active Windows directory
+    # or its SetupComplete.cmd when testing GUI staging on full Windows.
+    [System.IO.Path]::GetFullPath((Join-Path $env:TEMP 'OSDApps-GUI-Staging-Test'))
+}
+
 function Invoke-OSDAppUIStage {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][object[]]$Applications,
         [Parameter(Mandatory)][string]$WindowsPath,
-        [switch]$Offline
+        [switch]$Offline,
+        [switch]$TestMode
     )
 
-    if (-not (Test-OSDAppWinPE)) {
-        throw 'Staging from the GUI is supported in WinPE after Windows has been applied. Full Windows is inspection-only in this MVP.'
+    $winPE = Test-OSDAppWinPE
+    if ($TestMode) {
+        if ($winPE) {
+            throw 'TestMode is for full Windows only. In WinPE, stage to the actual offline Windows installation.'
+        }
+        $expectedTestRoot = Get-OSDAppUITestWindowsPath
+        $provided = [System.IO.Path]::GetFullPath($WindowsPath)
+        if (-not [string]::Equals($provided.TrimEnd('\'), $expectedTestRoot.TrimEnd('\'), [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Full Windows staging is only permitted under the isolated test target '$expectedTestRoot'."
+        }
+    }
+    elseif (-not $winPE) {
+        throw 'Full Windows staging requires -TestMode. Normal GUI staging is intended for WinPE after Windows has been applied.'
     }
 
     $resolvedTarget = Resolve-OSDAppWindowsPath -WindowsPath $WindowsPath
