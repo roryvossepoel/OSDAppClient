@@ -204,7 +204,7 @@ function Sync-OSDAppCache {
 
         # This is the commit point: the manifest must describe the new files.
         $catalogCommitAttempted = $true
-        Move-Item -LiteralPath $catalogPrepared -Destination $cacheCatalogPath -Force -ErrorAction Stop
+        Publish-OSDAppCacheCatalog -SourcePath $catalogPrepared -DestinationPath $cacheCatalogPath
         $committed = $true
     }
     catch {
