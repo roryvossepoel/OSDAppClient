@@ -71,7 +71,7 @@ function Show-OSDAppUI {
         [switch]$PreviewOnly
     )
 
-    if ([Threading.Thread]::CurrentThread.ApartmentState -ne [Threading.ApartmentState]::STA) {
+    if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne [System.Threading.ApartmentState]::STA) {
         throw 'An STA session is required. Launch Windows PowerShell with powershell.exe -STA -NoProfile.'
     }
     try {
@@ -98,81 +98,81 @@ function Show-OSDAppUI {
         }
     }
 
-    $form = [Windows.Forms.Form]::new()
+    $form = [System.Windows.Forms.Form]::new()
     $form.Text = 'OSDApps Manager - Development Preview'
-    $form.Size = [Drawing.Size]::new(980, 700)
-    $form.MinimumSize = [Drawing.Size]::new(780, 560)
+    $form.Size = [System.Drawing.Size]::new(980, 700)
+    $form.MinimumSize = [System.Drawing.Size]::new(780, 560)
     $form.StartPosition = 'CenterScreen'
     $form.AutoScaleMode = 'Dpi'
-    $form.Font = [Drawing.Font]::new('Segoe UI', 9)
+    $form.Font = [System.Drawing.Font]::new('Segoe UI', 9)
 
-    $root = [Windows.Forms.TableLayoutPanel]::new()
+    $root = [System.Windows.Forms.TableLayoutPanel]::new()
     $root.Dock = 'Fill'
     $root.RowCount = 3
-    [void]$root.RowStyles.Add([Windows.Forms.RowStyle]::new('Absolute', 155))
-    [void]$root.RowStyles.Add([Windows.Forms.RowStyle]::new('Percent', 100))
-    [void]$root.RowStyles.Add([Windows.Forms.RowStyle]::new('Absolute', 45))
+    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute', 155))
+    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent', 100))
+    [void]$root.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute', 45))
     $form.Controls.Add($root)
 
-    $header = [Windows.Forms.Panel]::new()
+    $header = [System.Windows.Forms.Panel]::new()
     $header.Dock = 'Fill'
-    $header.BackColor = [Drawing.Color]::FromArgb(35,59,95)
+    $header.BackColor = [System.Drawing.Color]::FromArgb(35,59,95)
     [void]$root.Controls.Add($header,0,0)
 
-    $title = [Windows.Forms.Label]::new()
+    $title = [System.Windows.Forms.Label]::new()
     $title.Text = 'OSDApps Manager'
-    $title.Font = [Drawing.Font]::new('Segoe UI', 17, [Drawing.FontStyle]::Bold)
-    $title.ForeColor = [Drawing.Color]::White
+    $title.Font = [System.Drawing.Font]::new('Segoe UI', 17, [System.Drawing.FontStyle]::Bold)
+    $title.ForeColor = [System.Drawing.Color]::White
     $title.SetBounds(18,10,500,40)
     $header.Controls.Add($title)
 
-    $description = [Windows.Forms.Label]::new()
+    $description = [System.Windows.Forms.Label]::new()
     $description.Text = 'Application deployment and cache management - first preview'
-    $description.ForeColor = [Drawing.Color]::White
+    $description.ForeColor = [System.Drawing.Color]::White
     $description.SetBounds(20,54,750,24)
     $header.Controls.Add($description)
 
-    $url = [Windows.Forms.TextBox]::new()
+    $url = [System.Windows.Forms.TextBox]::new()
     $url.Text = if ($initialCatalog) { [string]$initialCatalog.AbsoluteUri } else { '' }
     $url.SetBounds(20,96,625,26)
     $url.Anchor = 'Top,Left,Right'
     $header.Controls.Add($url)
 
-    $offlineCheck = [Windows.Forms.CheckBox]::new()
+    $offlineCheck = [System.Windows.Forms.CheckBox]::new()
     $offlineCheck.Text = 'Offline only'
-    $offlineCheck.ForeColor = [Drawing.Color]::White
+    $offlineCheck.ForeColor = [System.Drawing.Color]::White
     $offlineCheck.Checked = [bool]$Offline
     $offlineCheck.SetBounds(650,96,120,26)
     $offlineCheck.Anchor = 'Top,Right'
     $header.Controls.Add($offlineCheck)
 
-    $refresh = [Windows.Forms.Button]::new()
+    $refresh = [System.Windows.Forms.Button]::new()
     $refresh.Text = 'Refresh'
     $refresh.SetBounds(820,94,100,29)
     $refresh.Anchor = 'Top,Right'
     $header.Controls.Add($refresh)
 
-    $targetInfo = [Windows.Forms.Label]::new()
+    $targetInfo = [System.Windows.Forms.Label]::new()
     $targetInfo.Text = $targetLabel
-    $targetInfo.ForeColor = [Drawing.Color]::White
+    $targetInfo.ForeColor = [System.Drawing.Color]::White
     $targetInfo.SetBounds(20,129,910,23)
     $header.Controls.Add($targetInfo)
 
-    $tabs = [Windows.Forms.TabControl]::new()
+    $tabs = [System.Windows.Forms.TabControl]::new()
     $tabs.Dock = 'Fill'
     [void]$root.Controls.Add($tabs,0,1)
-    $appTab = [Windows.Forms.TabPage]::new('Install Applications')
-    $cacheTab = [Windows.Forms.TabPage]::new('Cache Management')
+    $appTab = [System.Windows.Forms.TabPage]::new('Install Applications')
+    $cacheTab = [System.Windows.Forms.TabPage]::new('Cache Management')
     [void]$tabs.TabPages.Add($appTab)
     [void]$tabs.TabPages.Add($cacheTab)
 
-    $appInfo = [Windows.Forms.Label]::new()
+    $appInfo = [System.Windows.Forms.Label]::new()
     $appInfo.Text = 'Select apps to STAGE for SetupComplete. Built-ins use defaults. Unchecking does not remove existing entries.'
     $appInfo.Dock = 'Top'
     $appInfo.Height = 39
     $appTab.Controls.Add($appInfo)
 
-    $appList = [Windows.Forms.ListView]::new()
+    $appList = [System.Windows.Forms.ListView]::new()
     $appList.Dock = 'Fill'
     $appList.View = 'Details'
     $appList.CheckBoxes = $true
@@ -184,32 +184,32 @@ function Show-OSDAppUI {
     [void]$appList.Columns.Add('Version',125)
     [void]$appList.Columns.Add('Queue',100)
 
-    $appActions = [Windows.Forms.Panel]::new()
+    $appActions = [System.Windows.Forms.Panel]::new()
     $appActions.Dock = 'Bottom'
     $appActions.Height = 51
     $appTab.Controls.Add($appActions)
     $appTab.Controls.Add($appList)
     $appList.BringToFront()
 
-    $selection = [Windows.Forms.Label]::new()
+    $selection = [System.Windows.Forms.Label]::new()
     $selection.Text = '0 selected'
     $selection.SetBounds(12,15,420,27)
     $appActions.Controls.Add($selection)
 
-    $stage = [Windows.Forms.Button]::new()
+    $stage = [System.Windows.Forms.Button]::new()
     $stage.Text = 'Stage selected apps'
     $stage.SetBounds(735,8,175,32)
     $stage.Anchor = 'Top,Right'
     $stage.Enabled = ($winPE -and $null -ne $target -and -not $PreviewOnly)
     $appActions.Controls.Add($stage)
 
-    $cacheIntro = [Windows.Forms.Label]::new()
+    $cacheIntro = [System.Windows.Forms.Label]::new()
     $cacheIntro.Text = 'Read-only cache inventory in this preview. Sync and cache clear are next.'
     $cacheIntro.Dock = 'Top'
     $cacheIntro.Height = 39
     $cacheTab.Controls.Add($cacheIntro)
 
-    $cacheList = [Windows.Forms.ListView]::new()
+    $cacheList = [System.Windows.Forms.ListView]::new()
     $cacheList.Dock = 'Fill'
     $cacheList.View = 'Details'
     $cacheList.GridLines = $true
@@ -221,15 +221,15 @@ function Show-OSDAppUI {
     $cacheTab.Controls.Add($cacheList)
     $cacheList.BringToFront()
 
-    $footer = [Windows.Forms.Panel]::new()
+    $footer = [System.Windows.Forms.Panel]::new()
     $footer.Dock = 'Fill'
     [void]$root.Controls.Add($footer,0,2)
-    $status = [Windows.Forms.Label]::new()
+    $status = [System.Windows.Forms.Label]::new()
     $status.Text = 'Loading...'
     $status.SetBounds(20,12,780,26)
     $status.Anchor = 'Top,Left,Right'
     $footer.Controls.Add($status)
-    $close = [Windows.Forms.Button]::new()
+    $close = [System.Windows.Forms.Button]::new()
     $close.Text = 'Close'
     $close.SetBounds(837,7,90,29)
     $close.Anchor = 'Top,Right'
@@ -253,7 +253,7 @@ function Show-OSDAppUI {
         try { Update-OSDAppUIInventory -State $s }
         catch {
             $s.Status.Text = "Refresh failed: $($_.Exception.Message)"
-            [void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Refresh','OK','Error')
+            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Refresh','OK','Error')
         }
     })
     $stage.Add_Click({
@@ -261,14 +261,14 @@ function Show-OSDAppUI {
         if (-not $s -or $s.PreviewOnly) { return }
         $items = @(foreach ($item in @($s.Apps.CheckedItems)) { $item.Tag })
         if ($items.Count -eq 0) {
-            [void][Windows.Forms.MessageBox]::Show('Select at least one app.','OSDApps','OK','Information')
+            [void][System.Windows.Forms.MessageBox]::Show('Select at least one app.','OSDApps','OK','Information')
             return
         }
-        $confirmation = [Windows.Forms.MessageBox]::Show(
+        $confirmation = [System.Windows.Forms.MessageBox]::Show(
             "Stage $($items.Count) app(s) on $($s.Target)? Built-in defaults apply. Previous staged apps will remain.",
             'Confirm staging','YesNo','Question'
         )
-        if ($confirmation -ne [Windows.Forms.DialogResult]::Yes) { return }
+        if ($confirmation -ne [System.Windows.Forms.DialogResult]::Yes) { return }
         $s.Stage.Enabled = $false
         $s.Refresh.Enabled = $false
         $s.Status.Text = 'Staging selected applications; please wait...'
@@ -276,12 +276,12 @@ function Show-OSDAppUI {
         try {
             $result = Invoke-OSDAppUIStage -Applications $items -WindowsPath $s.Target -Offline:$s.Offline.Checked
             $s.Status.Text = "Staged $($items.Count) applications for SetupComplete."
-            [void][Windows.Forms.MessageBox]::Show('Applications were staged, not yet installed.','OSDApps','OK','Information')
+            [void][System.Windows.Forms.MessageBox]::Show('Applications were staged, not yet installed.','OSDApps','OK','Information')
             Update-OSDAppUIInventory -State $s
         }
         catch {
             $s.Status.Text = "Stage failed: $($_.Exception.Message)"
-            [void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Stage failed','OK','Error')
+            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message,'OSDApps - Stage failed','OK','Error')
         }
         finally {
             $s.Refresh.Enabled = $true
