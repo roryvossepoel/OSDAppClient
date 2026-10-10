@@ -74,7 +74,12 @@ function Sync-OSDAppCache {
 
         # Application IDs become directory names; reject traversal and separators
         # from untrusted repository metadata before any filesystem operation.
-        if ([string]$package.Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*
+        if ([string]$package.Id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+            [string]$package.Id -match '\.\.') {
+            throw "Invalid package Id '$($package.Id)' in repository catalog."
+        }
+
+        if ($package.Archive.FileName -and $package.Archive.FileName -ne 'Package.zip') {
             throw "Package '$($package.Id)' must use the fixed archive name Package.zip."
         }
 
@@ -143,108 +148,6 @@ function Sync-OSDAppCache {
                 Remove-Item -LiteralPath $packageTemp -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
-    }
-
-    $cacheCatalogPath = Join-Path $CachePath 'CacheCatalog.json'
-
-    $existingPackages = @()
-    if (Test-Path -LiteralPath $cacheCatalogPath -PathType Leaf) {
-        try {
-            $existingCatalog = Get-OSDAppManifest -Path $cacheCatalogPath
-            $existingPackages = @($existingCatalog.Packages)
-        }
-        catch {
-            Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'CacheCatalogReadFailed' -Level 'Warning' -Message 'Existing cache catalog could not be read and will be rebuilt from synchronized packages.' -Data @{ Catalog = $cacheCatalogPath; Error = $_.Exception.Message }
-            $existingPackages = @()
-        }
-    }
-
-    $updatedIds = @($packages.Id)
-    $mergedPackages = @(
-        @($existingPackages | Where-Object { $_.Id -notin $updatedIds }) +
-        @($packages)
-    )
-
-    $selectedCatalog = [ordered]@{
-        SchemaVersion = $sourceCatalog.SchemaVersion
-        GeneratedAt   = $sourceCatalog.GeneratedAt
-        SourceCatalog = $catalogSourceDescription
-        Packages      = @($mergedPackages)
-    }
-
-    $selectedCatalog | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $cacheCatalogPath -Encoding UTF8
-
-    Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'SyncComplete' -Message 'Repository synchronization completed.' -Data @{
-        Catalog = $cacheCatalogPath
-        SyncedPackageCount = @($packages).Count
-        CachedPackageCount = @($mergedPackages).Count
-    }
-
-    Get-Item -LiteralPath $cacheCatalogPath
-}
- -or
-            [string]$package.Id -match '\.\.') {
-            throw "Invalid package Id '$($package.Id)' in repository catalog."
-        }
-
-        if ($package.Archive.FileName -and $package.Archive.FileName -ne 'Package.zip') {
-            throw "Package '$($package.Id)' must use the fixed archive name Package.zip."
-        }
-
-        $targetRoot = Join-Path $packagesRoot $package.Id
-        $targetArchive = Join-Path $targetRoot 'Package.zip'
-
-        if (Test-OSDAppFileHash -Path $targetArchive -ExpectedSha256 $package.Archive.Sha256) {
-            Write-Verbose "$($package.Id) is current."
-            Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'PackageCurrent' -Message 'Cached package is current.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture }
-            continue
-        }
-
-        if (-not $PSCmdlet.ShouldProcess($package.Id, "Synchronize version $($package.Version)")) { continue }
-
-        $packageTemp = Join-Path $stagingRoot $package.Id
-        if (Test-Path -LiteralPath $packageTemp) { Remove-Item -LiteralPath $packageTemp -Recurse -Force }
-        New-Item -ItemType Directory -Path $packageTemp -Force | Out-Null
-        $tempArchive = Join-Path $packageTemp 'Package.zip'
-
-        if ($package.Archive.Uri) {
-            Write-Verbose "Downloading $($package.Archive.Uri)"
-            Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Downloading package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $package.Archive.Uri }
-            Invoke-WebRequest -Uri $package.Archive.Uri -OutFile $tempArchive -UseBasicParsing
-        }
-        elseif ($package.Archive.SourcePath) {
-            $sourceArchive = [string]$package.Archive.SourcePath
-            if (-not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) { throw "Source archive not found: $sourceArchive" }
-            Write-Verbose "Copying $sourceArchive"
-            Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'AcquireStart' -Message 'Copying package archive.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Source = $sourceArchive }
-            Copy-Item -LiteralPath $sourceArchive -Destination $tempArchive -Force
-        }
-        else {
-            throw "Package '$($package.Id)' archive has neither Uri nor SourcePath."
-        }
-
-        if (-not (Test-OSDAppFileHash -Path $tempArchive -ExpectedSha256 $package.Archive.Sha256)) {
-            Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'HashValidationFailed' -Level 'Error' -Message 'SHA-256 validation failed.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture }
-            throw "SHA-256 validation failed for '$($package.Id)/Package.zip'."
-        }
-
-        Write-OSDAppLog -LogPath $logPath -Component 'Sync' -Event 'PackageUpdated' -Message 'Package synchronized and validated.' -Data @{ Id = $package.Id; Version = $package.Version; Architecture = $package.Architecture; Sha256 = $package.Archive.Sha256 }
-
-        if (Test-Path -LiteralPath $targetRoot) {
-            $backupRoot = "$targetRoot.previous"
-            if (Test-Path -LiteralPath $backupRoot) { Remove-Item -LiteralPath $backupRoot -Recurse -Force }
-            Move-Item -LiteralPath $targetRoot -Destination $backupRoot
-            try {
-                Move-Item -LiteralPath $packageTemp -Destination $targetRoot
-                Remove-Item -LiteralPath $backupRoot -Recurse -Force
-            }
-            catch {
-                if (Test-Path -LiteralPath $targetRoot) { Remove-Item -LiteralPath $targetRoot -Recurse -Force }
-                Move-Item -LiteralPath $backupRoot -Destination $targetRoot
-                throw
-            }
-        }
-        else { Move-Item -LiteralPath $packageTemp -Destination $targetRoot }
     }
 
     $cacheCatalogPath = Join-Path $CachePath 'CacheCatalog.json'
