@@ -73,7 +73,7 @@ Full Windows / PreInstall
 
 Built-ins refresh in full Windows so every vendor integration can use one consistent acquisition, fallback, logging, and troubleshooting model.
 
-Microsoft 365 Apps uses the Office Deployment Tool for synchronization. Teams, Adobe Acrobat Unified, Google Chrome Enterprise, and Mozilla Firefox Enterprise use vendor-native sources with lightweight freshness checks where applicable.
+Microsoft 365 Apps uses the Office Deployment Tool for synchronization. Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise, and Cisco Webex use vendor-native sources with lightweight freshness checks where applicable.
 
 ## Why Office refreshes in full Windows
 

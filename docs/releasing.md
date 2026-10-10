@@ -48,6 +48,9 @@ A normal `main` push without an `OSDApps.psd1` change does not trigger a new rel
 - Confirm Pester and GitHub CI pass
 - Verify GitHub Release notes and PowerShell Gallery publication
 - Keep examples and public metadata aligned with the exported parameters
+- Verify the public `metadata/builtins.json` (`SchemaVersion: 1`) has entries for new apps with correct exported commands, cache paths and public icons
+- When a viewer reads the JSON from `main`, verify both JSON and icon assets after merge; do not break the schema without updating consumers
+- Distinguish supported architectures from field-validated architectures
 
 ## Local validation
 

@@ -255,6 +255,8 @@ x64:   https://binaries.webex.com/WebexOfclDesktop-Win-64-Gold/Webex_en.msi
 arm64: https://binaries.webex.com/WebexOfclDesktop-Win-Arm-64-Gold/Webex_en.msi
 ```
 
+The x64 URL was verified in practice on 10 October 2026 (Cisco-signed MSI, version 46.9.0.35800, 259.9 MiB); both online and fully offline SetupComplete installations succeeded. **ARM64 has not yet been field-validated.**
+
 These x64/ARM64 URLs are listed in Cisco's [Webex App installation guide](https://help.webex.com/en-US/article/nw5p67g/Webex-%7C-Installation-and-Automatic-Upgrade). That page also contains an alternate older non-localized x64 URL in its package table; verify the actual current MSI delivery before production use. `-PackageUri` can override the source.
 
 ```powershell
@@ -315,10 +317,11 @@ The freshness mechanism is product-specific:
 | Adobe Acrobat Unified | HTTP metadata for the official Adobe ZIP: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.zip` is downloaded only when the remote metadata changed or no cached ZIP exists. |
 | Google Chrome Enterprise | HTTP metadata for the official Enterprise MSI: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. |
 | Mozilla Firefox Enterprise | HTTP metadata for the Mozilla latest MSI endpoint: `ETag` preferred, otherwise `Last-Modified + Content-Length` | `Package.msi` is downloaded only when the remote metadata changed or no cached MSI exists. Channel, architecture, and language are cached separately. |
+| Cisco Webex | Cisco MSI HTTP metadata, `ETag` preferred, otherwise `Last-Modified + Content-Length` | Reuse the MSI when unchanged; download when missing or changed. Separate x64/ARM64 cache folders. |
 
 ### HTTP metadata comparison
 
-For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, and Mozilla Firefox Enterprise, OSDApps first asks the vendor endpoint for remote file metadata.
+For Teams, Adobe Acrobat Unified, Google Chrome Enterprise, Mozilla Firefox Enterprise, and Cisco Webex, OSDApps first asks the vendor endpoint for remote file metadata.
 
 The comparison order is:
 
