@@ -10,7 +10,18 @@ function Remove-OSDAppSetupComplete {
 
     # Only delete complete, canonical OSDApps-owned blocks. Preserve third-party
     # commands anywhere else, including between the two OSDApps blocks.
-    $text = [System.IO.File]::ReadAllText($setupPath)
+    # Preserve every byte outside OSDApps-owned lines. Use Latin-1 as a
+    # lossless byte-to-character mapping for ANSI and UTF-8 cmd files;
+    # UTF-16 BOM files are decoded and re-encoded with their original endian.
+    $bytes = [System.IO.File]::ReadAllBytes($setupPath)
+    $encoding = [System.Text.Encoding]::GetEncoding(28591)
+    if ($bytes.Length -ge 2 -and $bytes[0] -eq 255 -and $bytes[1] -eq 254) {
+        $encoding = [System.Text.Encoding]::Unicode
+    }
+    elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 254 -and $bytes[1] -eq 255) {
+        $encoding = [System.Text.Encoding]::BigEndianUnicode
+    }
+    $text = $encoding.GetString($bytes)
     $preMarker = '(?m)^:: OSDApps PreInstall\r?$'
     $beginMarker = '(?m)^:: OSDApps Begin\r?$'
     $endMarker = '(?m)^:: OSDApps End\r?$'
@@ -49,18 +60,6 @@ function Remove-OSDAppSetupComplete {
     $updated = [regex]::Replace($text, $prePattern, '', 1)
     $updated = [regex]::Replace($updated, $runnerPattern, '', 1)
 
-    $bytes = [System.IO.File]::ReadAllBytes($setupPath)
-    $encoding = [System.Text.Encoding]::Default
-    if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) {
-        $encoding = [System.Text.UTF8Encoding]::new($true)
-    }
-    elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 255 -and $bytes[1] -eq 254) {
-        $encoding = [System.Text.Encoding]::Unicode
-    }
-    elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 254 -and $bytes[1] -eq 255) {
-        $encoding = [System.Text.Encoding]::BigEndianUnicode
-    }
-
-    [System.IO.File]::WriteAllText($setupPath, $updated, $encoding)
+    [System.IO.File]::WriteAllBytes($setupPath, $encoding.GetBytes($updated))
     Get-Item -LiteralPath $setupPath
 }
