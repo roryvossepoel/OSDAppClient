@@ -1,4 +1,4 @@
-function Get-OSDAppUIStagedIds {
+function Get-OSDAppUIStagedApps {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$WindowsPath)
 
@@ -11,8 +11,17 @@ function Get-OSDAppUIStagedIds {
         ConvertFrom-Json -ErrorAction Stop
     foreach ($app in @($manifest.Apps)) {
         if ($null -ne $app -and -not [string]::IsNullOrWhiteSpace([string]$app.Id)) {
-            [string]$app.Id
+            $app
         }
+    }
+}
+
+function Get-OSDAppUIStagedIds {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$WindowsPath)
+
+    foreach ($app in @(Get-OSDAppUIStagedApps -WindowsPath $WindowsPath)) {
+        [string]$app.Id
     }
 }
 
@@ -120,5 +129,59 @@ function Invoke-OSDAppUIStage {
         Requested   = @($apps | ForEach-Object { [string]$_.Id })
         Staged      = @($staged)
         Offline     = [bool]$Offline
+    }
+}
+
+
+function Invoke-OSDAppUIApplyChanges {
+    [CmdletBinding()]
+    param(
+        [object[]]$Applications = @(),
+        [Parameter(Mandatory)][string]$WindowsPath,
+        [switch]$Offline,
+        [switch]$TestMode
+    )
+
+    $selected = @($Applications | Where-Object { $null -ne $_ })
+    $selectedIds = @($selected | ForEach-Object { [string]$_.Id })
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($id in $selectedIds) {
+        if ([string]::IsNullOrWhiteSpace($id) -or $id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+            $id -match '\.\.' -or -not $seen.Add($id)) {
+            throw "Invalid or duplicate application selection '$id'."
+        }
+    }
+
+    $existing = @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath)
+    $toAdd = @($selected | Where-Object { [string]$_.Id -notin $existing })
+    $toRemove = @($existing | Where-Object { $_ -notin $selectedIds })
+
+    # Add first. Failed staging must not remove previously staged applications.
+    if ($toAdd.Count -gt 0) {
+        Invoke-OSDAppUIStage -Applications $toAdd -WindowsPath $WindowsPath -Offline:$Offline -TestMode:$TestMode -ErrorAction Stop | Out-Null
+    }
+
+    if ($toRemove.Count -gt 0) {
+        if ($TestMode) {
+            Remove-OSDAppStaging -Name $toRemove -TestMode -Confirm:$false -ErrorAction Stop | Out-Null
+        }
+        else {
+            Remove-OSDAppStaging -Name $toRemove -WindowsPath $WindowsPath -Confirm:$false -ErrorAction Stop | Out-Null
+        }
+    }
+
+    $final = @(Get-OSDAppUIStagedIds -WindowsPath $WindowsPath)
+    $missing = @($selectedIds | Where-Object { $_ -notin $final })
+    $unexpected = @($final | Where-Object { $_ -notin $selectedIds })
+    if ($missing.Count -gt 0 -or $unexpected.Count -gt 0) {
+        throw "Post-apply validation failed. Missing: $($missing -join ', '); unexpected: $($unexpected -join ', ')."
+    }
+
+    [pscustomobject]@{
+        WindowsPath = $WindowsPath
+        Added = @($toAdd | ForEach-Object { [string]$_.Id })
+        Removed = @($toRemove)
+        Remaining = @($final)
+        Changed = ($toAdd.Count -gt 0 -or $toRemove.Count -gt 0)
     }
 }
