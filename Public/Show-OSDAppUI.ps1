@@ -166,11 +166,21 @@ function Show-OSDAppUI {
     [void]$tabs.TabPages.Add($appTab)
     [void]$tabs.TabPages.Add($cacheTab)
 
+    # Explicit table rows prevent Dock=Fill from covering footer controls.
+    $appLayout = [System.Windows.Forms.TableLayoutPanel]::new()
+    $appLayout.Dock = 'Fill'
+    $appLayout.RowCount = 3
+    [void]$appLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute', 39))
+    [void]$appLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent', 100))
+    [void]$appLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute', 51))
+    $appTab.Controls.Add($appLayout)
+
     $appInfo = [System.Windows.Forms.Label]::new()
     $appInfo.Text = 'Select apps to STAGE for SetupComplete. Built-ins use defaults. Unchecking does not remove existing entries.'
-    $appInfo.Dock = 'Top'
-    $appInfo.Height = 39
-    $appTab.Controls.Add($appInfo)
+    $appInfo.Dock = 'Fill'
+    $appInfo.TextAlign = 'MiddleLeft'
+    $appInfo.AutoEllipsis = $true
+    [void]$appLayout.Controls.Add($appInfo,0,0)
 
     $appList = [System.Windows.Forms.ListView]::new()
     $appList.Dock = 'Fill'
@@ -183,13 +193,11 @@ function Show-OSDAppUI {
     [void]$appList.Columns.Add('Availability',145)
     [void]$appList.Columns.Add('Version',125)
     [void]$appList.Columns.Add('Queue',100)
+    [void]$appLayout.Controls.Add($appList,0,1)
 
     $appActions = [System.Windows.Forms.Panel]::new()
-    $appActions.Dock = 'Bottom'
-    $appActions.Height = 51
-    $appTab.Controls.Add($appActions)
-    $appTab.Controls.Add($appList)
-    $appList.BringToFront()
+    $appActions.Dock = 'Fill'
+    [void]$appLayout.Controls.Add($appActions,0,2)
 
     $selection = [System.Windows.Forms.Label]::new()
     $selection.Text = '0 selected'
@@ -203,11 +211,18 @@ function Show-OSDAppUI {
     $stage.Enabled = ($winPE -and $null -ne $target -and -not $PreviewOnly)
     $appActions.Controls.Add($stage)
 
+    $cacheLayout = [System.Windows.Forms.TableLayoutPanel]::new()
+    $cacheLayout.Dock = 'Fill'
+    $cacheLayout.RowCount = 2
+    [void]$cacheLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Absolute', 39))
+    [void]$cacheLayout.RowStyles.Add([System.Windows.Forms.RowStyle]::new('Percent', 100))
+    $cacheTab.Controls.Add($cacheLayout)
+
     $cacheIntro = [System.Windows.Forms.Label]::new()
     $cacheIntro.Text = 'Read-only cache inventory in this preview. Sync and cache clear are next.'
-    $cacheIntro.Dock = 'Top'
-    $cacheIntro.Height = 39
-    $cacheTab.Controls.Add($cacheIntro)
+    $cacheIntro.Dock = 'Fill'
+    $cacheIntro.TextAlign = 'MiddleLeft'
+    [void]$cacheLayout.Controls.Add($cacheIntro,0,0)
 
     $cacheList = [System.Windows.Forms.ListView]::new()
     $cacheList.Dock = 'Fill'
@@ -218,8 +233,7 @@ function Show-OSDAppUI {
     [void]$cacheList.Columns.Add('Architecture',120)
     [void]$cacheList.Columns.Add('Integrity',145)
     [void]$cacheList.Columns.Add('Size',105)
-    $cacheTab.Controls.Add($cacheList)
-    $cacheList.BringToFront()
+    [void]$cacheLayout.Controls.Add($cacheList,0,1)
 
     $footer = [System.Windows.Forms.Panel]::new()
     $footer.Dock = 'Fill'
