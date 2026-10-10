@@ -27,11 +27,11 @@ Install-Module OSDApps -SkipPublisherCheck
 Import-Module OSDApps
 ```
 
-To install a specific, reproducible release (for example, the x64 Webex field-tested 0.32.0):
+To install a specific, reproducible release (for example, the field-validated 0.33.0):
 
 ```powershell
-Install-Module OSDApps -RequiredVersion 0.32.0 -Force -SkipPublisherCheck
-Import-Module OSDApps -RequiredVersion 0.30.0 -Force
+Install-Module OSDApps -RequiredVersion 0.33.0 -Force -SkipPublisherCheck
+Import-Module OSDApps -RequiredVersion 0.33.0 -Force
 ```
 
 `Install-PSResource` is the newer PSResourceGet equivalent, but PSResourceGet is not normally available by default in Windows PowerShell 5.1 / WinPE. For OSDCloud and WinPE scenarios, `Install-Module` is therefore the recommended installation method.
@@ -69,6 +69,14 @@ Add-OSDAppCiscoWebex
 Add-OSDApp OmnissaHorizonClient
 Add-OSDApp NotepadPlusPlus
 ```
+
+When a configured repository is temporarily unreachable, `Add-OSDApp` can continue with the local cache **only if every requested package is present and passes SHA-256 validation**. To deliberately skip the online refresh (for example, when deploying offline from a prepared USB cache):
+
+```powershell
+Add-OSDApp NotepadPlusPlus -SkipCacheRefresh
+```
+
+`-WhatIf` previews staging without synchronizing, downloading, or modifying the offline Windows installation. `-SkipCacheRefresh` applies to repository applications; built-in applications have their own acquisition logic.
 
 produces:
 

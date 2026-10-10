@@ -73,6 +73,7 @@ function Write-RunnerLog {
         $logMessage += ' | ' + ($details -join '; ')
     }
     $logMessage = $logMessage -replace '\]LOG\]!>', ']LOG]! >'
+    $logMessage = $logMessage -replace '[\r\n\x00-\x1F]+', ' '
 
     $now = (Get-Date).ToUniversalTime()
     $time = $now.ToString('HH:mm:ss.fff') + '+000'
